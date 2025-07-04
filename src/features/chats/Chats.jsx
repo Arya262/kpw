@@ -49,7 +49,7 @@ const Chat = () => {
         }
       );
       const data = await response.json();
-      console.log(data);
+      console.log("Fetched contacts data:", data);
       const enriched = await Promise.all(
         data.map(async (c) => {
           let lastMessage = null;
@@ -84,7 +84,8 @@ const Chat = () => {
           }
 
           return {
-            id: c.customer_id,
+            id: c.contact_id,
+            customer_id: c.contact_id,
             conversation_id: c.conversation_id,
             name: `${c.first_name} ${c.last_name || ""}`.trim(),
             country_code: c.country_code,
@@ -310,6 +311,13 @@ const Chat = () => {
     setShowUserDetails((prev) => !prev);
   };
 
+  const handleDeleteChat = async (contact, authCustomerId) => {
+    console.log("Deleting chat for logged-in customer_id:", authCustomerId);
+    setContacts((prev) => prev.filter((c) => c.conversation_id !== contact.conversation_id));
+    setSelectedContact(null);
+    setMessages([]);
+  };
+
   return (
     <div className="flex flex-col md:flex-row w-full flex-1 min-h-0 h-full border border-gray-300 rounded-2xl bg-white mx-auto max-w-screen-2xl overflow-hidden">
       {/* Sidebar */}
@@ -326,7 +334,10 @@ const Chat = () => {
               searchQuery={searchQuery}
               onSearchChange={handleSearchChange}
               onSelectContact={(contact) => {
-                handleSelectContact(contact);
+                const fullContact = contacts.find(
+                  (c) => c.conversation_id === contact.conversation_id
+                );
+                handleSelectContact(fullContact || contact);
                 if (isMobile) setShowMobileChat(true);
               }}
             />
@@ -346,6 +357,8 @@ const Chat = () => {
                 ref={profileButtonRef}
                 isMobile={isMobile}
                 onBack={() => setShowMobileChat(false)}
+                onDeleteChat={handleDeleteChat}
+                authCustomerId={user?.customer_id}
               />
 
               {/* Body */}

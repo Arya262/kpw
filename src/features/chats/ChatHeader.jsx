@@ -1,5 +1,6 @@
 import { forwardRef, useState, useEffect, useRef } from "react";
 import { ChevronLeft, MoreVertical, Trash2, BellOff } from "lucide-react";
+import SingleDeleteDialog from "../../features/contacts/SingleDeleteDialog";
 
 const getAvatarColor = (name = "User") => {
   const hash = [...name].reduce((acc, char) => acc + char.charCodeAt(0), 0);
@@ -8,9 +9,10 @@ const getAvatarColor = (name = "User") => {
 };
 
 const ChatHeader = forwardRef(
-  ({ selectedContact, onProfileClick, isMobile, onBack }, profileButtonRef) => {
+  ({ selectedContact, onProfileClick, isMobile, onBack, onDeleteChat, authCustomerId }, profileButtonRef) => {
     const [deleting, setDeleting] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const dropdownRef = useRef(null);
 
     useEffect(() => {
@@ -28,20 +30,29 @@ const ChatHeader = forwardRef(
 
     if (!selectedContact) return null;
     const handleDelete = async () => {
-      if (
-        confirm(`Are you sure you want to delete the chat with ${selectedContact.name}?`)
-      ) {
-        try {
-          setDeleting(true);
-          console.log("Deleted:", selectedContact.id);
-          await new Promise((resolve) => setTimeout(resolve, 1500));
-        } catch (error) {
-          console.error("Failed to delete chat", error);
-        } finally {
-          setDeleting(false);
-          setDropdownOpen(false);
+      setShowDeleteDialog(true);
+    };
+
+    const handleConfirmDelete = async () => {
+      setDeleting(true);
+      try {
+        console.log(
+          `Delete confirmed at: ${new Date().toISOString()} | Contact: ${selectedContact?.name} | Conversation ID: ${selectedContact?.conversation_id} | Customer ID (from auth): ${authCustomerId}`
+        );
+        if (onDeleteChat) {
+          await onDeleteChat(selectedContact, authCustomerId);
         }
+      } catch (error) {
+        console.error("Failed to delete chat", error);
+      } finally {
+        setDeleting(false);
+        setShowDeleteDialog(false);
+        setDropdownOpen(false);
       }
+    };
+
+    const handleCancelDelete = () => {
+      setShowDeleteDialog(false);
     };
 
     const renderAvatar = (contact) => {
@@ -169,6 +180,13 @@ const ChatHeader = forwardRef(
             </>
           )}
         </div>
+        <SingleDeleteDialog
+          showDialog={showDeleteDialog}
+          contactName={selectedContact?.name}
+          onCancel={handleCancelDelete}
+          onConfirm={handleConfirmDelete}
+          isDeleting={deleting}
+        />
       </div>
     );
   }
