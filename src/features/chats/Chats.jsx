@@ -312,11 +312,50 @@ const Chat = () => {
   };
 
   const handleDeleteChat = async (contact, authCustomerId) => {
-    console.log("Deleting chat for logged-in customer_id:", authCustomerId);
-    setContacts((prev) => prev.filter((c) => c.conversation_id !== contact.conversation_id));
-    setSelectedContact(null);
-    setMessages([]);
-  };
+  const conversationId = contact.conversation_id;
+
+  if (!conversationId || !authCustomerId) {
+    console.error("Missing conversation ID or customer ID");
+    return;
+  }
+
+  if (
+    confirm(`Are you sure you want to delete the chat with ${contact.name}?`)
+  ) {
+    try {
+      console.log("Deleting chat for logged-in customer_id:", authCustomerId);
+
+      const response = await fetch("http://localhost:3000/deleteconversations", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          conversation_ids: [conversationId],
+          customer_id: authCustomerId,
+        }),
+      });
+
+      const result = await response.json();
+      console.log("API Response:", result);
+
+      if (response.ok && result.success) {
+        // Remove from UI if API deletion was successful
+        setContacts((prev) =>
+          prev.filter((c) => c.conversation_id !== conversationId)
+        );
+        setSelectedContact(null);
+        setMessages([]);
+      } else {
+        alert("Failed to delete chat: " + result.message);
+      }
+    } catch (error) {
+      console.error("❌ Error deleting chat:", error);
+      alert("Something went wrong while deleting the chat.");
+    }
+  }
+};
+
 
   return (
     <div className="flex flex-col md:flex-row w-full flex-1 min-h-0 h-full border border-gray-300 rounded-2xl bg-white mx-auto max-w-screen-2xl overflow-hidden">
