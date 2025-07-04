@@ -8,6 +8,7 @@ const getAvatarColor = (name = "User") => {
 };
 
 const UserDetails = ({ isExpanded, setIsExpanded, selectedContact }) => {
+  console.log("Selected Contact:", selectedContact);
   if (!selectedContact) return null;
 
   const renderAvatar = (contact) => {
@@ -44,7 +45,12 @@ const UserDetails = ({ isExpanded, setIsExpanded, selectedContact }) => {
             {renderAvatar(selectedContact)}
           </div>
           <h3 className="font-semibold text-lg">{selectedContact.name || "Unnamed"}</h3>
-          <p className="text-sm text-gray-600">{selectedContact.mobile_no || "No number"}</p>
+<p className="text-sm text-gray-600">
+  {selectedContact?.country_code
+    ? `${selectedContact.country_code.startsWith("+") ? "" : "+"}${selectedContact.country_code} `
+    : ""}
+  {selectedContact?.mobile_no || "No number"}
+</p>
           <p className="opted-in text-green-600 text-sm">Opted-in</p>
         </div>
 

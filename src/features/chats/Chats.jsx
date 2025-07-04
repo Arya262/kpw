@@ -22,7 +22,7 @@ const Chat = () => {
   const [hasProcessedLocationState, setHasProcessedLocationState] =
     useState(false);
   const location = useLocation();
-  const socket = useSocket();
+  const { socket, connected } = useSocket();
   const userDetailsRef = useRef(null);
   const profileButtonRef = useRef(null);
   const { user } = useAuth();
@@ -87,6 +87,7 @@ const Chat = () => {
             id: c.customer_id,
             conversation_id: c.conversation_id,
             name: `${c.first_name} ${c.last_name || ""}`.trim(),
+            country_code: c.country_code,
             mobile_no: c.mobile_no,
             updated_at: c.updated_at,
             image: c.profile_image,
