@@ -4,9 +4,11 @@ import Modal from "./Modal";
 import vendor from "../../assets/Vector.png";
 import { useNavigate } from "react-router-dom";
 import { API_ENDPOINTS } from "../../config/api";
-import { toast } from "react-toastify";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const ExploreTemplates = () => {
+  console.log('ExploreTemplates rendered');
   const navigate = useNavigate();
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -42,46 +44,24 @@ const ExploreTemplates = () => {
   }, [user?.customer_id]);
 
   const handleAddTemplate = async (newTemplate) => {
+    // Map camelCase JSON to backend snake_case format
+    console.log("Received from Modal:", newTemplate);
+  const requestBody = {
+    elementName: newTemplate.elementName,
+    content: newTemplate.content,
+    category: newTemplate.category,
+    templateType: newTemplate.templateType,
+    languageCode: newTemplate.languageCode,
+    header: newTemplate.header || null,
+    footer: newTemplate.footer || null,
+    buttons: newTemplate.buttons || [],
+    example: newTemplate.example,
+    exampleHeader: newTemplate.exampleHeader,
+    messageSendTTL: Number(newTemplate.messageSendTTL) || 259200,
+    customer_id: user?.customer_id,
+  };
+
     try {
-      // Clean the content to meet Gupshup requirements
-      const cleanContent = newTemplate.data
-        .replace(/[^\x00-\x7F]/g, '') // Remove non-ASCII characters (emojis, etc.)
-        .replace(/\n{3,}/g, '\n\n') // Limit consecutive newlines
-        .trim();
-      
-      // Clean the example text as well
-      const cleanExample = newTemplate.container_meta?.sampleText
-        ? newTemplate.container_meta.sampleText
-            .replace(/[^\x00-\x7F]/g, '')
-            .replace(/\n{3,}/g, '\n\n')
-            .trim()
-        : '';
-      
-      // Filter out invalid buttons
-      const validButtons = (newTemplate.container_meta?.buttons || []).filter(button => 
-        button.text && 
-        button.text.trim() && 
-        !['QUICK_REPLY', 'PHONE_NUMBER', 'URL_TITLE'].includes(button.text.trim())
-      );
-      
-      // Transform the data to match the exact API structure
-      const requestBody = {
-        elementName: newTemplate.element_name,
-        content: cleanContent,
-        category: newTemplate.category,
-        templateType: newTemplate.template_type,
-        languageCode: newTemplate.language === 'en_US' ? 'en' : newTemplate.language,
-        header: newTemplate.container_meta?.header || '',
-        footer: newTemplate.container_meta?.footer || '',
-        buttons: validButtons,
-        example: cleanExample,
-        exampleHeader: newTemplate.container_meta?.header || '',
-        messageSendTTL: "3360", // Default value
-        customer_id: user?.customer_id,
-      };
-      
-      console.log('Sending template data:', requestBody);
-      
       const response = await fetch(API_ENDPOINTS.TEMPLATES.CREATE, {
         method: 'POST',
         headers: {
@@ -91,13 +71,8 @@ const ExploreTemplates = () => {
         body: JSON.stringify(requestBody),
       });
 
-      console.log('Response status:', response.status);
-      
       const data = await response.json();
-      console.log('Response data:', data);
-      
       if (data.success) {
-        // Update local state with the saved template (including the ID from backend)
         setTemplates((prev) => [...prev, data.template || newTemplate]);
         toast.success('Template created successfully!', {
           position: "top-right",
@@ -107,8 +82,9 @@ const ExploreTemplates = () => {
           pauseOnHover: true,
           draggable: true,
         });
+        // Close modal after successful creation
+        setIsModalOpen(false);
       } else {
-        console.error('API Error:', data);
         toast.error(data.message || data.error || 'Failed to create template', {
           position: "top-right",
           autoClose: 3000,
@@ -117,9 +93,10 @@ const ExploreTemplates = () => {
           pauseOnHover: true,
           draggable: true,
         });
+        // Keep modal open on error so user can fix and retry
       }
+
     } catch (error) {
-      console.error('Error creating template:', error);
       toast.error('Failed to create template', {
         position: "top-right",
         autoClose: 3000,
@@ -128,11 +105,13 @@ const ExploreTemplates = () => {
         pauseOnHover: true,
         draggable: true,
       });
+      // Keep modal open on network error so user can retry
     }
   };
 
   return (
     <div className="p-6">
+      <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover theme="light" />
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold">Explore Templates</h2>
         <button

@@ -91,6 +91,8 @@ const Templates = () => {
   const handleEdit = (template) => {
     setEditingTemplate(template);
     setEditForm({
+      id: template.id,
+      element_name: template.element_name,
       category: template.category || '',
       header: template.container_meta?.header || '',
       footer: template.container_meta?.footer || '',
@@ -216,19 +218,38 @@ const Templates = () => {
           onClose={() => { setEditingTemplate(null); setEditForm(null); }}
           onSubmit={async (updatedTemplate) => {
             try {
-              const response = await fetch(API_ENDPOINTS.TEMPLATES.UPDATE, {
+              const requestBody = {
+                content: updatedTemplate.content,
+                category: updatedTemplate.category,
+                templateType: updatedTemplate.templateType,
+                example: updatedTemplate.example,
+                exampleHeader: updatedTemplate.exampleHeader,
+                header: updatedTemplate.header,
+                footer: updatedTemplate.footer,
+                buttons: updatedTemplate.buttons || [],
+              };
+              
+              console.log('Updating template with id:', updatedTemplate.id);
+              console.log('Update endpoint:', API_ENDPOINTS.TEMPLATES.UPDATE(updatedTemplate.id));
+              
+              const response = await fetch(API_ENDPOINTS.TEMPLATES.UPDATE(updatedTemplate.id), {
                 method: 'PUT',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({
-                  ...updatedTemplate,
-                  customer_id: user?.customer_id,
-                }),
+                body: JSON.stringify(requestBody),
               });
 
+              console.log('Response status:', response.status);
+              console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+              
+              if (!response.ok) {
+                const errorText = await response.text();
+                console.log('Error response body:', errorText);
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+              }
+              
               const data = await response.json();
+              console.log('Response data:', data);
               
               if (data.success) {
                 // Update local state with the updated template from backend
@@ -236,9 +257,13 @@ const Templates = () => {
                   prev.map((t) =>
                     t.id === updatedTemplate.id
                       ? {
-                          ...data.template || updatedTemplate,
+                          ...t,
+                          ...updatedTemplate,
+                          // Keep existing fields that might not be in the update
                           created_on: t.created_on,
-                          status: data.template?.status || updatedTemplate.status || t.status,
+                          id: t.id,
+                          element_name: t.element_name,
+                          status: t.status,
                         }
                       : t
                   )
@@ -259,14 +284,53 @@ const Templates = () => {
               }
             } catch (error) {
               console.error('Error updating template:', error);
-              toast.error('Failed to update template', {
-                position: "top-right",
-                autoClose: 3000,
-                hideProgressBar: false,
-                closeOnClick: true,
-                pauseOnHover: true,
-                draggable: true,
-              });
+              
+              // If it's a 404 error, try updating locally as a fallback
+              if (error.message.includes('HTTP 404')) {
+                console.log('Backend update endpoint not available, updating locally...');
+                
+                // Update local state
+                setTemplates((prev) =>
+                  prev.map((t) =>
+                    t.id === updatedTemplate.id
+                      ? {
+                          ...t,
+                          ...updatedTemplate,
+                          container_meta: {
+                            ...t.container_meta,
+                            header: updatedTemplate.header,
+                            footer: updatedTemplate.footer,
+                            sampleText: updatedTemplate.content,
+                          },
+                        }
+                      : t
+                  )
+                );
+                
+                setSuccessMessage("Template updated successfully! (Local update - backend endpoint not available)");
+                setTimeout(() => setSuccessMessage(""), 3000);
+                setEditingTemplate(null);
+                setEditForm(null);
+                
+                toast.warning('Template updated locally. Backend update endpoint not available.', {
+                  position: "top-right",
+                  autoClose: 5000,
+                  hideProgressBar: false,
+                  closeOnClick: true,
+                  pauseOnHover: true,
+                  draggable: true,
+                });
+              } else {
+                const errorMessage = 'Failed to update template. Please try again.';
+                toast.error(errorMessage, {
+                  position: "top-right",
+                  autoClose: 5000,
+                  hideProgressBar: false,
+                  closeOnClick: true,
+                  pauseOnHover: true,
+                  draggable: true,
+                });
+              }
             }
           }}
         />

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { z } from "zod";
-import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import DeleteConfirmationDialog from "../shared/DeleteConfirmationDialog";
 
@@ -30,7 +29,14 @@ const templateSchema = z.object({
   }),
 });
 
-const TemplateModal = ({ isOpen, onClose, onSubmit, initialValues = {}, mode = 'add' }) => {
+const TemplateModal = ({
+  isOpen,
+  onClose,
+  onSubmit,
+  initialValues = {},
+  mode = "add",
+}) => {
+  console.log('Modal rendered');
   const [templateType, setTemplateType] = useState("Text");
   const [header, setHeader] = useState("");
   const [format, setFormat] = useState("");
@@ -155,57 +161,39 @@ const TemplateModal = ({ isOpen, onClose, onSubmit, initialValues = {}, mode = '
 
   // Add a useEffect to pre-fill fields if initialValues is provided (edit mode)
   useEffect(() => {
-    if (isOpen && mode === 'edit' && initialValues && Object.keys(initialValues).length > 0) {
-      setCategory(initialValues.category || '');
-      setTemplateName(initialValues.element_name || '');
-      setLanguage(initialValues.language || 'en_US');
+    if (
+      isOpen &&
+      mode === "edit" &&
+      initialValues &&
+      Object.keys(initialValues).length > 0
+    ) {
+      setCategory(initialValues.category || "");
+      setTemplateName(initialValues.element_name || "");
+      setLanguage(initialValues.language || "en_US");
       setTemplateType(
         initialValues.template_type
-          ? initialValues.template_type.charAt(0) + initialValues.template_type.slice(1).toLowerCase()
-          : 'Text'
+          ? initialValues.template_type.charAt(0) +
+              initialValues.template_type.slice(1).toLowerCase()
+          : "Text"
       );
-      setHeader(initialValues.container_meta?.header || '');
-      setFormat(initialValues.container_meta?.data || '');
-      setFooter(initialValues.container_meta?.footer || '');
-      
-      // Extract buttons from container_meta.buttons
-      if (initialValues.container_meta?.buttons && Array.isArray(initialValues.container_meta.buttons)) {
-        const buttons = initialValues.container_meta.buttons;
-        
-        // Extract quick replies
-        const quickReplyButtons = buttons.filter(b => b.type === 'QUICK_REPLY');
-        setQuickReplies(quickReplyButtons.length > 0 ? quickReplyButtons.map(b => b.text) : ['']);
-        
-        // Extract URL CTAs
-        const urlButtons = buttons.filter(b => b.type === 'URL');
-        setUrlCtas(urlButtons.length > 0 ? urlButtons.map(b => ({ title: b.text, url: b.url || '' })) : [{ title: '', url: '' }]);
-        
-        // Extract phone CTA
-        const phoneButton = buttons.find(b => b.type === 'PHONE');
-        if (phoneButton) {
-          setPhoneCta({
-            title: phoneButton.text || '',
-            country: phoneButton.country || '',
-            number: phoneButton.number || ''
-          });
-        } else {
-          setPhoneCta({ title: '', country: '', number: '' });
-        }
-      } else {
-        // Default values if no buttons
-        setUrlCtas([{ title: '', url: '' }]);
-        setPhoneCta({ title: '', country: '', number: '' });
-        setQuickReplies(['']);
-      }
-      
-      setOfferCode(initialValues.offerCode || '');
-      setSelectedAction(initialValues.selectedAction || 'None');
+      setHeader(initialValues.container_meta?.header || "");
+      setFormat(initialValues.container_meta?.data || "");
+      setFooter(initialValues.container_meta?.footer || "");
+      setUrlCtas(initialValues.urlCtas || [{ title: "", url: "" }]);
+      setPhoneCta(
+        initialValues.phoneCta || { title: "", country: "", number: "" }
+      );
+      setQuickReplies(initialValues.quickReplies || [""]);
+      setOfferCode(initialValues.offerCode || "");
+      setSelectedAction(initialValues.selectedAction || "None");
       // Set sample values for variables
-      const formatStr = initialValues.container_meta?.data || '';
-      const sampleText = initialValues.container_meta?.sampleText || '';
+      const formatStr = initialValues.container_meta?.data || "";
+      const sampleText = initialValues.container_meta?.sampleText || "";
       const regex = /{{\s*(\d+)\s*}}/g;
       const matches = [...formatStr.matchAll(regex)];
-      const uniqueVariables = [...new Set(matches.map((match) => match[1]))].sort((a, b) => a - b);
+      const uniqueVariables = [
+        ...new Set(matches.map((match) => match[1])),
+      ].sort((a, b) => a - b);
       setVariables(uniqueVariables);
       // Prefer sampleValues if present
       if (initialValues.container_meta?.sampleValues) {
@@ -213,13 +201,13 @@ const TemplateModal = ({ isOpen, onClose, onSubmit, initialValues = {}, mode = '
       } else if (formatStr && sampleText) {
         // Try to extract values by aligning format and sampleText
         // Split both by lines
-        const formatLines = formatStr.split('\n');
-        const sampleLines = sampleText.split('\n');
+        const formatLines = formatStr.split("\n");
+        const sampleLines = sampleText.split("\n");
         const sampleValues = {};
         let varIdx = 0;
         for (let i = 0; i < formatLines.length; i++) {
           let fLine = formatLines[i];
-          let sLine = sampleLines[i] || '';
+          let sLine = sampleLines[i] || "";
           let m;
           while ((m = regex.exec(fLine)) !== null) {
             // Try to extract the value for this variable from the sample line
@@ -227,9 +215,9 @@ const TemplateModal = ({ isOpen, onClose, onSubmit, initialValues = {}, mode = '
             const before = fLine.slice(0, m.index);
             const after = fLine.slice(m.index + m[0].length);
             let value = sLine;
-            if (before) value = value.replace(before, '');
-            if (after) value = value.replace(after, '');
-            value = value.replace(/^[^\w\d]*/, '').replace(/[^\w\d]*$/, '');
+            if (before) value = value.replace(before, "");
+            if (after) value = value.replace(after, "");
+            value = value.replace(/^[^\w\d]*/, "").replace(/[^\w\d]*$/, "");
             sampleValues[m[1]] = value.trim();
             varIdx++;
           }
@@ -337,7 +325,7 @@ const TemplateModal = ({ isOpen, onClose, onSubmit, initialValues = {}, mode = '
   };
 
   const cancelExit = () => {
-    console.log("Cancel exit clicked"); 
+    console.log("Cancel exit clicked");
     setShowExitDialog(false);
   };
 
@@ -349,8 +337,15 @@ const TemplateModal = ({ isOpen, onClose, onSubmit, initialValues = {}, mode = '
   };
 
   const handleSubmit = (e) => {
+    console.log('handleSubmit called');
     e.preventDefault();
     if (!validateForm()) {
+      return;
+    }
+
+    // Ensure required fields are set
+    if (!templateName || !templateType) {
+      alert('Template Name and Template Type are required.');
       return;
     }
 
@@ -361,47 +356,42 @@ const TemplateModal = ({ isOpen, onClose, onSubmit, initialValues = {}, mode = '
     };
     const sampleText = generateSampleText(format, sampleValues);
 
-    // Convert form fields back to buttons array
+    // Convert form fields to buttons array in the expected format
     const buttons = [
       ...quickReplies.filter(reply => reply.trim() && reply.trim() !== 'QUICK_REPLY').map(text => ({ text: text.trim(), type: 'QUICK_REPLY' })),
       ...urlCtas.filter(cta => cta.title && cta.url && cta.title.trim() !== 'URL_TITLE').map(cta => ({ text: cta.title, type: 'URL', url: cta.url })),
       ...(phoneCta.title && phoneCta.number && phoneCta.title.trim() !== 'PHONE_NUMBER' ? [{ text: phoneCta.title, type: 'PHONE', country: phoneCta.country, number: phoneCta.number }] : [])
     ];
 
+    // Build the newTemplate object in camelCase with container_meta
     const newTemplate = {
-      id: initialValues.id || Date.now(),
+      elementName: templateName,
+      content: format,
       category: category,
-      element_name: templateName,
-      language: language,
-      template_type: templateType.toUpperCase(),
-      container_type:
-        templateType.toUpperCase() === "TEXT" ? "text_template" : "",
-      data: `${header}\n${format}\n${footer}`,
+      templateType: templateType ? templateType.toUpperCase() : 'TEXT',
+      languageCode: language === "en_US" ? "en" : language,
+      header: header,
+      footer: footer,
+      buttons: buttons,
+      example: sampleText,
+      exampleHeader: header,
+      messageSendTTL: "3360",
+      // Add container_meta for downstream use
       container_meta: {
         header: header,
+        footer: footer,
         data: format,
         sampleText: sampleText,
-        sampleValues: { ...sampleValues },
-        footer: footer,
-        buttons: buttons
+        sampleValues: sampleValues,
       },
-      offerCode: offerCode.trim() || null,
-      selectedAction,
     };
 
+    // Debug logs
+    console.log('DEBUG:', { templateName, templateType });
+    console.log('Submitting newTemplate:', newTemplate);
+
     onSubmit(newTemplate);
-
-    // Show success notification
-    toast.success(mode === 'edit' ? "Template updated successfully!" : "Template added successfully!", {
-      position: "top-right",
-      autoClose: 3000,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
-    });
-
-    onClose();
+    // Don't close modal here - let parent handle it after showing success/error message
   };
 
   if (!isOpen) return null;
@@ -423,7 +413,9 @@ const TemplateModal = ({ isOpen, onClose, onSubmit, initialValues = {}, mode = '
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center p-4 border-b flex-shrink-0 relative">
-          <h2 className="text-lg font-semibold">{mode === 'edit' ? 'Edit Template' : 'Add New Template'}</h2>
+          <h2 className="text-lg font-semibold">
+            {mode === "edit" ? "Edit Template" : "Add New Template"}
+          </h2>
           <button
             onClick={handleClose}
             className="absolute top-2 right-4 text-gray-600 hover:text-black text-3xl font-bold w-8 h-8 flex items-center justify-center pb-2 rounded-full transition-colors cursor-pointer bg-gray-100"
@@ -473,7 +465,7 @@ const TemplateModal = ({ isOpen, onClose, onSubmit, initialValues = {}, mode = '
                         setTemplateName(e.target.value);
                         validateField("templateName", e.target.value);
                       }}
-                      disabled={mode === 'edit'}
+                      disabled={mode === "edit"}
                     />
                     {errors.templateName && (
                       <p className="text-red-500 text-sm mt-1">
@@ -582,6 +574,20 @@ const TemplateModal = ({ isOpen, onClose, onSubmit, initialValues = {}, mode = '
                         if (e.target.value.length <= 1024) {
                           setFormat(e.target.value);
                           validateField("format", e.target.value);
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          const cursorPosition = e.target.selectionStart;
+                          const textBefore = format.substring(0, cursorPosition);
+                          const textAfter = format.substring(cursorPosition);
+                          const newText = textBefore + '\n' + textAfter;
+                          setFormat(newText);
+                          // Set cursor position after the newline
+                          setTimeout(() => {
+                            e.target.setSelectionRange(cursorPosition + 1, cursorPosition + 1);
+                          }, 0);
                         }
                       }}
                     ></textarea>
@@ -926,7 +932,7 @@ const TemplateModal = ({ isOpen, onClose, onSubmit, initialValues = {}, mode = '
                     onClick={handleSubmit}
                     className="bg-[#05a3a3] text-white px-6 py-2 rounded font-semibold hover:cursor-pointer"
                   >
-                    {mode === 'edit' ? 'Update' : 'Add'}
+                    {mode === "edit" ? "Update" : "Add"}
                   </button>
                   <button
                     type="button"
@@ -1088,8 +1094,6 @@ const TemplateModal = ({ isOpen, onClose, onSubmit, initialValues = {}, mode = '
         </div>
       )}
 
-      {/* Toast Container */}
-      <ToastContainer />
     </div>
   );
 };
