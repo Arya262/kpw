@@ -1,4 +1,5 @@
-export const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000';
+export const API_BASE =
+  import.meta.env.VITE_API_BASEz || "http://localhost:3000";
 
 export const API_ENDPOINTS = {
   BROADCASTS: {
@@ -10,9 +11,10 @@ export const API_ENDPOINTS = {
     ADD_SINGLE: `${API_BASE}/addcustomer`,
     ADD_MULTIPLE: `${API_BASE}/addcustomers`,
     GET_ALL: `${API_BASE}/contacts`,
-    GET_CONVERSATION_ID: (customerId) => `${API_BASE}/conversationid?contact_id=${customerId}`,
+    GET_CONVERSATION_ID: (customerId) =>
+      `${API_BASE}/conversationid?contact_id=${customerId}`,
     DELETE: `${API_BASE}/deletecontact`,
-    UPDATE: `${API_BASE}/updatecontact`
+    UPDATE: `${API_BASE}/updatecontact`,
   },
   CHAT: {
     CONVERSATIONS: `${API_BASE}/conversations`,
@@ -29,19 +31,28 @@ export const API_ENDPOINTS = {
   },
   GROUPS: {
     GET_ALL: `${API_BASE}/returnGroups`,
+    CREATE: `${API_BASE}/createGroup`,
+    UPDATE: `${API_BASE}/updateGroup`,
+    DELETE: `${API_BASE}/deleteGroup`,
+    GET_CONTACTS: (groupId) => `${API_BASE}/groupContacts?group_id=${groupId}`,
   },
   EXTERNAL: {
-    COUNTRY_CODES: 'https://countriesnow.space/api/v0.1/countries/codes',
+    COUNTRY_CODES: "https://countriesnow.space/api/v0.1/countries/codes",
   },
   AUTH: {
     LOGOUT: `${API_BASE}/logout`,
     LOGIN: `${API_BASE}/login`,
     ME: `${API_BASE}/me`,
+    REGISTER: `${API_BASE}/register`,
   },
   CREDIT: {
     GRAPH: `${API_BASE}/creditUsage`,
   },
+  RAZORPAY: {
+    CREATE_ORDER: `${API_BASE}/create-payment`,
+    VERIFY_PAYMENT: `${API_BASE}/verify-payment`,
+  },
   WHATSAPP: {
-    NUMBERS: "/api/whatsapp/numbers"
-  }
+    NUMBERS: "/api/whatsapp/numbers",
+  },
 };
