@@ -99,7 +99,7 @@ const DashboardHome = () => {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID,
         amount: order.amount,
         currency: "INR",
-        name: user?.company_name || "", // ✅ dynamic name
+        name: user?.company_name || "FoodChow", // ✅ dynamic name
         description: "Add Credit",
         image: user?.company_logo || undefined, // ✅ optional logo
         order_id: order.id,
@@ -121,7 +121,7 @@ const DashboardHome = () => {
           email: user?.email || "",
           contact: user?.phone || "",
         },
-        theme: { color: "#3399cc" },
+        theme: { color: "#05a3a3" },
         modal: {
           ondismiss: () => setPaymentLoading(false),
         },
