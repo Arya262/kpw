@@ -1,8 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { Send, X, Paperclip, FileText } from "lucide-react";
 import SendTemplate from "./chatfeautures/SendTemplate";
-import Picker from "@emoji-mart/react";
-import data from "@emoji-mart/data";
+import EmojiPicker from "emoji-picker-react";
 
 const MessageInput = ({ onSendMessage, selectedContact }) => {
   const [message, setMessage] = useState("");
@@ -11,6 +10,7 @@ const MessageInput = ({ onSendMessage, selectedContact }) => {
   const [attachments, setAttachments] = useState([]);
   const [caption, setCaption] = useState("");
   const [selectedImageIdx, setSelectedImageIdx] = useState(0);
+  const [activeFormatting, setActiveFormatting] = useState({ bold: false, italic: false, strikethrough: false, link: false });
   const inputRef = useRef();
   const fileInputRef = useRef();
   const modalRef = useRef();
@@ -80,14 +80,14 @@ const MessageInput = ({ onSendMessage, selectedContact }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showTemplates]);
 
-  const handleEmojiSelect = (emoji) => {
+  const handleEmojiSelect = (emojiObject) => {
     const cursorPos = inputRef.current.selectionStart;
     const textBefore = message.substring(0, cursorPos);
     const textAfter = message.substring(cursorPos);
-    setMessage(textBefore + emoji.native + textAfter);
+    setMessage(textBefore + emojiObject.emoji + textAfter);
     setTimeout(() => {
       inputRef.current.focus();
-      inputRef.current.selectionEnd = cursorPos + emoji.native.length;
+      inputRef.current.selectionEnd = cursorPos + emojiObject.emoji.length;
     }, 0);
   };
 
@@ -104,11 +104,99 @@ const MessageInput = ({ onSendMessage, selectedContact }) => {
     setAttachments((prev) => prev.filter((_, i) => i !== index));
   };
 
+  // Formatting handlers
+  const handleFormatting = (formatType) => {
+    if (!inputRef.current || !isWithin24Hours) return;
+    
+    const textarea = inputRef.current;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = message.substring(start, end);
+    
+    let formattedText = "";
+    let newCursorPos = start;
+    
+    switch (formatType) {
+      case "bold":
+        formattedText = `*${selectedText}*`;
+        newCursorPos = start + 1;
+        break;
+      case "italic":
+        formattedText = `_${selectedText}_`;
+        newCursorPos = start + 1;
+        break;
+      case "strikethrough":
+        formattedText = `~${selectedText}~`;
+        newCursorPos = start + 1;
+        break;
+      case "link":
+        if (selectedText) {
+          formattedText = `[${selectedText}](url)`;
+          newCursorPos = start + selectedText.length + 3; // Position after the text, before the URL
+        } else {
+          formattedText = "[link text](url)";
+          newCursorPos = start + 10; // Position after "link text"
+        }
+        break;
+      default:
+        return;
+    }
+    
+    const newMessage = message.substring(0, start) + formattedText + message.substring(end);
+    setMessage(newMessage);
+    
+    // Set cursor position after formatting
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
+  };
+
   // Update selectedImageIdx if attachments change
   useEffect(() => {
     if (attachments.length === 0) setSelectedImageIdx(0);
     else if (selectedImageIdx >= attachments.length) setSelectedImageIdx(0);
   }, [attachments, selectedImageIdx]);
+
+  // Detect current formatting at cursor position
+  const detectFormatting = () => {
+    if (!inputRef.current) return;
+    
+    const textarea = inputRef.current;
+    const cursorPos = textarea.selectionStart;
+    const text = message;
+    
+    // Check for formatting markers around cursor position
+    const beforeCursor = text.substring(0, cursorPos);
+    const afterCursor = text.substring(cursorPos);
+    
+    // Check for bold (*text*)
+    const boldMatch = beforeCursor.match(/\*[^*]*$/);
+    const boldEndMatch = afterCursor.match(/^[^*]*\*/);
+    const isBold = boldMatch && boldEndMatch;
+    
+    // Check for italic (_text_)
+    const italicMatch = beforeCursor.match(/_[^_]*$/);
+    const italicEndMatch = afterCursor.match(/^[^_]*_/);
+    const isItalic = italicMatch && italicEndMatch;
+    
+    // Check for strikethrough (~text~)
+    const strikethroughMatch = beforeCursor.match(/~[^~]*$/);
+    const strikethroughEndMatch = afterCursor.match(/^[^~]*~/);
+    const isStrikethrough = strikethroughMatch && strikethroughEndMatch;
+    
+    // Check for link ([text](url))
+    const linkMatch = beforeCursor.match(/\[[^\]]*$/);
+    const linkEndMatch = afterCursor.match(/^[^\]]*\]\([^)]*\)/);
+    const isLink = linkMatch && linkEndMatch;
+    
+    setActiveFormatting({
+      bold: isBold,
+      italic: isItalic,
+      strikethrough: isStrikethrough,
+      link: isLink
+    });
+  };
 
   // Helper: get all image attachments
   const imageAttachments = attachments.filter(att => att.file.type.startsWith("image/"));
@@ -154,7 +242,13 @@ const MessageInput = ({ onSendMessage, selectedContact }) => {
               {/* Caption input always below large preview (if any) */}
               <textarea
                 value={caption}
-                onChange={e => setCaption(e.target.value)}
+                onChange={e => {
+                  setCaption(e.target.value);
+                  setTimeout(detectFormatting, 0);
+                }}
+                onKeyUp={detectFormatting}
+                onMouseUp={detectFormatting}
+                onSelect={detectFormatting}
                 placeholder="Caption (optional)"
                 className="w-full text-sm border border-gray-300 rounded-lg px-4 py-2 mb-2 focus:outline-none focus:ring-1 focus:ring-teal-500 resize-none"
                 rows={1}
@@ -226,7 +320,10 @@ const MessageInput = ({ onSendMessage, selectedContact }) => {
           )}
           {showEmojiPicker && (
             <div className="absolute left-0 bottom-full mb-2 z-50">
-              <Picker data={data} onEmojiSelect={handleEmojiSelect} theme="light" />
+              <EmojiPicker
+                onEmojiClick={handleEmojiSelect}
+                theme="light"
+              />
             </div>
           )}
           <form
@@ -245,10 +342,58 @@ const MessageInput = ({ onSendMessage, selectedContact }) => {
             </button>
             {/* Formatting buttons */}
             <div className="flex items-center h-10 bg-white border-t border-b border-gray-300 px-1">
-              <button type="button" className="px-1 text-gray-500 hover:text-teal-500" tabIndex={-1} disabled={!isWithin24Hours}><b>B</b></button>
-              <button type="button" className="px-1 text-gray-500 hover:text-teal-500" tabIndex={-1} disabled={!isWithin24Hours}><i>I</i></button>
-              <button type="button" className="px-1 text-gray-500 hover:text-teal-500" tabIndex={-1} disabled={!isWithin24Hours}><s>S</s></button>
-              <button type="button" className="px-1 text-gray-500 hover:text-teal-500" tabIndex={-1} disabled={!isWithin24Hours}><u>🔗</u></button>
+              <button 
+                type="button" 
+                className={`px-2 py-1 rounded text-sm font-medium transition-colors ${
+                  activeFormatting.bold 
+                    ? 'bg-teal-100 text-teal-700' 
+                    : 'text-gray-500 hover:text-teal-500 hover:bg-gray-50'
+                }`}
+                onClick={() => handleFormatting('bold')}
+                disabled={!isWithin24Hours}
+                title="Bold"
+              >
+                <b>B</b>
+              </button>
+              <button 
+                type="button" 
+                className={`px-2 py-1 rounded text-sm font-medium transition-colors ${
+                  activeFormatting.italic 
+                    ? 'bg-teal-100 text-teal-700' 
+                    : 'text-gray-500 hover:text-teal-500 hover:bg-gray-50'
+                }`}
+                onClick={() => handleFormatting('italic')}
+                disabled={!isWithin24Hours}
+                title="Italic"
+              >
+                <i>I</i>
+              </button>
+              <button 
+                type="button" 
+                className={`px-2 py-1 rounded text-sm font-medium transition-colors ${
+                  activeFormatting.strikethrough 
+                    ? 'bg-teal-100 text-teal-700' 
+                    : 'text-gray-500 hover:text-teal-500 hover:bg-gray-50'
+                }`}
+                onClick={() => handleFormatting('strikethrough')}
+                disabled={!isWithin24Hours}
+                title="Strikethrough"
+              >
+                <s>S</s>
+              </button>
+              <button 
+                type="button" 
+                className={`px-2 py-1 rounded text-sm font-medium transition-colors ${
+                  activeFormatting.link 
+                    ? 'bg-teal-100 text-teal-700' 
+                    : 'text-gray-500 hover:text-teal-500 hover:bg-gray-50'
+                }`}
+                onClick={() => handleFormatting('link')}
+                disabled={!isWithin24Hours}
+                title="Add Link"
+              >
+                🔗
+              </button>
             </div>
             <button
               type="button"
@@ -274,7 +419,13 @@ const MessageInput = ({ onSendMessage, selectedContact }) => {
               <textarea
                 ref={inputRef}
                 value={message}
-                onChange={(e) => setMessage(e.target.value)}
+                onChange={(e) => {
+                  setMessage(e.target.value);
+                  setTimeout(detectFormatting, 0);
+                }}
+                onKeyUp={detectFormatting}
+                onMouseUp={detectFormatting}
+                onSelect={detectFormatting}
                 placeholder={
                   isTextDisabled
                     ? "Conversation expired. Please send templates."

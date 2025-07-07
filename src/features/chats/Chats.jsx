@@ -325,16 +325,16 @@ const Chat = () => {
     try {
       console.log("Deleting chat for logged-in customer_id:", authCustomerId);
 
-      const response = await fetch("http://localhost:3000/deleteconversations", {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          conversation_ids: [conversationId],
-          customer_id: authCustomerId,
-        }),
-      });
+        const response = await fetch(API_ENDPOINTS.CHAT.DELETE_CONVERSATION, {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            conversation_ids: [conversationId],
+            customer_id: authCustomerId,
+          }),
+        });
 
       const result = await response.json();
       console.log("API Response:", result);
