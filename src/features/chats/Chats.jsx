@@ -4,7 +4,6 @@ import { useLocation } from "react-router-dom";
 import axios from "axios";
 import { useSocket } from "../../context/SocketContext";
 import { API_BASE, API_ENDPOINTS } from "../../config/api";
-
 import ChatSidebar from "./chatSiderbar";
 import ChatHeader from "./ChatHeader";
 import ChatMessageArea from "./ChatMessages";

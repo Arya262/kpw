@@ -1,10 +1,33 @@
 import React, { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, useMotionValue, useTransform, animate } from "framer-motion";
 import MessagingAnalytics from "./MessagingAnalytics.jsx";
 import { Wallet, Banknote, PiggyBank, Crown, Plus } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { API_ENDPOINTS } from "../../config/api";
 import AddCreditModal from "./AddCreditModal";
+
+// 🎯 Reusable animated number component using Framer Motion only
+const AnimatedNumber = ({ value, duration = 1.2 }) => {
+  const count = useMotionValue(0);
+  const formatted = useTransform(count, (latest) =>
+    Math.floor(latest).toLocaleString()
+  );
+  const [display, setDisplay] = useState("0");
+
+  useEffect(() => {
+    const controls = animate(count, value, {
+      duration,
+      ease: "easeOut",
+    });
+    const unsubscribe = formatted.on("change", (latest) => setDisplay(latest));
+    return () => {
+      controls.stop();
+      unsubscribe();
+    };
+  }, [value]);
+
+  return <motion.span>{display}</motion.span>;
+};
 
 const DashboardHome = () => {
   const [summary, setSummary] = useState({
@@ -22,35 +45,33 @@ const DashboardHome = () => {
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
 
+  const fetchSummary = async () => {
+    try {
+      const res = await fetch(
+        `${API_ENDPOINTS.CREDIT.GRAPH}?customer_id=${user.customer_id}`,
+        { credentials: "include" }
+      );
+      const data = await res.json();
+      setSummary({
+        total_credit: data.total_credit,
+        total_credit_remaining: data.total_credit_remaining,
+        total_credit_consumed: data.total_credit_consumed,
+        plan_type: "Premium",
+      });
+      setUsageHistory(data.usage_history || []);
+    } catch (err) {
+      console.error("Failed to load summary:", err);
+    }
+  };
+
   useEffect(() => {
-    if (!user?.customer_id) return;
-
-    const fetchSummary = async () => {
-      try {
-        const res = await fetch(
-          `${API_ENDPOINTS.CREDIT.GRAPH}?customer_id=${user.customer_id}`,
-          { credentials: "include" }
-        );
-        const data = await res.json();
-        setSummary({
-          total_credit: data.total_credit,
-          total_credit_remaining: data.total_credit_remaining,
-          total_credit_consumed: data.total_credit_consumed,
-          plan_type: "Premium",
-        });
-        setUsageHistory(data.usage_history || []);
-      } catch (err) {
-        console.error("Failed to load summary:", err);
-      }
-    };
-
-    fetchSummary();
+    if (user?.customer_id) fetchSummary();
   }, [user?.customer_id]);
 
   const stats = [
-    { title: "Total Credit", icon: Wallet, value: `${summary.total_credit}`, gradient: "gradient-1" },
-    { title: "Used Credit", icon: Banknote, value: `${summary.total_credit_consumed}`, gradient: "gradient-2" },
-    { title: "Remaining Credit", icon: PiggyBank, value: `${summary.total_credit_remaining}`, gradient: "gradient-3" },
+    { title: "Total Credit", icon: Wallet, value: summary.total_credit, gradient: "gradient-1" },
+    { title: "Used Credit", icon: Banknote, value: summary.total_credit_consumed, gradient: "gradient-2" },
+    { title: "Remaining Credit", icon: PiggyBank, value: summary.total_credit_remaining, gradient: "gradient-3" },
     { title: "Plan Type", icon: Crown, value: summary.plan_type, gradient: "gradient-4" },
   ];
 
@@ -99,9 +120,9 @@ const DashboardHome = () => {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID,
         amount: order.amount,
         currency: "INR",
-        name: user?.company_name || "", // ✅ dynamic name
+        name: user?.company_name || "FoodChow",
+        image: user?.company_logo || undefined,
         description: "Add Credit",
-        image: user?.company_logo || undefined, // ✅ optional logo
         order_id: order.id,
         handler: async (response) => {
           await fetch(API_ENDPOINTS.RAZORPAY.VERIFY_PAYMENT, {
@@ -116,6 +137,7 @@ const DashboardHome = () => {
 
           setPaymentSuccess(true);
           setPaymentLoading(false);
+          fetchSummary();
         },
         prefill: {
           email: user?.email || "",
@@ -141,15 +163,15 @@ const DashboardHome = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 text-center md:text-left">
         <h2 className="text-2xl md:text-3xl font-bold text-gray-800">Dashboard</h2>
-        <button
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           className="bg-teal-500 hover:bg-teal-600 text-white flex items-center justify-center gap-2 px-4 py-2 rounded text-sm md:text-base cursor-pointer"
           onClick={() => setShowAddCredit(true)}
         >
-          <div className="w-5 h-5">
-            <Plus className="w-full h-full" />
-          </div>
+          <Plus className="w-5 h-5" />
           Add Credit
-        </button>
+        </motion.button>
       </div>
 
       {/* Summary Cards */}
@@ -166,7 +188,9 @@ const DashboardHome = () => {
               <Icon className="w-8 h-8" />
             </div>
             <h3 className="text-lg font-semibold">{title}</h3>
-            <p className="text-xl font-bold">{value}</p>
+            <p className="text-xl font-bold">
+              {typeof value === "number" ? <AnimatedNumber value={value} /> : value}
+            </p>
           </motion.div>
         ))}
       </div>
