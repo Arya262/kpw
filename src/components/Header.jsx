@@ -4,9 +4,10 @@ import { Menu, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API_ENDPOINTS } from "../config/api";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify"; // No need to import ToastContainer here
 import "react-toastify/dist/ReactToastify.css";
 import WhatsAppSearchPanel from "../components/WhatsAppSearchPanel";
+import NotificationBell from "./NotificationBell";
 
 export default function Header({ isMenuOpen, onToggleSidebar }) {
   const [searchTerm, setSearchTerm] = useState("");
@@ -73,7 +74,6 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
 
   return (
     <>
-      <ToastContainer />
       <header className="sticky top-0 z-50 flex flex-wrap justify-between items-center px-4 py-4 shadow-md bg-white relative gap-y-2">
         {/* Left Side */}
         <div className="flex items-center gap-2">
@@ -99,8 +99,8 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
         </div>
 
         {/* Right Side */}
-        <div className="flex items-center gap-2 flex-nowrap w-auto max-w-full overflow-hidden">
-          {/* Full Search Bar for Desktop & Tablet */}
+        <div className="flex items-center gap-2 flex-nowrap w-auto max-w-full">
+          {/* Full Search Bar */}
           <div
             className="hidden sm:flex items-center gap-2 bg-[#f0f2f5] rounded-full px-4 py-2 w-auto min-w-[220px] relative cursor-pointer"
             aria-label="Search WhatsApp number"
@@ -148,6 +148,11 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
             onClick={fetchWhatsAppNumbers}
           >
             <FaSearch className="text-gray-500" />
+          </div>
+
+          {/* Notification Bell */}
+          <div className="relative z-50">
+            <NotificationBell />
           </div>
 
           {/* Buttons */}
