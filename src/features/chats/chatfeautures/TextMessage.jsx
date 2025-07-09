@@ -1,40 +1,35 @@
-import { Check, CheckCheck } from "lucide-react";
+import MessageStatusIcon from "./MessageStatusIcon";
 
 const TextMessage = ({ msg, sent }) => {
-  const bubbleColor = sent ? "bg-[#dcf8c6]" : "bg-[#f0f0f0]";
-  const textColor = "text-black";
-  const tailClass = sent ? "tail-right" : "tail-left";
-
-  // Determine the tick icon and style based on message status
-  const renderStatusIcon = () => {
-    if (!sent) return null;
-
-    const isRead = msg.status === "read";
-    const isDelivered = msg.status === "delivered";
-    const isSent = msg.status === "sent";
-
-    return (
-      <span
-        className={`ml-1 leading-none transition-colors duration-300 ease-in-out ${
-          isRead ? "text-blue-500" : "text-gray-400"
-        }`}
-        title={msg.status.charAt(0).toUpperCase() + msg.status.slice(1)}
-      >
-        {isSent && <Check size={12} />}
-        {(isDelivered || isRead) && <CheckCheck size={12} />}
-      </span>
-    );
-  };
+  const bubbleBg = sent ? "#dcf8c6" : "#f0f0f0";
+  const tailAlignment = sent ? "right-[-4px]" : "left-[-4px]";
+  const tailPath = sent
+    ? "M0 0 Q10 20 20 0"   // Tail points leftward (for right-side bubble)
+    : "M20 0 Q10 20 0 0";  // Tail points rightward (for left-side bubble)
 
   return (
-    <div className={`relative flex ${sent ? "justify-end" : "justify-start"}`}>
-      <div
-        className={`relative inline-block max-w-[60%] px-4 pt-2 pb-[6px] rounded-2xl text-sm leading-snug shadow-sm ${bubbleColor} ${textColor} ${tailClass}`}
-      >
-        <p className="whitespace-pre-wrap break-words">{msg.content}</p>
-        <div className="flex justify-end items-center space-x-1 mt-1">
-          <span className="text-[10px] text-gray-500">{msg.sent_at}</span>
-          {renderStatusIcon()}
+    <div className={`relative flex ${sent ? "justify-end" : "justify-start"} px-2`}>
+      <div className="relative max-w-[60%]">
+        {/* SVG Tail */}
+        <svg
+          className={`absolute top-1 ${tailAlignment}`}
+          width="20"
+          height="20"
+          viewBox="0 0 20 20"
+        >
+          <path d={tailPath} fill={bubbleBg} />
+        </svg>
+
+        {/* Bubble */}
+        <div
+          className="bg-white rounded-2xl px-4 pt-2 pb-[6px] text-sm leading-snug shadow-sm"
+          style={{ backgroundColor: bubbleBg }}
+        >
+          <p className="whitespace-pre-wrap break-words text-black">{msg.content}</p>
+          <div className="flex justify-end items-center space-x-1 mt-1">
+            <span className="text-[10px] text-gray-500">{msg.sent_at}</span>
+            {sent && <MessageStatusIcon status={msg.status} />}
+          </div>
         </div>
       </div>
     </div>

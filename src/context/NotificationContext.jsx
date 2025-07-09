@@ -12,6 +12,8 @@ import notificationService from "../utils/notificationService";
 
 const NotificationContext = createContext(null);
 
+const SOUND_PATH = "/sound/notification.mp3"; // ✅ Centralized sound path
+
 export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -23,9 +25,9 @@ export const NotificationProvider = ({ children }) => {
   const lastNotificationTime = useRef({});
   const lastSoundTime = useRef(0);
 
-  // ✅ Set custom .mp3 sound (defaults to /notification.mp3)
+  // ✅ Set custom .mp3 sound
   useEffect(() => {
-    notificationService.setCustomAudio("/notification.mp3");
+    notificationService.setCustomAudio(SOUND_PATH);
   }, []);
 
   const playSound = async () => {
@@ -100,7 +102,7 @@ export const NotificationProvider = ({ children }) => {
   // ✅ Preload audio safely (without .play())
   useEffect(() => {
     const preloadSound = () => {
-      const s = new Audio("/notification.mp3");
+      const s = new Audio(SOUND_PATH);
       s.load();
       document.removeEventListener("click", preloadSound);
     };
@@ -165,7 +167,6 @@ export const NotificationProvider = ({ children }) => {
     setIsNotificationEnabled(newState);
   };
 
-  // ✅ Include `addAlert` so SocketContext can call it
   const contextValue = useMemo(
     () => ({
       unreadCount,
@@ -175,7 +176,7 @@ export const NotificationProvider = ({ children }) => {
       markAllNotificationsAsRead,
       clearAllNotifications,
       toggleNotifications,
-      addAlert: handleIncomingMessage, // <-- this is critical
+      addAlert: handleIncomingMessage, 
     }),
     [unreadCount, notifications, isNotificationEnabled]
   );

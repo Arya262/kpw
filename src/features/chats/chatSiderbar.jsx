@@ -1,11 +1,14 @@
 import { IoSearchOutline } from "react-icons/io5";
+import { useMemo } from "react";
 
+// Utility: Generate avatar background color based on name
 const getAvatarColor = (name = "User") => {
   const hash = [...name].reduce((acc, char) => acc + char.charCodeAt(0), 0);
   const hue = hash % 360;
   return `hsl(${hue}, 70%, 50%)`;
 };
 
+// Utility: Format timestamp into readable string
 const formatLastMessageTime = (timestamp) => {
   if (!timestamp) return "";
 
@@ -24,9 +27,7 @@ const formatLastMessageTime = (timestamp) => {
       .toLowerCase();
   }
 
-  if (date.toDateString() === yesterday.toDateString()) {
-    return "Yesterday";
-  }
+  if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
 
   if (date.getFullYear() === now.getFullYear()) {
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -39,29 +40,47 @@ const formatLastMessageTime = (timestamp) => {
   });
 };
 
+// Utility: Return last message preview based on type
 const getMessagePreview = (message, type) => {
   if (!message && !type) return null;
 
   if (message && type === "text") return message;
 
   switch (type) {
-    case "image":
-      return "📷 Photo";
-    case "video":
-      return "🎥 Video";
-    case "document":
-      return "📄 Document";
-    case "audio":
-      return "🎵 Audio";
-    case "location":
-      return "📍 Location";
-    case "contact":
-      return "👤 Contact";
-    case "template":
-      return "📋 Template";
-    default:
-      return message || "";
+    case "image": return "📷 Photo";
+    case "video": return "🎥 Video";
+    case "document": return "📄 Document";
+    case "audio": return "🎵 Audio";
+    case "location": return "📍 Location";
+    case "contact": return "👤 Contact";
+    case "template": return "📋 Template";
+    default: return message || "";
   }
+};
+
+// Reusable Avatar component
+const Avatar = ({ name = "User", image }) => {
+  const firstLetter = name.charAt(0).toUpperCase();
+  const bgColor = getAvatarColor(name);
+
+  if (image) {
+    return (
+      <img
+        src={image}
+        alt="User Avatar"
+        className="w-10 h-10 rounded-full object-cover mr-4"
+      />
+    );
+  }
+
+  return (
+    <div
+      className="w-10 h-10 rounded-full mr-4 flex items-center justify-center text-white font-semibold"
+      style={{ backgroundColor: bgColor }}
+    >
+      {firstLetter}
+    </div>
+  );
 };
 
 const ChatSidebar = ({
@@ -71,34 +90,11 @@ const ChatSidebar = ({
   onSearchChange,
   onSelectContact,
 }) => {
-  const filteredContacts = (contacts || []).filter((c) =>
-    c.name?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const renderAvatar = (contact) => {
-    const name = contact?.name || "User";
-    const firstLetter = name.charAt(0).toUpperCase();
-    const bgColor = getAvatarColor(name);
-
-    if (contact.image) {
-      return (
-        <img
-          src={contact.image}
-          alt="User Avatar"
-          className="w-10 h-10 rounded-full object-cover mr-4"
-        />
-      );
-    }
-
-    return (
-      <div
-        className="w-10 h-10 rounded-full mr-4 flex items-center justify-center text-white font-semibold"
-        style={{ backgroundColor: bgColor }}
-      >
-        {firstLetter}
-      </div>
+  const filteredContacts = useMemo(() => {
+    return (contacts || []).filter((c) =>
+      c.name?.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  };
+  }, [contacts, searchQuery]);
 
   return (
     <div className="w-full h-full flex flex-col bg-white border-r border-gray-200 p-4">
@@ -127,7 +123,8 @@ const ChatSidebar = ({
             return (
               <div
                 key={contact.conversation_id ?? `contact-${index}`}
-                role="button"
+                role="listitem"
+                aria-selected={isSelected}
                 tabIndex={0}
                 onClick={() => onSelectContact(contact)}
                 onKeyDown={(e) => {
@@ -136,38 +133,46 @@ const ChatSidebar = ({
                     onSelectContact(contact);
                   }
                 }}
-                className={`flex items-center px-2 py-1 w-full max-w-full rounded-xl transition focus:outline-none cursor-pointer bg-white
-                  ${isSelected
-                    ? "border border-[#0AA89E] bg-gray-100"
-                    : "border border-[#E0E0E0] hover:bg-gray-100"
+                className={`flex items-center px-2 py-1 w-full max-w-full rounded-xl transition focus:outline-none cursor-pointer
+                  border ${
+                    isSelected
+                      ? "border-[#0AA89E] bg-gray-100"
+                      : "border border-[#E0E0E0] hover:bg-gray-100"
                   }`}
               >
                 {/* Avatar */}
-                <div className="shrink-0">{renderAvatar(contact)}</div>
+                <div className="shrink-0">
+                  <Avatar name={contact.name} image={contact.image} />
+                </div>
 
                 {/* Contact Details */}
                 <div className="flex-1 min-w-0 overflow-hidden">
-                  <div className="flex justify-between items-center space-x-2">
+                  <div className="flex justify-between items-start space-x-2">
                     <p className="font-semibold text-black truncate max-w-[160px]">
                       {contact.name || "Unnamed"}
                     </p>
-                    <p className="text-xs text-gray-500 select-none shrink-0">
-                      {formatLastMessageTime(contact.lastMessageTime)}
-                    </p>
-                  </div>
-
-                  <div className="w-full overflow-hidden">
-                    <p className="text-sm text-gray-500 truncate mt-0.5">
-                      {getMessagePreview(
-                        contact.lastMessage,
-                        contact.lastMessageType
-                      ) || (
-                        <span className="italic text-gray-400">
-                          No messages yet
+                    <div className="flex flex-col items-end min-w-[50px] text-right">
+                      <p className="text-xs text-gray-500 select-none">
+                        {formatLastMessageTime(contact.lastMessageTime)}
+                      </p>
+                      {contact.unreadCount > 0 && (
+                        <span className="mt-1 inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold leading-none text-white bg-[#24AEAE] rounded-full transition-transform transform duration-200 scale-100">
+                          {contact.unreadCount}
                         </span>
                       )}
-                    </p>
+                    </div>
                   </div>
+
+                  <p className="text-sm text-gray-500 truncate mt-0.5">
+                    {getMessagePreview(
+                      contact.lastMessage,
+                      contact.lastMessageType
+                    ) || (
+                      <span className="italic text-gray-400">
+                        No messages yet
+                      </span>
+                    )}
+                  </p>
                 </div>
               </div>
             );
