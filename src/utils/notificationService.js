@@ -7,6 +7,7 @@ class NotificationService {
   constructor() {
     this.audioContext = null;
     this.customAudioUrl = null;
+    this.customAudioElement = null; // ✅ Cached audio element
     this.initAudio();
   }
 
@@ -37,6 +38,9 @@ class NotificationService {
 
   setCustomAudio(url) {
     this.customAudioUrl = url;
+    this.customAudioElement = new Audio(url);  // ✅ Cache audio
+    this.customAudioElement.volume = 0.5;
+    this.customAudioElement.load();            // ✅ Preload
   }
 
   async playNotificationSound() {
@@ -48,11 +52,11 @@ class NotificationService {
 
       await this.resumeAudioContextIfNeeded();
 
-      if (this.customAudioUrl) {
-        const audio = new Audio(this.customAudioUrl);
-        audio.volume = 0.5;
-        await audio.play();
+      if (this.customAudioElement) {
+        this.customAudioElement.currentTime = 0;  // ✅ Rewind before play
+        await this.customAudioElement.play();
       } else {
+        // ✅ Fallback beep
         const oscillator = this.audioContext.createOscillator();
         const gainNode = this.audioContext.createGain();
 
@@ -94,13 +98,15 @@ class NotificationService {
     }
   }
 
+  // ✅ Toast now delayed to avoid React DOM race condition
   showInAppNotification(message, type = "info", options = {}) {
-    // ✅ Uses react-toastify for in-app notifications
-    if (toast[type]) {
-      toast[type](message, options);
-    } else {
-      toast(message, options);
-    }
+    setTimeout(() => {
+      if (toast[type]) {
+        toast[type](message, options);
+      } else {
+        toast(message, options);
+      }
+    }, 0);
   }
 
   updateTabTitle(unreadCount, appName = APP_NAME) {
@@ -114,6 +120,7 @@ class NotificationService {
       try {
         const permission = await Notification.requestPermission();
         console.log("🔔 Notification permission:", permission);
+        return permission;
       } catch (e) {
         console.warn("❌ Notification permission failed:", e.message);
       }
@@ -131,14 +138,14 @@ class NotificationService {
     console.log("🔈 Notification permission:", Notification.permission);
     console.log("🔈 Page hidden:", document.hidden);
     
-    // Always play sound and show in-app notification
+    // ✅ Always play sound and show toast
     await this.playNotificationSound();
     this.showInAppNotification(
       `${contactName}: ${message.content || "New message"}`,
       "success"
     );
 
-    // Show browser notification only if page is not focused
+    // ✅ Show browser notification only if tab is not focused
     if (!this.isPageFocused()) {
       this.showBrowserNotification(
         contactName,

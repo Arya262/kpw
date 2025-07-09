@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useMemo } from "react";
 import TextMessage from "./chatfeautures/TextMessage";
 import ImageMessage from "./chatfeautures/ImageMessage";
 import VideoMessage from "./chatfeautures/VideoMessage";
@@ -37,10 +37,14 @@ const ChatMessages = ({ selectedContact, messages = [], isTyping }) => {
     }, {});
   };
 
-  const groupedMessages = groupMessagesByDate(messages);
+  const groupedMessages = useMemo(() => groupMessagesByDate(messages), [messages]);
+
+  const isSentByUser = (msg) => {
+    return msg.status !== "received";
+  };
 
   const renderMessage = (msg, index) => {
-    const sent = msg.status !== "received";
+    const sent = isSentByUser(msg);
     const time = msg.sent_at
       ? new Date(msg.sent_at).toLocaleTimeString("en-US", {
           hour: "numeric",
@@ -80,24 +84,34 @@ const ChatMessages = ({ selectedContact, messages = [], isTyping }) => {
   };
 
   return (
-    <div className="flex flex-col min-h-0 h-full space-y-4 overflow-y-auto pr-1 scrollbar-hide" aria-live="polite">
+    <div
+      className="flex flex-col min-h-0 h-full overflow-y-auto pr-1 scrollbar-hide 
+                 bg-[url('/images/bg-light.png')] dark:bg-[url('/images/bg-dark.png')] 
+                 bg-repeat transition-colors duration-300 ease-in-out"
+      aria-live="polite"
+      role="list"
+    >
       {messages.length > 0 ? (
         Object.entries(groupedMessages).map(([dateLabel, msgs]) => (
           <div key={dateLabel}>
             <div className="flex justify-center my-2">
-              <span className="bg-gray-200 text-gray-600 text-xs px-3 py-1 rounded-full shadow-sm">
+              <span className="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs px-3 py-1 rounded-full shadow-sm">
                 {dateLabel}
               </span>
             </div>
             {msgs.map((msg, i) => (
-              <div key={msg.message_id || i} className="mb-4">
+              <div
+                key={msg.message_id || `${msg.message_type}-${i}`}
+                className="mb-4"
+                role="listitem"
+              >
                 {renderMessage(msg, i)}
               </div>
             ))}
           </div>
         ))
       ) : (
-        <p className="text-center text-gray-400">
+        <p className="text-center text-gray-400 dark:text-gray-500 mt-4">
           {selectedContact?.conversation_id
             ? "No messages to display."
             : "This contact has no visible conversation."}

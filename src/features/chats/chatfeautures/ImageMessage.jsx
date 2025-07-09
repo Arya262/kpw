@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Check, CheckCheck } from "lucide-react";
+import MessageStatusIcon from "./MessageStatusIcon";
 
 const ImageMessage = ({ msg, sent }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -13,7 +13,7 @@ const ImageMessage = ({ msg, sent }) => {
     setIsModalOpen(false);
   };
 
-  // Close modal on Escape key
+  // Escape key to close modal
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === "Escape") setIsModalOpen(false);
@@ -22,29 +22,44 @@ const ImageMessage = ({ msg, sent }) => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  return (
-    <div className={`relative flex ${sent ? "justify-end" : "justify-start"} mb-4`}>
-      {/* Image Bubble */}
-      <div
-        className="bg-white rounded-2xl overflow-hidden shadow max-w-[90%] sm:w-[70%] md:w-[60%] lg:w-[40%] cursor-pointer"
-        onClick={handleImageClick}
-      >
-        <img
-          src={hasImageError ? "https://placehold.co/150?text=Image+Not+Found" : msg.media_url}
-          alt={msg.content || "Sent image"}
-          className="w-full object-cover rounded-2xl"
-          onError={() => setHasImageError(true)}
-        />
-      </div>
+  const bubbleBg = sent ? "#dcf8c6" : "#f0f0f0";
+  const tailAlignment = sent ? "right-[-4px]" : "left-[-4px]";
+  const tailPath = sent
+    ? "M0 0 Q10 20 20 0" // Tail on right
+    : "M20 0 Q10 20 0 0"; // Tail on left
 
-      {/* Timestamp and Status */}
-      <div className="absolute bottom-2 right-2 flex items-center space-x-1">
-        <span className="text-[10px] text-gray-500">{msg.sent_at}</span>
-        {sent && (
-          <span className="text-blue-500">
-            {msg.status === "read" ? <CheckCheck size={12} /> : <Check size={12} />}
-          </span>
-        )}
+  return (
+    <div className={`relative flex ${sent ? "justify-end" : "justify-start"} px-2 mb-4`}>
+      <div className="relative max-w-[60%]">
+        {/* Tail SVG */}
+        <svg
+          className={`absolute top-1 ${tailAlignment}`}
+          width="20"
+          height="20"
+          viewBox="0 0 20 20"
+        >
+          <path d={tailPath} fill={bubbleBg} />
+        </svg>
+
+        {/* Image Bubble */}
+        <div
+          className="relative rounded-2xl overflow-hidden shadow cursor-pointer"
+          style={{ backgroundColor: bubbleBg }}
+          onClick={handleImageClick}
+        >
+          <img
+            src={hasImageError ? "https://placehold.co/150?text=Image+Not+Found" : msg.media_url}
+            alt={msg.content || "Sent image"}
+            className="w-full object-cover max-h-[300px]"
+            onError={() => setHasImageError(true)}
+          />
+
+          {/* Timestamp & Status Icon */}
+          <div className="absolute bottom-1 right-2 flex items-center gap-1 bg-black bg-opacity-50 px-1 py-[1px] rounded">
+            <span className="text-[10px] text-white">{msg.sent_at}</span>
+            {sent && <MessageStatusIcon status={msg.status} />}
+          </div>
+        </div>
       </div>
 
       {/* Fullscreen Modal */}

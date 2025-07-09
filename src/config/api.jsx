@@ -21,6 +21,7 @@ export const API_ENDPOINTS = {
     MESSAGES: `${API_BASE}/messages`,
     SEND_MESSAGE: `${API_BASE}/sendmessage`,
     DELETE_CONVERSATION: `${API_BASE}/deleteconversations`,
+    MARK_AS_READ: `${API_BASE}/markMessagesAsRead`,
   },
   TEMPLATES: {
     GET_ALL: `${API_BASE}/templates`,

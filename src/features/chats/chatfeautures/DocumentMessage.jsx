@@ -10,8 +10,9 @@ import {
   File
 } from "lucide-react";
 import { formatFileSize } from "../../../utils/format";
+import MessageStatusIcon from "./MessageStatusIcon";
 
-// Get the file icon based on the file extension
+// Determine icon based on file type
 const getFileIcon = (fileName = "") => {
   const ext = fileName.split(".").pop().toLowerCase();
   if (["pdf", "doc", "docx", "txt"].includes(ext)) return <FileText size={20} className="text-gray-500" />;
@@ -22,11 +23,9 @@ const getFileIcon = (fileName = "") => {
   return <File size={20} className="text-gray-500" />;
 };
 
-// DocumentMessage component with a modal for image preview
 const DocumentMessage = ({ msg, sent }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Safe check if msg.document exists
   const document = msg?.document || {};
   const name = document?.name || msg?.content || "Unnamed document";
   const url = document?.url || msg?.media_url || "#";
@@ -34,68 +33,77 @@ const DocumentMessage = ({ msg, sent }) => {
   const size = formatFileSize(rawSize);
 
   const handleImageClick = () => {
-    if (url) {
-      setIsModalOpen(true);
-    }
+    if (url) setIsModalOpen(true);
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-  };
+  const handleCloseModal = () => setIsModalOpen(false);
+
+  const bubbleBg = sent ? "#dcf8c6" : "#f0f0f0";
+  const tailAlignment = sent ? "right-[-4px]" : "left-[-4px]";
+  const tailPath = sent
+    ? "M0 0 Q10 20 20 0" // Tail for right-side
+    : "M20 0 Q10 20 0 0"; // Tail for left-side
 
   return (
-    <div className={`relative flex ${sent ? "justify-end" : "justify-start"} mb-4`}>
-      {/* Document Bubble */}
-      <div className="bg-white rounded-2xl overflow-hidden shadow max-w-[90%] sm:w-[70%] md:w-[60%] lg:w-[40%]">
-        <div className="p-3 flex items-start gap-3">
-          {/* File Icon */}
-          <div className="pt-1">
-            {getFileIcon(name)}
-          </div>
+    <div className={`relative flex ${sent ? "justify-end" : "justify-start"} px-2 mb-4`}>
+      <div className="relative max-w-[60%]">
+        {/* Tail */}
+        <svg
+          className={`absolute top-1 ${tailAlignment}`}
+          width="20"
+          height="20"
+          viewBox="0 0 20 20"
+        >
+          <path d={tailPath} fill={bubbleBg} />
+        </svg>
 
-          {/* File Details */}
-          <div className="flex-1">
-            <p className="text-sm font-semibold break-all">{name}</p>
-            <p className="text-xs text-gray-600">{size}</p>
-            <a
-              href={url}
-              download={name}
-              className="text-blue-500 text-xs mt-1 block"
-            >
-              Download
-            </a>
-            {/* Add image preview functionality if it's an image */}
-            {url && url.match(/\.(jpg|jpeg|png|gif|webp)$/i) && (
-              <button
-                onClick={handleImageClick}
+        {/* Document Bubble */}
+        <div className="rounded-2xl overflow-hidden shadow" style={{ backgroundColor: bubbleBg }}>
+          <div className="p-3 flex items-start gap-3">
+            {/* Icon */}
+            <div className="pt-1">{getFileIcon(name)}</div>
+
+            {/* Info */}
+            <div className="flex-1">
+              <p className="text-sm font-semibold break-all">{name}</p>
+              <p className="text-xs text-gray-600">{size}</p>
+              <a
+                href={url}
+                download={name}
                 className="text-blue-500 text-xs mt-1 block"
               >
-                Preview
-              </button>
-            )}
+                Download
+              </a>
+
+              {/* Preview button if image */}
+              {url && url.match(/\.(jpg|jpeg|png|gif|webp)$/i) && (
+                <button
+                  onClick={handleImageClick}
+                  className="text-blue-500 text-xs mt-1 block"
+                >
+                  Preview
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Time & Status inside bubble */}
+          <div className="flex justify-end items-center space-x-1 px-3 pb-2">
+            <span className="text-[10px] text-gray-500">{msg.sent_at}</span>
+            {sent && <MessageStatusIcon status={msg.status} />}
           </div>
         </div>
       </div>
 
-      {/* Timestamp and Status */}
-      <div className="absolute bottom-2 right-2 flex items-center space-x-1">
-        <span className="text-[10px] text-gray-500">{msg.sent_at}</span>
-        {sent && (
-          <span className="text-blue-500">
-            {msg.status === "read" ? <CheckCheck size={12} /> : <Check size={12} />}
-          </span>
-        )}
-      </div>
-
-      {/* Image Preview Modal */}
-      {isModalOpen && url.match(/\.(jpg|jpeg|png|gif|webp)$/i) && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-          <div className="bg-white p-4 rounded">
+      {/* Modal Preview for images */}
+      {isModalOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"
+          onClick={handleCloseModal}
+        >
+          <div className="bg-white p-4 rounded" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-2">
-              <button
-                onClick={handleCloseModal}
-                className="text-gray-500 font-bold"
-              >
+              <button onClick={handleCloseModal} className="text-gray-500 font-bold">
                 Close
               </button>
             </div>
