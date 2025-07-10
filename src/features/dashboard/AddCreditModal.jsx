@@ -1,19 +1,30 @@
 import React, { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle, ShieldCheck } from "lucide-react";
+import { motion } from "framer-motion";
+import { ShieldCheck } from "lucide-react";
 
 const ConfirmationDialog = ({ showExitDialog, cancelExit, confirmExit }) => {
   const dialogRef = useRef(null);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === "Escape") {
+      if (e.key === "Escape") cancelExit();
+    };
+    const handleClickOutside = (e) => {
+      if (dialogRef.current && !dialogRef.current.contains(e.target)) {
         cancelExit();
       }
     };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [cancelExit]);
+
+    if (showExitDialog) {
+      window.addEventListener("keydown", handleKeyDown);
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showExitDialog, cancelExit]);
 
   useEffect(() => {
     dialogRef.current?.focus();
@@ -22,10 +33,7 @@ const ConfirmationDialog = ({ showExitDialog, cancelExit, confirmExit }) => {
   if (!showExitDialog) return null;
 
   return (
-    <div
-      className="fixed inset-0 bg-opacity-5 flex items-center justify-center z-50 transition-opacity duration-300"
-      onMouseDown={(e) => e.stopPropagation()}
-    >
+    <div className="fixed inset-0 bg-opacity-5 flex items-center justify-center z-50 transition-opacity duration-300">
       <div
         ref={dialogRef}
         className="bg-white rounded-xl p-6 w-full max-w-sm shadow-lg transform transition-all duration-300 scale-100"
@@ -61,14 +69,12 @@ const ConfirmationDialog = ({ showExitDialog, cancelExit, confirmExit }) => {
           <button
             onClick={cancelExit}
             className="px-3 py-2 w-[70px] bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
-            aria-label="Cancel"
           >
             Cancel
           </button>
           <button
             onClick={confirmExit}
             className="px-3 py-2 w-[70px] bg-teal-500 text-white rounded-md hover:bg-teal-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
-            aria-label="Confirm"
           >
             OK
           </button>
@@ -108,6 +114,16 @@ const AddCreditModal = ({
     };
   }, [isOpen]);
 
+  useEffect(() => {
+    if (paymentSuccess) {
+      const timer = setTimeout(() => {
+        onClose(); // auto-close after payment success
+      }, 2000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [paymentSuccess, onClose]);
+
   const handleCloseAndNavigate = () => {
     setShowExitDialog(true);
   };
@@ -129,20 +145,18 @@ const AddCreditModal = ({
     <div className="fixed inset-0 bg-white/40 flex items-center justify-center z-50 transition-all duration-300">
       <div
         ref={modalRef}
-        className={`bg-white rounded-lg w-full max-w-sm shadow-lg p-6 relative border transition-all duration-300 ${
-          isCrossHighlighted
+        className={`bg-white rounded-lg w-full max-w-sm shadow-lg p-6 relative border transition-all duration-300 ${isCrossHighlighted
             ? "border-teal-500 border-2 shadow-[0_0_20px_rgba(5,163,163,0.3)]"
             : "border-gray-300"
-        }`}
+          }`}
       >
         <button
           onClick={handleCloseAndNavigate}
           disabled={paymentLoading}
-          className={`absolute top-2 right-4 text-gray-600 hover:text-black text-3xl font-bold w-8 h-8 flex items-center justify-center pb-2 rounded-full transition-colors cursor-pointer ${
-            isCrossHighlighted
+          className={`absolute top-2 right-4 text-gray-600 hover:text-black text-3xl font-bold w-8 h-8 flex items-center justify-center pb-2 rounded-full transition-colors cursor-pointer ${isCrossHighlighted
               ? "bg-red-500 text-white hover:text-white"
               : "bg-gray-100"
-          } ${paymentLoading ? "opacity-50 cursor-not-allowed" : ""}`}
+            } ${paymentLoading ? "opacity-50 cursor-not-allowed" : ""}`}
         >
           ×
         </button>
@@ -164,11 +178,10 @@ const AddCreditModal = ({
                 <button
                   key={amount}
                   type="button"
-                  className={`px-3 py-1 rounded border w-full text-sm ${
-                    creditAmount == amount
+                  className={`px-3 py-1 rounded border w-full text-sm ${creditAmount === amount
                       ? "bg-blue-600 text-white"
                       : "bg-gray-100 text-gray-800 hover:bg-gray-200"
-                  }`}
+                    }`}
                   onClick={() => setCreditAmount(amount)}
                   disabled={paymentLoading}
                 >
@@ -210,14 +223,13 @@ const AddCreditModal = ({
                   creditAmount <= 0
                 }
                 className={`w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-md font-semibold transition-all duration-200 flex items-center justify-center 
-    ${
-      paymentLoading ||
-      !creditAmount ||
-      isNaN(creditAmount) ||
-      creditAmount <= 0
-        ? "opacity-50 cursor-pointer"
-        : "cursor-pointer"
-    }`}
+    ${paymentLoading ||
+                    !creditAmount ||
+                    isNaN(creditAmount) ||
+                    creditAmount <= 0
+                    ? "opacity-50 cursor-pointer"
+                    : "cursor-pointer"
+                  }`}
               >
                 {paymentLoading ? (
                   <span className="flex items-center gap-2">

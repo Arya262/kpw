@@ -68,16 +68,43 @@ const DashboardHome = () => {
     if (user?.customer_id) fetchSummary();
   }, [user?.customer_id]);
 
+  const total = summary.total_credit;
+  const used = summary.total_credit_consumed;
+  const remaining = Math.max(0, total - used);
   const stats = [
-    { title: "Total Credit", icon: Wallet, value: summary.total_credit, gradient: "gradient-1" },
-    { title: "Used Credit", icon: Banknote, value: summary.total_credit_consumed, gradient: "gradient-2" },
-    { title: "Remaining Credit", icon: PiggyBank, value: summary.total_credit_remaining, gradient: "gradient-3" },
-    { title: "Plan Type", icon: Crown, value: summary.plan_type, gradient: "gradient-4" },
+    {
+      title: "Total Credit",
+      icon: Wallet,
+      value: summary.total_credit,
+      gradient: "gradient-1",
+    },
+    {
+      title: "Used Credit",
+      icon: Banknote,
+      value: summary.total_credit_consumed,
+      gradient: "gradient-2",
+    },
+    {
+      title: "Remaining Credit",
+      icon: PiggyBank,
+      value: remaining,
+      gradient: "gradient-3",
+    },
+    {
+      title: "Plan Type",
+      icon: Crown,
+      value: summary.plan_type,
+      gradient: "gradient-4",
+    },
   ];
 
   const loadRazorpayScript = () => {
     return new Promise((resolve) => {
-      if (document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]')) {
+      if (
+        document.querySelector(
+          'script[src="https://checkout.razorpay.com/v1/checkout.js"]'
+        )
+      ) {
         resolve(true);
         return;
       }
@@ -111,7 +138,10 @@ const DashboardHome = () => {
       const orderRes = await fetch(API_ENDPOINTS.RAZORPAY.CREATE_ORDER, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: amountInRupees }),
+        body: JSON.stringify({
+          amount: amountInRupees,
+          customer_id: user.customer_id,
+        }),
       });
 
       const { order } = await orderRes.json();
@@ -162,11 +192,13 @@ const DashboardHome = () => {
     <div>
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 text-center md:text-left">
-        <h2 className="text-2xl md:text-3xl font-bold text-gray-800">Dashboard</h2>
+        <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
+          Dashboard
+        </h2>
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          className="bg-teal-500 hover:bg-teal-600 text-white flex items-center justify-center gap-2 px-4 py-2 rounded text-sm md:text-base cursor-pointer"
+          className="bg-[#24AEAE] hover:bg-teal-600 text-white flex items-center justify-center gap-2 px-4 py-2 rounded text-sm md:text-base cursor-pointer"
           onClick={() => setShowAddCredit(true)}
         >
           <Plus className="w-5 h-5" />
@@ -189,7 +221,11 @@ const DashboardHome = () => {
             </div>
             <h3 className="text-lg font-semibold">{title}</h3>
             <p className="text-xl font-bold">
-              {typeof value === "number" ? <AnimatedNumber value={value} /> : value}
+              {typeof value === "number" ? (
+                <AnimatedNumber value={value} />
+              ) : (
+                value
+              )}
             </p>
           </motion.div>
         ))}

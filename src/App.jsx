@@ -4,6 +4,8 @@ import DashboardLayout from "./layouts/DashboardLayout";
 import ErrorBoundary from "./components/ErrorBoundary";
 import Loader from "./components/Loader";
 import PrivateRoute from "./PrivateRoute";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 // Lazy load components
 const ContactList = lazy(() => import("./features/contacts/ContactList"));
@@ -16,17 +18,36 @@ const NotFound = lazy(() => import("./components/NotFound"));
 const DashboardHome = lazy(() => import("./features/dashboard/DashboardHome"));
 const ExploreTemplates = lazy(() => import("./features/templates/ExploreTemplates"));
 const LoginRedirectHandler = lazy(() => import("./LoginRedirectHandler"));
+const ForgotPassword = lazy(() => import("./ForgotPassword")); // ✅ Add this line
+const RegisterPage = lazy(() => import("./RegisterPage"));
 
 function App() {
   return (
+    <>
     <Suspense fallback={<Loader />}>
       <Routes>
-        {/* Manual Login Route */}
+        {/* Public Routes */}
         <Route
           path="/login"
           element={
             <ErrorBoundary>
               <LoginRedirectHandler />
+            </ErrorBoundary>
+          }
+        />
+                  <Route
+            path="/register"
+            element={
+              <ErrorBoundary>
+                <RegisterPage />
+              </ErrorBoundary>
+            }
+          />
+        <Route
+          path="/forgot-password" // ✅ Add this route
+          element={
+            <ErrorBoundary>
+              <ForgotPassword />
             </ErrorBoundary>
           }
         />
@@ -113,10 +134,23 @@ function App() {
           </Route>
         </Route>
 
-        {/* Redirect any unknown routes to login */}
+        {/* Redirect unknown routes to login */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </Suspense>
+          <ToastContainer
+        position="top-right"
+        autoClose={4000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
+    </>
   );
 }
 

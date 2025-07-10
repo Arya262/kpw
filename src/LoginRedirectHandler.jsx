@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { FaEyeSlash, FaEye } from "react-icons/fa";
 import whatsAppLogo from "./assets/whatsappIcon.png";
 import { useNavigate } from "react-router-dom";
@@ -7,6 +7,8 @@ import axios from "axios";
 import { API_ENDPOINTS } from "./config/api";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import Loader from "./components/Loader";
+import { Link } from "react-router-dom";
 
 const LoginPage = () => {
   const { login } = useAuth();
@@ -26,18 +28,18 @@ const LoginPage = () => {
     switch (name) {
       case "loginMethod":
         if (!value.trim()) {
-          return "Make sure you enter a valid email address (e.g. user@example.com) or a 10-digit mobile number.";
+          return "Make sure you enter a valid email address or a 10-digit mobile number.";
         }
         if (!emailRegex.test(value) && !mobileRegex.test(value)) {
-          return "Please enter a valid email address or 10-digit mobile number starting with 6-9.";
+          return "Enter a valid email or 10-digit mobile number starting with 6-9.";
         }
         return "";
       case "password":
         if (!value.trim()) {
-          return "Please enter your password to continue.";
+          return "Please enter your password.";
         }
         if (value.length < 6) {
-          return "Your password must be at least 6 characters long.";
+          return "Password must be at least 6 characters.";
         }
         return "";
       default:
@@ -54,11 +56,8 @@ const LoginPage = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    if (name === "loginMethod") {
-      setLoginMethod(value);
-    } else if (name === "password") {
-      setPassword(value);
-    }
+    if (name === "loginMethod") setLoginMethod(value);
+    else if (name === "password") setPassword(value);
 
     if (touched[name]) {
       const error = validateField(name, value);
@@ -77,30 +76,17 @@ const LoginPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setTouched({ loginMethod: true, password: true });
 
-    // Mark all fields as touched
-    setTouched({
-      loginMethod: true,
-      password: true,
-    });
-
-    if (!validate()) {
-      // Focus the first field with an error
-      const firstErrorField = Object.keys(errors).find((key) => errors[key]);
-      if (firstErrorField) {
-        document.getElementsByName(firstErrorField)[0]?.focus();
-      }
-      return;
-    }
+    if (!validate()) return;
 
     try {
-      setLoading(true);
-
+      setLoading(true); // ✅ show loader
       const response = await axios.post(
         API_ENDPOINTS.AUTH.LOGIN,
         {
           email: loginMethod,
-          password: password,
+          password,
         },
         {
           withCredentials: true,
@@ -117,49 +103,22 @@ const LoginPage = () => {
         }, 200);
       } else {
         toast.error(
-          error ||
-            "We couldn't log you in. Please check your email/mobile and password.",
-          {
-            position: "top-right",
-            autoClose: 5000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            theme: "light",
-          }
+          error || "Invalid email/mobile or password. Please try again."
         );
       }
     } catch (err) {
       console.error("Login error:", err);
-      toast.error("An unexpected error occurred. Please try again later.", {
-        position: "top-right",
-        autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        theme: "light",
-      });
+      toast.error("An error occurred. Please try again later.");
     } finally {
-      setLoading(false);
+      setLoading(false); // ✅ hide loader
     }
   };
 
+  if (loading) return <Loader />;
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-t from-[#adede9] via-[#def7f6] via-[#d4f5f3] to-white p-4">
-      <ToastContainer
-        position="top-right"
-        autoClose={5000}
-        hideProgressBar={false}
-        newestOnTop
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
-      />
+      <ToastContainer />
       <div className="w-full max-w-[648px] bg-white rounded-xl overflow-hidden shadow-lg flex flex-col">
         {/* Header */}
         <div className="relative h-[250px] sm:h-[300px] md:h-[352px] w-full bg-[#ceeeec] overflow-hidden">
@@ -326,12 +285,15 @@ const LoginPage = () => {
               )}
             </div>
 
-            {/* Forgot Password */}
-            <div className="flex justify-end text-xs sm:text-sm">
-              <span className="text-blue-600 hover:underline cursor-pointer">
-                Forgot Password?
-              </span>
-            </div>
+{/* Forgot Password */}
+<div className="flex justify-end text-xs sm:text-sm">
+  <Link
+    to="/forgot-password"
+    className="text-blue-600 hover:underline cursor-pointer"
+  >
+    Forgot Password?
+  </Link>
+</div>
 
             {/* Login Button */}
             <button
@@ -367,6 +329,16 @@ const LoginPage = () => {
                 "LOGIN"
               )}
             </button>
+            {/* Create Account Link */}
+            <div className="text-sm text-center">
+              <span className="text-gray-600">Don't have an account?</span>{" "}
+              <span
+                className="text-blue-600 hover:underline cursor-pointer"
+                onClick={() => navigate("/register")}
+              >
+                Create one
+              </span>
+            </div>
           </form>
         </div>
       </div>

@@ -133,7 +133,7 @@ const Chat = () => {
               <div className="flex-1 flex flex-row min-h-0 h-full">
                 {/* Message + Input */}
                 <div className="flex-1 flex flex-col min-h-0 h-full">
-                  <div className="flex-1 overflow-y-auto bg-white p-4">
+                  <div className="flex-1 overflow-y-auto">
                     <ChatMessageArea
                       selectedContact={selectedContact}
                       messages={messages || []}

@@ -85,8 +85,8 @@ const ChatMessages = ({ selectedContact, messages = [], isTyping }) => {
 
   return (
     <div
-      className="flex flex-col min-h-0 h-full overflow-y-auto pr-1 scrollbar-hide 
-                 bg-[url('/images/bg-light.png')] dark:bg-[url('/images/bg-dark.png')] 
+      className="flex flex-col min-h-0 h-full overflow-y-auto  scrollbar-hide 
+                 bg-[url('/light.png')]
                  bg-repeat transition-colors duration-300 ease-in-out"
       aria-live="polite"
       role="list"

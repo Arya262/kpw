@@ -1,19 +1,16 @@
 import { useState, useMemo, useEffect, useRef } from "react";
-import { Send, X, Paperclip, FileText } from "lucide-react";
+import { Send, X } from "lucide-react";
 import SendTemplate from "./chatfeautures/SendTemplate";
 import EmojiPicker from "emoji-picker-react";
+import DOMPurify from "dompurify";
 
 const MessageInput = ({ onSendMessage, selectedContact }) => {
   const [message, setMessage] = useState("");
   const [showTemplates, setShowTemplates] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [attachments, setAttachments] = useState([]);
-  const [caption, setCaption] = useState("");
-  const [selectedImageIdx, setSelectedImageIdx] = useState(0);
-  const [activeFormatting, setActiveFormatting] = useState({ bold: false, italic: false, strikethrough: false, link: false });
-  const inputRef = useRef();
-  const fileInputRef = useRef();
-  const modalRef = useRef();
+  const inputRef = useRef(null);
+  const modalRef = useRef(null);
+  const emojiBtnRef = useRef(null);
 
   const isWithin24Hours = useMemo(() => {
     const time = selectedContact?.lastMessageTime;
@@ -21,7 +18,6 @@ const MessageInput = ({ onSendMessage, selectedContact }) => {
     try {
       const lastTime = new Date(time).getTime();
       const now = Date.now();
-      if (isNaN(lastTime)) return true;
       const hoursDiff = (now - lastTime) / (1000 * 60 * 60);
       return hoursDiff <= 24;
     } catch {
@@ -29,16 +25,46 @@ const MessageInput = ({ onSendMessage, selectedContact }) => {
     }
   }, [selectedContact?.lastMessageTime]);
 
+  const sanitizeHtml = (html) => {
+    return DOMPurify.sanitize(html, {
+      ALLOWED_TAGS: ["b", "i", "s", "strong", "em"],
+      ALLOWED_ATTR: [],
+    })
+      .replace(/<div>|<\/div>/gi, "")
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/&nbsp;/gi, " ")
+      .trim();
+  };
+
+  const extractPlainText = (html) => {
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = html;
+    return tempDiv.textContent || tempDiv.innerText || "";
+  };
+
+  const convertHtmlToWhatsAppMarkdown = (html) => {
+    let text = html;
+
+    // Convert bold <b> or <strong>
+    text = text.replace(/<(b|strong)>(.*?)<\/\1>/gi, "*$2*");
+
+    // Convert italic <i> or <em>
+    text = text.replace(/<(i|em)>(.*?)<\/\1>/gi, "_$2_");
+
+    // Convert strikethrough <s>
+    text = text.replace(/<s>(.*?)<\/s>/gi, "~$1~");
+
+    // Remove all other HTML tags
+    text = text.replace(/<\/?[^>]+(>|$)/g, "");
+
+    return text.trim();
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (attachments.length > 0) {
-      if (!caption.trim()) return;
-      onSendMessage({ caption, attachments });
-      setAttachments([]);
-      setCaption("");
-      return;
-    }
-    if (!message.trim()) {
+    const cleaned = sanitizeHtml(message);
+    const plain = extractPlainText(cleaned);
+    if (!plain.trim()) {
       setShowTemplates(true);
       return;
     }
@@ -46,19 +72,33 @@ const MessageInput = ({ onSendMessage, selectedContact }) => {
       setShowTemplates(true);
       return;
     }
-    onSendMessage(message);
+
+    const whatsappFormattedMessage = convertHtmlToWhatsAppMarkdown(cleaned);
+    onSendMessage(whatsappFormattedMessage);
     setMessage("");
+    if (inputRef.current) inputRef.current.innerHTML = "";
   };
 
-  const isTextDisabled = selectedContact?.lastMessageTime
-    ? !isWithin24Hours
-    : false;
+  const handleFormatting = (command) => {
+    if (!isWithin24Hours) return;
+    document.execCommand(command, false, null);
+    inputRef.current?.focus();
+  };
+
+  const handleEmojiSelect = (emojiObject) => {
+    const emoji = emojiObject.emoji;
+    const sel = window.getSelection();
+    const range = sel.getRangeAt(0);
+    range.deleteContents();
+    range.insertNode(document.createTextNode(emoji));
+    sel.collapseToEnd();
+    setMessage(inputRef.current.innerHTML);
+    inputRef.current?.focus();
+  };
 
   useEffect(() => {
     const handleEscape = (e) => {
-      if (e.key === "Escape") {
-        setShowTemplates(false);
-      }
+      if (e.key === "Escape") setShowTemplates(false);
     };
     if (showTemplates) {
       document.addEventListener("keydown", handleEscape);
@@ -68,321 +108,105 @@ const MessageInput = ({ onSendMessage, selectedContact }) => {
 
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (modalRef.current && !modalRef.current.contains(e.target)) {
-        setShowTemplates(false);
+      if (
+        emojiBtnRef.current &&
+        !emojiBtnRef.current.contains(e.target) &&
+        !document.querySelector(".epr-main")?.contains(e.target)
+      ) {
+        setShowEmojiPicker(false);
       }
     };
-    if (showTemplates) {
+    if (showEmojiPicker) {
       document.addEventListener("mousedown", handleClickOutside);
     }
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showTemplates]);
-
-  const handleEmojiSelect = (emojiObject) => {
-    const cursorPos = inputRef.current.selectionStart;
-    const textBefore = message.substring(0, cursorPos);
-    const textAfter = message.substring(cursorPos);
-    setMessage(textBefore + emojiObject.emoji + textAfter);
-    setTimeout(() => {
-      inputRef.current.focus();
-      inputRef.current.selectionEnd = cursorPos + emojiObject.emoji.length;
-    }, 0);
-  };
-
-  const handleFileChange = (e) => {
-    const files = Array.from(e.target.files);
-    setAttachments((prev) => [
-      ...prev,
-      ...files.map((file) => ({ file }))
-    ]);
-    e.target.value = null;
-  };
-
-  const handleRemoveAttachment = (index) => {
-    setAttachments((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const handleFormatting = (formatType) => {
-    if (!inputRef.current || !isWithin24Hours) return;
-
-    const textarea = inputRef.current;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selectedText = message.substring(start, end);
-
-    let formattedText = "";
-    let newCursorPos = start;
-
-    switch (formatType) {
-      case "bold":
-        formattedText = `*${selectedText}*`;
-        newCursorPos = start + 1;
-        break;
-      case "italic":
-        formattedText = `_${selectedText}_`;
-        newCursorPos = start + 1;
-        break;
-      case "strikethrough":
-        formattedText = `~${selectedText}~`;
-        newCursorPos = start + 1;
-        break;
-      case "link":
-        formattedText = selectedText
-          ? `[${selectedText}](url)`
-          : "[link text](url)";
-        newCursorPos = start + (selectedText ? selectedText.length + 3 : 10);
-        break;
-      default:
-        return;
-    }
-
-    const newMessage = message.substring(0, start) + formattedText + message.substring(end);
-    setMessage(newMessage);
-
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(newCursorPos, newCursorPos);
-    }, 0);
-  };
-
-  useEffect(() => {
-    if (attachments.length === 0) setSelectedImageIdx(0);
-    else if (selectedImageIdx >= attachments.length) setSelectedImageIdx(0);
-  }, [attachments, selectedImageIdx]);
-
-  const detectFormatting = () => {
-    if (!inputRef.current) return;
-
-    const textarea = inputRef.current;
-    const cursorPos = textarea.selectionStart;
-    const text = message;
-
-    const beforeCursor = text.substring(0, cursorPos);
-    const afterCursor = text.substring(cursorPos);
-
-    const isBold = beforeCursor.match(/\*[^*]*$/) && afterCursor.match(/^[^*]*\*/);
-    const isItalic = beforeCursor.match(/_[^_]*$/) && afterCursor.match(/^[^_]*_/);
-    const isStrikethrough = beforeCursor.match(/~[^~]*$/) && afterCursor.match(/^[^~]*~/);
-    const isLink = beforeCursor.match(/\[[^\]]*$/) && afterCursor.match(/^[^\]]*\]\([^)]*\)/);
-
-    setActiveFormatting({
-      bold: isBold,
-      italic: isItalic,
-      strikethrough: isStrikethrough,
-      link: isLink,
-    });
-  };
-
-  const imageAttachments = attachments.filter(att => att.file.type.startsWith("image/"));
-  const nonImageAttachments = attachments.filter(att => !att.file.type.startsWith("image/"));
+  }, [showEmojiPicker]);
 
   return (
     <>
-      <div className="p-3 sm:px-6 bg-white">
+      <div className="sticky bottom-0 bg-white border-t border-gray-200 z-10 px-2 py-2">
         {!isWithin24Hours && (
-          <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded flex flex-col sm:flex-row justify-between gap-2 sm:items-center">
-            <div>
-              <div className="flex items-center mb-1">
-                <span className="inline-block w-6 h-6 mr-2 text-gray-400">
-                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                </span>
-                <span className="font-medium text-gray-800">Session expired. Send a template to reopen.</span>
+          <div className="mb-2 p-3 bg-gray-50 border border-gray-200 rounded-md text-sm">
+            <div className="flex justify-between items-center mb-2 text-gray-700">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="font-medium">Session expired. Send a template to reopen.</span>
               </div>
-              <div className="text-xs text-gray-500">Session expires after 24 hours of inactivity.</div>
+              <button
+                onClick={() => setShowTemplates(true)}
+                className="h-8 px-3 flex items-center justify-center text-white bg-teal-500 hover:bg-teal-600 rounded-full text-xs whitespace-nowrap"
+              >
+                Select Template
+              </button>
             </div>
-            <button
-              className="px-4 py-2 border border-teal-500 text-teal-600 rounded hover:bg-teal-50 font-medium"
-              onClick={() => setShowTemplates(true)}
-            >
-              Select Template
-            </button>
+            <div className="text-xs text-gray-500">
+              Session expires after 24 hours of inactivity.
+            </div>
           </div>
         )}
 
-        <div className="relative w-full max-w-full">
-          {attachments.length > 0 && (
-            <>
-              {imageAttachments.length > 0 && (
-                <div className="flex justify-center mb-2">
-                  <img
-                    src={URL.createObjectURL(imageAttachments[selectedImageIdx]?.file)}
-                    alt=""
-                    className="max-h-64 max-w-full rounded-lg object-contain border"
-                  />
-                </div>
-              )}
-              <textarea
-                value={caption}
-                onChange={(e) => {
-                  setCaption(e.target.value);
-                  setTimeout(detectFormatting, 0);
-                }}
-                placeholder="Caption (optional)"
-                className="w-full text-sm border border-gray-300 rounded-lg px-4 py-2 mb-2 focus:outline-none focus:ring-1 focus:ring-teal-500 resize-none"
-                rows={1}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSubmit(e);
-                  }
-                }}
-                disabled={!isWithin24Hours}
-              />
-              <div className="flex flex-wrap items-center gap-2 mb-2">
-                <button
-                  type="button"
-                  className="flex items-center justify-center w-12 h-12 border-2 border-dashed border-gray-300 rounded hover:bg-gray-100"
-                  onClick={() => fileInputRef.current.click()}
-                  disabled={!isWithin24Hours}
-                >
-                  <span className="text-2xl">+</span>
-                </button>
-                {imageAttachments.map((att, idx) => (
-                  <div key={idx} className="relative flex items-center">
-                    <img
-                      src={URL.createObjectURL(att.file)}
-                      className={`w-12 h-12 object-cover rounded cursor-pointer border-2 ${selectedImageIdx === idx ? 'border-teal-500' : 'border-transparent'}`}
-                      onClick={() => setSelectedImageIdx(idx)}
-                    />
-                    <button
-                      type="button"
-                      className="absolute -top-2 -right-2 bg-white rounded-full p-0.5 text-gray-400 hover:text-red-500 shadow"
-                      onClick={() => {
-                        const imgIdx = attachments.findIndex(a => a === att);
-                        handleRemoveAttachment(imgIdx);
-                        if (selectedImageIdx >= idx && selectedImageIdx > 0) setSelectedImageIdx(selectedImageIdx - 1);
-                      }}
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-                {nonImageAttachments.map((att, idx) => (
-                  <div key={imageAttachments.length + idx} className="relative flex items-center">
-                    <div className="flex flex-col items-center justify-center w-12 h-12 bg-gray-100 rounded">
-                      <FileText className="w-6 h-6 text-gray-400" />
-                      <span className="text-[10px] truncate w-10 text-center">{att.file.name}</span>
-                    </div>
-                    <button
-                      type="button"
-                      className="absolute -top-2 -right-2 bg-white rounded-full p-0.5 text-gray-400 hover:text-red-500 shadow"
-                      onClick={() => handleRemoveAttachment(attachments.findIndex(a => a === att))}
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
+        {showEmojiPicker && (
+          <div className="absolute bottom-20 left-4 z-50">
+            <EmojiPicker onEmojiClick={handleEmojiSelect} theme="light" />
+          </div>
+        )}
 
-          {showEmojiPicker && (
-            <div className="absolute left-0 bottom-full mb-2 z-50">
-              <EmojiPicker onEmojiClick={handleEmojiSelect} theme="light" />
-            </div>
-          )}
-
-          {/* 💬 MAIN FORM */}
-          <form
-            onSubmit={handleSubmit}
-            className="flex flex-wrap sm:flex-nowrap items-stretch gap-1 w-full"
-          >
+        <form onSubmit={handleSubmit} className="flex items-center gap-2">
+          <div className="flex items-center flex-1 bg-gray-100 rounded-full px-3 py-2 relative">
             <button
+              ref={emojiBtnRef}
               type="button"
-              className="h-10 w-10 sm:w-auto px-2 border border-gray-300 border-r-0 rounded-l-lg bg-white hover:bg-gray-100 flex items-center justify-center"
               onClick={() => setShowEmojiPicker((v) => !v)}
-              tabIndex={-1}
+              className="text-xl mr-2 hover:bg-gray-200 rounded-full w-8 h-8 flex items-center justify-center"
               disabled={!isWithin24Hours}
             >
-              <span role="img" aria-label="emoji">😊</span>
+              😊
             </button>
 
-            {/* Formatting Buttons */}
-            <div className="flex items-center h-10 overflow-x-auto bg-white border-t border-b border-gray-300 px-1 gap-1">
-              {["bold", "italic", "strikethrough", "link"].map((type) => {
-                const isActive = activeFormatting[type];
-                const label = {
-                  bold: <b>B</b>,
-                  italic: <i>I</i>,
-                  strikethrough: <s>S</s>,
-                  link: "🔗",
-                }[type];
-                return (
-                  <button
-                    key={type}
-                    type="button"
-                    className={`px-2 py-1 rounded text-sm font-medium ${
-                      isActive ? "bg-teal-100 text-teal-700" : "text-gray-500 hover:text-teal-500 hover:bg-gray-50"
-                    }`}
-                    onClick={() => handleFormatting(type)}
-                    disabled={!isWithin24Hours}
-                    title={type}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
+            <div className="flex gap-1 mr-2">
+              <button type="button" onClick={() => handleFormatting("bold")} className="font-bold text-sm hover:text-gray-700" title="Bold">B</button>
+              <button type="button" onClick={() => handleFormatting("italic")} className="italic text-sm hover:text-gray-700" title="Italic">I</button>
+              <button type="button" onClick={() => handleFormatting("strikeThrough")} className="line-through text-sm hover:text-gray-700" title="Strikethrough">S</button>
             </div>
 
-            <button
-              type="button"
-              className="h-10 w-10 sm:w-auto px-2 border border-gray-300 border-r-0 bg-white hover:bg-gray-100 flex items-center justify-center"
-              onClick={() => fileInputRef.current.click()}
-              tabIndex={-1}
-              disabled={!isWithin24Hours}
-            >
-              <Paperclip className="w-4 h-4" />
-            </button>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"
-              style={{ display: "none" }}
-              onChange={handleFileChange}
-              disabled={!isWithin24Hours}
-            />
-
-            {attachments.length === 0 && (
-              <textarea
-                ref={inputRef}
-                value={message}
-                onChange={(e) => {
-                  setMessage(e.target.value);
-                  setTimeout(detectFormatting, 0);
-                }}
-                placeholder={
-                  isTextDisabled
-                    ? "Conversation expired. Please send templates."
-                    : "Send Message"
+            <div
+              ref={inputRef}
+              contentEditable={isWithin24Hours}
+              suppressContentEditableWarning
+              onInput={(e) => setMessage(e.currentTarget.innerHTML)}
+              onKeyDown={(e) => {
+                if (!isWithin24Hours) {
+                  e.preventDefault();
+                  return;
                 }
-                disabled={!isWithin24Hours}
-                className={`text-sm border border-gray-300 px-4 py-2 h-10 w-full sm:flex-1 focus:outline-none focus:ring-1 focus:ring-teal-500 resize-none ${
-                  !isWithin24Hours ? "bg-gray-100 cursor-not-allowed" : ""
-                }`}
-                rows={1}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSubmit(e);
-                  }
-                }}
-              />
-            )}
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSubmit(e);
+                }
+              }}
+              onPaste={(e) => {
+                if (!isWithin24Hours) e.preventDefault();
+              }}
+              className={`flex-1 text-sm focus:outline-none max-h-36 overflow-y-auto ${
+                !isWithin24Hours ? "text-gray-400 cursor-not-allowed" : ""
+              }`}
+              style={{ minHeight: "20px" }}
+            ></div>
 
             <button
               type="submit"
-              className="flex items-center justify-center sm:justify-start gap-2 h-10 w-full sm:w-auto px-4 text-white text-sm rounded-r-lg border border-l-0 bg-teal-500 hover:bg-teal-600 border-teal-500"
-              disabled={!isWithin24Hours && attachments.length === 0}
+              className="ml-2 h-8 px-3 flex items-center justify-center text-white bg-teal-500 hover:bg-teal-600 rounded-full text-xs whitespace-nowrap"
+              disabled={!isWithin24Hours}
             >
-              <Send className="w-4 h-4" />
-              <span className="hidden sm:inline">
-                {attachments.length > 0 || message.trim() ? "Send Message" : "Send Template"}
-              </span>
+              <Send className="w-4 h-4 mr-1" />
+              {sanitizeHtml(message).trim()
+                ? "Send Message"
+                : "Send Template"}
             </button>
-          </form>
-        </div>
+          </div>
+        </form>
       </div>
 
       {showTemplates && (

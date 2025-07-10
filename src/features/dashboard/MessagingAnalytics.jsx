@@ -1,3 +1,6 @@
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import html2canvas from "html2canvas";
 import React, { useEffect, useState, useMemo } from "react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -8,6 +11,7 @@ import {
   startOfWeek, endOfWeek
 } from "date-fns";
 import { useAuth } from "../../context/AuthContext";
+import { API_ENDPOINTS } from "../../config/api";
 
 // Utility: Get date range for filter
 function getDateRange(filter, options) {
@@ -127,6 +131,156 @@ export default function MessagingAnalytics({ usageHistory }) {
     { name: "Meta Fees", value: totalMeta }
   ], [totalGupshup, totalMeta]);
 
+const getImageAsBase64 = async (url) => {
+  const res = await fetch(url);
+  const blob = await res.blob();
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+};
+
+const handleDownloadPDF = async () => {
+  const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+
+  // ✅ Load logo from public/logo.png
+  const logoBase64 = await getImageAsBase64("/logo.png");
+const customerName = user?.company_name || "FOODCHOW";
+const appId = user?.details?.app_id || "WhatsappMarketing";
+  const formatNumber = (value) =>
+    new Intl.NumberFormat("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+
+  const rangeText = (() => {
+    if (filter === "Monthly") return selectedMonth;
+    if (filter === "Yearly") return selectedYear;
+    if (filter === "Weekly") return `Week of ${selectedWeekStart}`;
+    if (filter === "Custom") return `${customStart} to ${customEnd}`;
+    return "";
+  })();
+
+  const columns = [
+    { header: "Date", dataKey: "usage_date" },
+    { header: "Session Out", dataKey: "session_out" },
+    { header: "Session In", dataKey: "session_in" },
+    { header: "Template FEP", dataKey: "template_fep" },
+    { header: "Template FTC", dataKey: "template_ftc" },
+    { header: "Util.", dataKey: "template_util" },
+    { header: "Auth.", dataKey: "template_auth" },
+    { header: "Mark.", dataKey: "template_mark" },
+    { header: "Serv.", dataKey: "template_service" },
+    { header: "GS Fee", dataKey: "gupshup_fees" },
+    { header: "WA Fee", dataKey: "meta_fees" },
+  ];
+
+  const rows = filteredData.map(row => ({
+    usage_date: row.usage_date,
+    session_out: row.session_out || 0,
+    session_in: row.session_in || 0,
+    template_fep: row.template_fep || 0,
+    template_ftc: row.template_ftc || 0,
+    template_util: row.template_util || 0,
+    template_auth: row.template_auth || 0,
+    template_mark: row.template_mark || 0,
+    template_service: row.template_service || 0,
+    gupshup_fees: row.gupshup_fees || 0,
+    meta_fees: row.meta_fees || 0,
+  }));
+
+  const formattedRows = rows.map(r => ({
+    ...r,
+    session_out: formatNumber(r.session_out),
+    session_in: formatNumber(r.session_in),
+    template_fep: formatNumber(r.template_fep),
+    template_ftc: formatNumber(r.template_ftc),
+    template_util: formatNumber(r.template_util),
+    template_auth: formatNumber(r.template_auth),
+    template_mark: formatNumber(r.template_mark),
+    template_service: formatNumber(r.template_service),
+    gupshup_fees: formatNumber(r.gupshup_fees),
+    meta_fees: formatNumber(r.meta_fees),
+  }));
+
+  const summaryRow = {
+    usage_date: "Total",
+    session_out: formatNumber(rows.reduce((sum, r) => sum + r.session_out, 0)),
+    session_in: formatNumber(rows.reduce((sum, r) => sum + r.session_in, 0)),
+    template_fep: formatNumber(rows.reduce((sum, r) => sum + r.template_fep, 0)),
+    template_ftc: formatNumber(rows.reduce((sum, r) => sum + r.template_ftc, 0)),
+    template_util: formatNumber(rows.reduce((sum, r) => sum + r.template_util, 0)),
+    template_auth: formatNumber(rows.reduce((sum, r) => sum + r.template_auth, 0)),
+    template_mark: formatNumber(rows.reduce((sum, r) => sum + r.template_mark, 0)),
+    template_service: formatNumber(rows.reduce((sum, r) => sum + r.template_service, 0)),
+    gupshup_fees: formatNumber(rows.reduce((sum, r) => sum + r.gupshup_fees, 0)),
+    meta_fees: formatNumber(rows.reduce((sum, r) => sum + r.meta_fees, 0)),
+  };
+
+  // ✅ Header with logo only
+  if (logoBase64) {
+    doc.addImage(logoBase64, 'PNG', 40, 20, 100, 40); // Logo only
+  }
+
+doc.setFontSize(12);
+doc.text("301 Milestone Vibrant,", 40, 70);
+doc.text("Udana Darwaja, Ring Road,", 40, 85);
+doc.text("Opposite to Apple Hospital,", 40, 100);
+doc.text("Surat, Gujarat 395002", 40, 115);
+
+doc.setFontSize(14);
+doc.text(`App Usage Statement for: ${appId}`, 40, 140);
+doc.text(`Date Range: ${rangeText}`, 40, 160);
+doc.setFontSize(12);
+doc.text(`Customer: ${customerName}`, 40, 175);
+doc.text(`App ID: ${appId}`, 300, 175);
+
+  // ✅ Main table
+  autoTable(doc, {
+    columns,
+    body: formattedRows,
+    startY: 190,
+    styles: { fontSize: 10 },
+    headStyles: { fillColor: [41, 128, 185] },
+    theme: 'grid',
+    didDrawPage: (data) => {
+      const finalY = data.cursor.y + 10;
+
+      // ✅ Summary row
+      autoTable(doc, {
+        columns,
+        body: [summaryRow],
+        startY: finalY,
+        styles: {
+          fontSize: 10,
+          fontStyle: 'bold',
+          fillColor: [240, 240, 240],
+        },
+        theme: 'plain',
+        margin: { left: data.settings.margin.left },
+        tableLineWidth: 0,
+        tableLineColor: 255,
+        showHead: 'never',
+      });
+
+      doc.text("Abbreviations: Util. - Utility, Auth. - Authentication, Mark. - Marketing, Serv. - Service", 40, finalY + 60);
+      doc.text("Template types include Marketing, Authentication, Utility, Service and Free Templates", 40, finalY + 75);
+
+      // ✅ Footer with page number
+      const pageHeight = doc.internal.pageSize.height;
+      const pageWidth = doc.internal.pageSize.width;
+      const pageNumber = doc.internal.getCurrentPageInfo().pageNumber;
+      const pageCount = doc.internal.getNumberOfPages();
+      doc.setFontSize(10);
+      doc.text(`Page ${pageNumber} of ${pageCount}`, pageWidth - 60, pageHeight - 20);
+    },
+  });
+
+  doc.save(`Foodchow_Report_${rangeText.replace(/ /g, "_")}.pdf`);
+};
   if (loading) {
     return (
       <div className="flex justify-center items-center h-60">
@@ -137,7 +291,19 @@ export default function MessagingAnalytics({ usageHistory }) {
 
   return (
     <div className="p-6 space-y-10">
+      {/* Download PDF Button */}
+      {filteredData.length > 0 && (
+        <div className="flex justify-end mb-4">
+          <button
+            className="bg-[#24AEAE] hover:bg-[#24AEAE] text-white px-4 py-2 rounded shadow cursor-pointer"
+            onClick={handleDownloadPDF}
+          >
+            Download PDF
+          </button>
+        </div>
+      )}
       {/* ✅ Filter Controls */}
+      <div id="analytics-section">
       <div className="flex flex-col md:flex-row items-center gap-4 mb-6">
         <select
           value={filter}
@@ -242,6 +408,7 @@ export default function MessagingAnalytics({ usageHistory }) {
           </div>
         </>
       )}
+      </div>
     </div>
   );
 }
