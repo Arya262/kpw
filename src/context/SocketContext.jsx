@@ -12,7 +12,7 @@ export const SocketProvider = ({ children }) => {
   const { addAlert } = useNotifications();
 
   useEffect(() => {
-    const newSocket = io("https://marketing-uoxu.onrender.com", {
+    const newSocket = io("https://www.foodchow.app", {
       transports: ["websocket"],
       withCredentials: true,
     });
