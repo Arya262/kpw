@@ -7,15 +7,19 @@ import { SocketProvider } from './context/SocketContext';
 import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext'; 
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <BrowserRouter>
-    <AuthProvider>
-      <NotificationProvider> 
-        <SocketProvider>
-          <App />
-        </SocketProvider>
-      </NotificationProvider>
-    </AuthProvider>
-  </BrowserRouter>
-);
+import { GoogleOAuthProvider } from '@react-oauth/google';
+import.meta.env.VITE_GOOGLE_CLIENT_ID
 
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+    <BrowserRouter>
+      <AuthProvider>
+        <NotificationProvider> 
+          <SocketProvider>
+            <App />
+          </SocketProvider>
+        </NotificationProvider>
+      </AuthProvider>
+    </BrowserRouter>
+  </GoogleOAuthProvider>
+);

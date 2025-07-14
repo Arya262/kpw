@@ -20,6 +20,27 @@ const PrivateRoute = () => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  // Handle role-based redirects
+  const isAdmin = user.role === "admin" || user.role === "super_admin";
+  const isOnAdminRoute = location.pathname.startsWith("/admin");
+  const isOnUserRoute = location.pathname === "/" || 
+                       location.pathname.startsWith("/contact") ||
+                       location.pathname.startsWith("/templates") ||
+                       location.pathname.startsWith("/chats") ||
+                       location.pathname.startsWith("/broadcast") ||
+                       location.pathname.startsWith("/settings") ||
+                       location.pathname.startsWith("/help");
+
+  // If admin user is trying to access user routes, redirect to admin dashboard
+  if (isAdmin && isOnUserRoute) {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+
+  // If regular user is trying to access admin routes, redirect to user dashboard
+  if (!isAdmin && isOnAdminRoute) {
+    return <Navigate to="/" replace />;
+  }
+
   return <Outlet />;
 };
 

@@ -8,12 +8,14 @@ import { toast } from "react-toastify"; // No need to import ToastContainer here
 import "react-toastify/dist/ReactToastify.css";
 import WhatsAppSearchPanel from "../components/WhatsAppSearchPanel";
 import NotificationBell from "./NotificationBell";
+import { useAuth } from "../context/AuthContext";
 
 export default function Header({ isMenuOpen, onToggleSidebar }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [showSearchPanel, setShowSearchPanel] = useState(false);
   const [whatsAppData, setWhatsAppData] = useState([]);
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
@@ -48,14 +50,19 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
       const data = response.data;
 
       if (data.success) {
+        // Clear user state and localStorage
+        logout();
         notify("success", "Successfully logged out!");
-        navigate("/login");
+        navigate("/login", { replace: true });
       } else {
         notify("error", "Logout failed. Please try again.");
       }
     } catch (error) {
       console.error("Logout error:", error);
-      notify("error", "Something went wrong. Please try again later.");
+      // Even if API call fails, clear local state
+      logout();
+      notify("success", "Successfully logged out!");
+      navigate("/login", { replace: true });
     }
   };
 

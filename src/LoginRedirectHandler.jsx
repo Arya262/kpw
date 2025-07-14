@@ -11,8 +11,19 @@ import Loader from "./components/Loader";
 import { Link } from "react-router-dom";
 
 const LoginPage = () => {
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect already authenticated users
+  React.useEffect(() => {
+    if (user) {
+      if (user.role === "admin" || user.role === "super_admin") {
+        navigate("/admin/dashboard", { replace: true });
+      } else {
+        navigate("/", { replace: true });
+      }
+    }
+  }, [user, navigate]);
 
   const [loginMethod, setLoginMethod] = useState("");
   const [password, setPassword] = useState("");
@@ -20,7 +31,7 @@ const LoginPage = () => {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [touched, setTouched] = useState({});
-
+  
   const validateField = (name, value) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const mobileRegex = /^[6-9]\d{9}$/;
@@ -74,7 +85,7 @@ const LoginPage = () => {
     return !Object.values(newErrors).some((error) => error);
   };
 
-  const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
     e.preventDefault();
     setTouched({ loginMethod: true, password: true });
 
@@ -94,13 +105,17 @@ const LoginPage = () => {
         }
       );
 
+      console.log("Login response:", response);
       const { success, user, error } = response.data;
 
       if (success) {
         login(user);
-        setTimeout(() => {
+        // Clear any existing history and navigate to appropriate dashboard
+        if (user.role === "admin" || user.role === "super_admin") {
+          navigate("/admin/dashboard", { replace: true });
+        } else {
           navigate("/", { replace: true });
-        }, 200);
+        }
       } else {
         toast.error(
           error || "Invalid email/mobile or password. Please try again."
@@ -113,6 +128,7 @@ const LoginPage = () => {
       setLoading(false); // ✅ hide loader
     }
   };
+
 
   if (loading) return <Loader />;
 

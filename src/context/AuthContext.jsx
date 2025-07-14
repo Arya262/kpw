@@ -14,47 +14,35 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // ✅ Fetch user once when app starts
+  // Load user from localStorage on app start
   useEffect(() => {
-    refreshUser();
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+    setLoading(false);
   }, []);
 
-  // ✅ Fetch user from backend
-  const refreshUser = useCallback(() => {
-    setLoading(true);
-    axios
-      .get(API_ENDPOINTS.AUTH.ME, { withCredentials: true })
-      .then((response) => {
-        const data = response.data;
-        if (data.success) {
-          setUser(data.user);
-        } else {
-          setUser(null);
-        }
-      })
-      .catch(() => setUser(null))
-      .finally(() => setLoading(false));
-  }, []);
-
-  // ✅ Login method
+  // Login method: persist user in localStorage
   const login = useCallback((userData) => {
     setUser(userData);
+    localStorage.setItem("user", JSON.stringify(userData));
   }, []);
 
-  // ✅ Logout method
+  // Logout method: clear user from state and localStorage
   const logout = useCallback(() => {
+    setUser(null);
+    localStorage.removeItem("user");
     axios
       .post(API_ENDPOINTS.AUTH.LOGOUT, {}, { withCredentials: true })
-      .then(() => {
-        setUser(null);
-      });
+      .catch(() => {});
   }, []);
 
   const isAuthenticated = !!user;
 
   return (
     <AuthContext.Provider
-      value={{ user, login, logout, refreshUser, isAuthenticated, loading }}
+      value={{ user, login, logout, isAuthenticated, loading }}
     >
       {children}
     </AuthContext.Provider>
