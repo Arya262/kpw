@@ -8,8 +8,6 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 import { useAuth } from "./context/AuthContext";
-import AdminLayout from "./layouts/AdminLayout";
-import { useBackButtonHandler } from "./hooks/useBackButtonHandler";
 
 // Lazy load components
 const ContactList = lazy(() => import("./features/contacts/ContactList"));
@@ -21,31 +19,14 @@ const Broadcast = lazy(() => import("./features/broadcast/Broadcast"));
 const NotFound = lazy(() => import("./components/NotFound"));
 const NotAuthorized = lazy(() => import("./components/NotAuthorized"));
 const DashboardHome = lazy(() => import("./features/dashboard/DashboardHome"));
-const ExploreTemplates = lazy(() =>
-  import("./features/templates/ExploreTemplates")
-);
+const ExploreTemplates = lazy(() =>import("./features/templates/ExploreTemplates"));
 const LoginRedirectHandler = lazy(() => import("./LoginRedirectHandler"));
 const ForgotPassword = lazy(() => import("./ForgotPassword"));
 const RegisterPage = lazy(() => import("./RegisterPage"));
-
-// Admin components
-const AdminDashboard = lazy(() => import("./features/admin/AdminDashboard"));
-const RoleManagement = lazy(() => import("./features/admin/RoleManagement"));
-
-// Role-based route protection component
-const AdminRoute = ({ children }) => {
-  const { user } = useAuth();
-
-  if (!user || (user.role !== "admin" && user.role !== "super_admin")) {
-    return <Navigate to="/unauthorized" replace />;
-  }
-
-  return children;
-};
+const GroupManagement = lazy(() => import("./features/contacts/GroupManagement"));
+const UserSetting = lazy(() => import("./features/flow/UserSetting"));
 
 function App() {
-  useBackButtonHandler();
-  
   return (
     <>
       <Suspense fallback={<Loader />}>
@@ -84,38 +65,6 @@ function App() {
             }
           />
 
-          {/* Protected Routes */}
-          <Route element={<PrivateRoute />}>
-            {/* Admin Routes - Protected by role */}
-            <Route
-              path="/admin"
-              element={
-                <AdminRoute>
-                  <AdminLayout />
-                </AdminRoute>
-              }
-            >
-              <Route
-                index
-                element={<Navigate to="/admin/dashboard" replace />}
-              />
-              <Route
-                path="dashboard"
-                element={
-                  <ErrorBoundary>
-                    <AdminDashboard />
-                  </ErrorBoundary>
-                }
-              />
-              <Route
-                path="roles"
-                element={
-                  <ErrorBoundary>
-                    <RoleManagement />
-                  </ErrorBoundary>
-                }
-              />
-            </Route>
             {/* User Routes */}
             <Route path="/" element={<DashboardLayout />}>
               <Route
@@ -131,6 +80,14 @@ function App() {
                 element={
                   <ErrorBoundary>
                     <ContactList />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="contact/group"
+                element={
+                  <ErrorBoundary>
+                    <GroupManagement />
                   </ErrorBoundary>
                 }
               />
@@ -170,6 +127,14 @@ function App() {
                 path="settings"
                 element={
                   <ErrorBoundary>
+                    <UserSetting />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="flow"
+                element={
+                  <ErrorBoundary>
                     <Setting />
                   </ErrorBoundary>
                 }
@@ -187,7 +152,6 @@ function App() {
                 element={<Navigate to="/contact" replace />}
               />
             </Route>
-          </Route>
           {/* Place the NotFound route globally at the end */}
           <Route
             path="*"

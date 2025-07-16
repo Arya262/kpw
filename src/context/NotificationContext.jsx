@@ -9,12 +9,15 @@ import React, {
 import { useSocket } from "./SocketContext";
 import { useAuth } from "./AuthContext";
 import notificationService from "../utils/notificationService";
+import axios from "axios";
+import { API_ENDPOINTS } from "../config/api";
 
 const NotificationContext = createContext(null);
 
 export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadConversations, setUnreadConversations] = useState({});
   const [isNotificationEnabled, setIsNotificationEnabled] = useState(true);
 
   const socket = useSocket();
@@ -23,7 +26,6 @@ export const NotificationProvider = ({ children }) => {
   const lastNotificationTime = useRef({});
   const lastSoundTime = useRef(0);
 
-  // ✅ Set custom .mp3 sound (defaults to /notification.mp3)
   useEffect(() => {
     notificationService.setCustomAudio("/notification.mp3");
   }, []);
@@ -34,6 +36,16 @@ export const NotificationProvider = ({ children }) => {
       lastSoundTime.current = now;
       await notificationService.playNotificationSound();
     }
+  };
+
+  const markConversationAsRead = (conversationId) => {
+    setUnreadConversations((prev) => {
+      const newMap = { ...prev };
+      const removedCount = newMap[conversationId] || 0;
+      delete newMap[conversationId];
+      setUnreadCount((prevUnread) => Math.max(prevUnread - removedCount, 0));
+      return newMap;
+    });
   };
 
   const handleIncomingMessage = async (data) => {
@@ -79,7 +91,12 @@ export const NotificationProvider = ({ children }) => {
       });
     }
 
+    // Update unread count (global and per conversation)
     setUnreadCount((prev) => prev + 1);
+    setUnreadConversations((prev) => ({
+      ...prev,
+      [conversationId]: (prev[conversationId] || 0) + 1,
+    }));
 
     const newNotification = {
       id: now,
@@ -97,7 +114,6 @@ export const NotificationProvider = ({ children }) => {
     window.dispatchEvent(new CustomEvent("message_received", { detail: data }));
   };
 
-  // ✅ Preload audio safely (without .play())
   useEffect(() => {
     const preloadSound = () => {
       const s = new Audio("/notification.mp3");
@@ -107,7 +123,6 @@ export const NotificationProvider = ({ children }) => {
     document.addEventListener("click", preloadSound);
   }, []);
 
-  // ✅ Listen to socket messages
   useEffect(() => {
     if (!socket) return;
 
@@ -127,7 +142,6 @@ export const NotificationProvider = ({ children }) => {
     };
   }, [socket]);
 
-  // ✅ Reset unread count when tab becomes visible
   useEffect(() => {
     const onFocus = () => {
       if (!document.hidden) setUnreadCount(0);
@@ -135,6 +149,31 @@ export const NotificationProvider = ({ children }) => {
     document.addEventListener("visibilitychange", onFocus);
     return () => document.removeEventListener("visibilitychange", onFocus);
   }, []);
+
+  useEffect(() => {
+    if (!user?.customer_id) return; // Wait for user to be loaded
+
+    const fetchUnreadCount = async () => {
+      try {
+        const response = await axios.get(
+          `${API_ENDPOINTS.CHAT.CONVERSATIONS}?customer_id=${user.customer_id}`,
+          {
+            headers: { "Content-Type": "application/json" },
+            withCredentials: true,
+          }
+        );
+        const totalUnread = response.data.reduce(
+          (sum, c) => sum + (c.unread_count || 0),
+          0
+        );
+        setUnreadCount(totalUnread);
+      } catch (error) {
+        console.error("Failed to fetch contacts for unread count:", error);
+      }
+    };
+
+    fetchUnreadCount();
+  }, [user?.customer_id]);
 
   const markNotificationAsRead = (id) => {
     setNotifications((prev) =>
@@ -146,11 +185,13 @@ export const NotificationProvider = ({ children }) => {
   const markAllNotificationsAsRead = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     setUnreadCount(0);
+    setUnreadConversations({});
   };
 
   const clearAllNotifications = () => {
     setNotifications([]);
     setUnreadCount(0);
+    setUnreadConversations({});
   };
 
   const toggleNotifications = async () => {
@@ -165,19 +206,20 @@ export const NotificationProvider = ({ children }) => {
     setIsNotificationEnabled(newState);
   };
 
-  // ✅ Include `addAlert` so SocketContext can call it
   const contextValue = useMemo(
     () => ({
       unreadCount,
+      unreadConversations, // ✅ per-conversation unread map
       notifications,
       isNotificationEnabled,
       markNotificationAsRead,
       markAllNotificationsAsRead,
       clearAllNotifications,
       toggleNotifications,
-      addAlert: handleIncomingMessage, // <-- this is critical
+      addAlert: handleIncomingMessage,
+      markConversationAsRead, // ✅ expose this to reset per-chat
     }),
-    [unreadCount, notifications, isNotificationEnabled]
+    [unreadCount, unreadConversations, notifications, isNotificationEnabled]
   );
 
   return (

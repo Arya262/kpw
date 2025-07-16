@@ -10,14 +10,16 @@ import {
   HelpCircle,
 } from "lucide-react";
 import SidebarSubMenu from "./SidebarSubMenu";
+import { useNotifications } from "../context/NotificationContext";
 
 const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
   const sidebarRef = useRef(null);
   const location = useLocation();
+  const { unreadCount } = useNotifications();
 
   const menuItems = [
     { name: "Dashboard", icon: <LayoutDashboard size={22} />, path: "/" },
-    { name: "Contact List", icon: <Contact2 size={22} />, path: "/contact" },
+    { name: "My Contact", icon: <Contact2 size={22} />, path: "/contact", submenu: true },
     {
       name: "Templates",
       icon: <FileText size={22} />,
@@ -26,7 +28,8 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
     },
     { name: "Chats", icon: <MessageCircle size={22} />, path: "/chats" },
     { name: "Broadcast", icon: <Megaphone size={22} />, path: "/broadcast" },
-    { name: "Setting", icon: <Settings size={22} />, path: "/settings" },
+    { name: "Setting", icon: <Settings size={22} />, path: "/settings",},
+    { name: "Flow", icon: <Megaphone size={22} />, path: "/flow" },
     { name: "Help", icon: <HelpCircle size={22} />, path: "/help" },
   ];
 
@@ -96,6 +99,10 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
               key={item.name}
               isOpen={isOpen}
               setIsOpen={setIsOpen}
+              item={item}
+                           icon={item.icon}
+              submenuItems={item.submenuItems}
+              path={item.path}
             />
           ) : (
             <NavLink
@@ -111,8 +118,16 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
                 }`
               }
             >
-              <span className="w-5 h-5 flex items-center justify-center">
+              <span className="w-5 h-5 flex items-center justify-center relative">
                 {item.icon}
+                {item.name === "Chats" && unreadCount > 0 && (
+                  <span
+                    className="absolute -top-1 -right-44 inline-flex items-center justify-center min-w-[20px] h-5 px-2 text-xs font-bold leading-none text-white rounded-full shadow"
+                    style={{ backgroundColor: '#0AA89E' }} 
+                  >
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
               </span>
               <span>{item.name}</span>
             </NavLink>

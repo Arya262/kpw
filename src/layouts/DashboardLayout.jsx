@@ -3,6 +3,7 @@ import Sidebar from "../components/Sidebar";
 import React, { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import NotAuthorized from "../components/NotAuthorized";
 
 const DashboardLayout = () => {
   const { user } = useAuth();
@@ -49,14 +50,7 @@ const DashboardLayout = () => {
           }`}
         >
           {!isRouteAllowed() ? (
-            <div className="min-h-screen flex items-center justify-center bg-red-50">
-              <div className="text-center">
-                <h1 className="text-2xl font-bold text-red-600">Access Denied</h1>
-                <p className="mt-2 text-gray-700">
-                  You do not have permission to view this page. Please contact the administrator.
-                </p>
-              </div>
-            </div>
+            <NotAuthorized />
           ) : (
             <Outlet />
           )}

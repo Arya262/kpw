@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import axios from "axios";
 import { API_BASE, API_ENDPOINTS } from "../config/api";
-
+import { useNotifications } from "../context/NotificationContext";
 export const useChatLogic = ({
   user,
   socket,
@@ -11,7 +11,7 @@ export const useChatLogic = ({
   setContacts,
   contacts,
 }) => {
-  // ✅ Mark messages as read (server-side)
+  const { markConversationAsRead } = useNotifications();
   const markAllAsRead = useCallback(async (conversationId) => {
     try {
       await axios.post(API_ENDPOINTS.CHAT.MARK_AS_READ, {
@@ -22,7 +22,6 @@ export const useChatLogic = ({
     }
   }, []);
 
-  // ✅ Fetch contacts and enrich with last message
   const fetchContacts = useCallback(async () => {
     if (!user?.customer_id) return;
 
@@ -81,8 +80,8 @@ export const useChatLogic = ({
 
       const sorted = enriched.sort(
         (a, b) =>
-          new Date(b.lastMessageTime || b.updated_at) -
-          new Date(a.lastMessageTime || a.updated_at)
+          new Date(b.lastMessageTime || b.updated_at || 0) -
+          new Date(a.lastMessageTime || a.updated_at || 0)
       );
 
       setContacts(sorted);
@@ -91,7 +90,6 @@ export const useChatLogic = ({
     }
   }, [user?.customer_id, setContacts]);
 
-  // ✅ Fetch messages and reset unread count
   const fetchMessagesForContact = useCallback(
     async (conversationId) => {
       if (!conversationId) return;
@@ -108,8 +106,8 @@ export const useChatLogic = ({
         const messages = response.data;
         setMessages(messages || []);
 
-        // ✅ Mark as read on server
-        markAllAsRead(conversationId);
+        await markAllAsRead(conversationId);
+         markConversationAsRead(conversationId);
 
         const latest = messages?.[messages.length - 1] || {};
 
@@ -121,7 +119,7 @@ export const useChatLogic = ({
                   lastMessage: latest.content || latest.element_name || c.lastMessage,
                   lastMessageType: latest.message_type || c.lastMessageType,
                   lastMessageTime: latest.sent_at || c.lastMessageTime,
-                  unreadCount: 0, // ✅ Always reset to 0
+                  unreadCount: 0,
                 }
               : c
           )
@@ -130,13 +128,15 @@ export const useChatLogic = ({
         console.error("❌ Failed to fetch messages:", err);
       }
     },
-    [setMessages, setContacts, markAllAsRead]
+    [setMessages, setContacts, markAllAsRead,markConversationAsRead]
   );
 
-  // ✅ Select contact
   const selectContact = useCallback(
     (contact) => {
       if (!contact) return;
+
+      // ✅ Prevent redundant re-selection
+      if (selectedContact?.conversation_id === contact.conversation_id) return;
 
       setSelectedContact(contact);
 
@@ -155,10 +155,9 @@ export const useChatLogic = ({
         setMessages([]);
       }
     },
-    [socket, fetchMessagesForContact, setSelectedContact, setContacts, setMessages]
+    [socket, fetchMessagesForContact, setSelectedContact, setContacts, setMessages, selectedContact]
   );
 
-  // ✅ Handle incoming message
   const handleIncomingMessage = useCallback(
     (msg) => {
       setContacts((prev) =>
@@ -185,7 +184,6 @@ export const useChatLogic = ({
     [setContacts, setMessages, selectedContact]
   );
 
-  // ✅ Setup socket listener
   const setupSocketListener = useCallback(() => {
     if (!socket) return;
     socket.on("newMessage", handleIncomingMessage);
@@ -194,7 +192,6 @@ export const useChatLogic = ({
     };
   }, [socket, handleIncomingMessage]);
 
-  // ✅ Send message
   const sendMessage = useCallback(
     async (input) => {
       if (!selectedContact?.conversation_id) return;
@@ -213,7 +210,11 @@ export const useChatLogic = ({
       }
 
       try {
-        await axios.post(`${API_BASE}/sendmessage`, newMessage);
+        await axios.post(`${API_BASE}/sendmessage`, {
+          ...newMessage,
+          message_type: messageType,
+        });
+
         fetchMessagesForContact(selectedContact.conversation_id);
 
         setContacts((prev) =>
@@ -234,8 +235,8 @@ export const useChatLogic = ({
             )
             .sort(
               (a, b) =>
-                new Date(b.lastMessageTime || b.updated_at) -
-                new Date(a.lastMessageTime || a.updated_at)
+                new Date(b.lastMessageTime || b.updated_at || 0) -
+                new Date(a.lastMessageTime || a.updated_at || 0)
             )
         );
       } catch (err) {
@@ -245,7 +246,6 @@ export const useChatLogic = ({
     [selectedContact, setContacts, fetchMessagesForContact]
   );
 
-  // ✅ Delete chat
   const deleteChat = useCallback(
     async (contact) => {
       const conversationId = contact.conversation_id;

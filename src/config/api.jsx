@@ -1,5 +1,5 @@
 export const API_BASE =
-  import.meta.env.VITE_API_BASE || "http://localhost:3000";
+  import.meta.env.VITE_API_BASEz || "http://localhost:3000";
 
 export const API_ENDPOINTS = {
   BROADCASTS: {
@@ -56,5 +56,11 @@ export const API_ENDPOINTS = {
   },
   WHATSAPP: {
     NUMBERS: "/api/whatsapp/numbers",
+  },
+  USERS: {
+    GET_SUBUSERS: (customerId) => `${API_BASE}/getsubusers?customer_id=${customerId}`,
+    CREATE_SUBUSER: `${API_BASE}/createSubUser`,
+    UPDATE_SUBUSER: (userId) => `${API_BASE}/updatesubuser?user_id=${userId}`,
+    DELETE_SUBUSER: (userId) => `${API_BASE}/deletesubuser?user_id=${userId}`,
   },
 };
