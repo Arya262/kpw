@@ -9,11 +9,9 @@ import "react-toastify/dist/ReactToastify.css";
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import { useGoogleLogin } from '@react-oauth/google';
-import FacebookLogin from 'react-facebook-login/dist/facebook-login-render-props';
 import { motion } from 'framer-motion';
 
 const RegisterPage = () => {
-  const facebookAppId = import.meta.env.VITE_FACEBOOK_APP_ID;
   const navigate = useNavigate();
   const [form, setForm] = useState({
     first_name: "",
@@ -468,31 +466,6 @@ const RegisterPage = () => {
                   </g>
                 </svg>
               </button>
-
-              {/* Facebook OAuth Button as Circle */}
-              <FacebookLogin
-                appId={facebookAppId} // <-- Replace with your real Facebook App ID
-                autoLoad={false}
-                callback={response => {
-                  // TODO: Send response.accessToken to backend
-                  console.log('Facebook response:', response);
-                }}
-                render={renderProps => (
-                  <button
-                    type="button"
-                    onClick={renderProps.onClick}
-                    className="w-12 h-12 flex items-center justify-center rounded-full border border-gray-300 hover:bg-gray-100 transition"
-                    style={{ background: '#fff' }}
-                    title="Sign up with Facebook"
-                  >
-                    {/* Facebook SVG */}
-                    <svg className="w-6 h-6" viewBox="0 0 24 24">
-                      <path fill="#1877F3" d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073c0 6.019 4.388 10.995 10.125 11.854v-8.385H7.078v-3.47h3.047V9.413c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953h-1.513c-1.491 0-1.953.926-1.953 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.068 24 18.092 24 12.073"/>
-                      <path fill="#FFF" d="M16.671 15.543l.532-3.47h-3.328v-2.25c0-.948.462-1.874 1.953-1.874h1.513V5.979s-1.374-.235-2.686-.235c-2.741 0-4.533 1.662-4.533 4.669v2.08H7.078v3.47h3.047v8.385a12.07 12.07 0 0 0 1.875.145c.637 0 1.262-.05 1.875-.145v-8.385h2.796z"/>
-                    </svg>
-                  </button>
-                )}
-              />
             </div>
 
             <div className="text-sm text-center">
