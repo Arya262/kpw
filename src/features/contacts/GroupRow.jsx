@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Edit2, Trash2 } from "lucide-react";
 import { createPortal } from "react-dom";
+import ContactList from "./ContactList";
 
 function PortalDropdown({ children, position, onClose }) {
   const dropdownRef = useRef(null);
@@ -70,6 +71,33 @@ export default function GroupRow({
     if (!isDropdownOpen) setDropdownPos(null);
   }, [isDropdownOpen]);
 
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+
+    const date = new Date(dateString);
+    const formattedDate = date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+    });
+
+    const hasTime = date.getHours() !== 0 || date.getMinutes() !== 0;
+    if (hasTime) {
+      const formattedTime = date.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+      return (
+        <div className="flex flex-col">
+          <span>{formattedDate}</span>
+          <span>{formattedTime}</span>
+        </div>
+      );
+    }
+    return <span>{formattedDate}</span>;
+  };
+
   return (
     <tr ref={rowRef} className="border-t border-b border-b-[#C3C3C3] hover:bg-gray-50 text-md">
       <td className="px-2 py-4 sm:px-4">
@@ -99,7 +127,7 @@ export default function GroupRow({
         {group.store_mapped || "All stores"}
       </td>
       <td className="px-2 py-4 text-[12px] sm:text-[16px] text-center text-gray-700">
-        {group.created_at ? new Date(group.created_at).toLocaleString() : "-"}
+        {group.created_at ? formatDate(group.created_at) : "-"}
       </td>
       <td className="relative py-4">
         <div className="flex justify-center">

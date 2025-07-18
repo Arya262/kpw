@@ -6,6 +6,47 @@ import "react-toastify/dist/ReactToastify.css";
 // Import DeleteConfirmationDialog
 import DeleteConfirmationDialog from "../shared/DeleteConfirmationDialog";
 import { API_ENDPOINTS } from "../../config/api";
+import ReactDOM from "react-dom";
+
+// PopoverPortal component for rendering popover in a portal
+function PopoverPortal({ anchorRect, children, onClose, position = 'bottom' }) {
+  const popoverRef = useRef();
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (popoverRef.current && !popoverRef.current.contains(event.target)) {
+        onClose();
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [onClose]);
+
+  if (!anchorRect) return null;
+  const style = {
+    position: 'absolute',
+    left: anchorRect.left,
+    top: position === 'bottom' ? anchorRect.bottom + 6 : anchorRect.top - 206, // 200px height + 6px gap
+    zIndex: 9999,
+    minWidth: 180,
+    maxWidth: 320,
+    maxHeight: 200,
+    background: 'white',
+    border: '1px solid #d1d5db',
+    borderRadius: 8,
+    boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+    padding: 8,
+    overflowY: 'auto',
+    textAlign: 'left',
+    animation: 'fadeIn 0.2s',
+  };
+  return ReactDOM.createPortal(
+    <div ref={popoverRef} style={style}>
+      {children}
+    </div>,
+    document.body
+  );
+}
 
 const UserSetting = () => {
   const { user } = useAuth();
@@ -64,12 +105,10 @@ const UserSetting = () => {
   // Role options for editing
   const roleOptions = [
     { value: "user", label: "User", color: "bg-gray-100 text-gray-700", icon: <User size={14} className="inline mr-1" /> },
-    { value: "premium_user", label: "Premium User", color: "bg-green-100 text-green-700", icon: <Star size={14} className="inline mr-1" /> },
     { value: "admin", label: "Admin", color: "bg-purple-100 text-purple-700", icon: <Shield size={14} className="inline mr-1" /> },
     { value: "super_admin", label: "Super Admin", color: "bg-red-100 text-red-700", icon: <Crown size={14} className="inline mr-1" /> },
   ];
 
-  // --- MOCK USERS DATA FOR DEMO ---
   // Remove mockUsers and set initial usersMatrix to []
   const [usersMatrix, setUsersMatrix] = useState([]);
 
@@ -177,7 +216,7 @@ const UserSetting = () => {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          customer_id: user.customer_id, // <-- add this line
+          customer_id: user.customer_id, 
           name: `${newUserFirstName} ${newUserLastName}`.trim(),
           email: newUserEmail,
           mobile_no: newUserMobileNo || "",
@@ -231,7 +270,7 @@ const UserSetting = () => {
     setEditUserRole(user.role);
     setEditUserPerms(user.allowed_routes);
     setEditUserFeatures(user.allowed_features || []);
-    setEditUserPassword(""); // Always blank for security
+    setEditUserPassword("");
   };
 
   // Save edited user
@@ -246,7 +285,7 @@ const UserSetting = () => {
           name: `${editUserFirstName} ${editUserLastName}`.trim(),
           email: editUser.email,
           mobile_no: editUserMobileNo || "",
-          password: editUserPassword, // Always send password (may be empty)
+          password: editUserPassword, 
           allowed_routes: editUserPerms,
         }),
       });
@@ -332,21 +371,66 @@ const UserSetting = () => {
   const [userToDelete, setUserToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Add at the top level of the component, after other useState/useRef
+  const [openPopover, setOpenPopover] = useState({ userId: null, type: null }); // type: 'routes' | 'features'
+  const popoverRefs = useRef({});
+  const [popoverPosition, setPopoverPosition] = useState('bottom'); // 'bottom' or 'top'
+  const [popoverAnchorRect, setPopoverAnchorRect] = useState(null);
+
+  // Add useEffect to handle click outside for popover
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (
+        openPopover.userId !== null &&
+        openPopover.type !== null &&
+        popoverRefs.current[`${openPopover.userId}_${openPopover.type}`] &&
+        !popoverRefs.current[`${openPopover.userId}_${openPopover.type}`].contains(event.target)
+      ) {
+        setOpenPopover({ userId: null, type: null });
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [openPopover]);
+
+  // Smart popover positioning: when openPopover changes, check available space and set popoverPosition
+  useEffect(() => {
+    if (openPopover.userId && openPopover.type) {
+      const badgeEl = popoverRefs.current[`${openPopover.userId}_${openPopover.type}`];
+      if (badgeEl) {
+        const rect = badgeEl.getBoundingClientRect();
+        const popoverHeight = 200; // Estimate or set max height of popover
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        if (spaceBelow < popoverHeight && spaceAbove > popoverHeight) {
+          setPopoverPosition('top');
+        } else {
+          setPopoverPosition('bottom');
+        }
+      }
+    }
+  }, [openPopover]);
+
   return (
     <>
       <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover theme="light" />
-      {/* --- PERMISSIONS MATRIX TABLE --- */}
       <div className="mb-8">
-        <div className="flex justify-end items-center mb-4">
-          {isOwner && (
-            <button
-              className="px-4 py-2 bg-[#24AEAE] text-white rounded hover:bg-#24AEAE[] transition cursor-pointer"
-              onClick={() => setShowAddUser(true)}
-              type="button"
-            >
-              + Add User
-            </button>
-          )}
+        <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
+          <div className="flex items-center gap-4 flex-wrap">
+            <h2 className="text-xl font-bold">Users</h2>
+            {/* You can add filter buttons here if needed */}
+          </div>
+          <div>
+            {isOwner && (
+              <button
+                className="px-4 py-2 bg-[#24AEAE] text-white rounded hover:bg-#24AEAE[] transition cursor-pointer"
+                onClick={() => setShowAddUser(true)}
+                type="button"
+              >
+                + Add User
+              </button>
+            )}
+          </div>
         </div>
         {/* Add User Modal */}
         {showAddUser && (
@@ -534,9 +618,9 @@ const UserSetting = () => {
                       setNewUserEmail("");
                       setNewUserPerms([]);
                       setNewUserFeatures([]);
-                      setNewUserRole('user'); // Reset role
-                      setNewUserPassword(""); // Reset password
-                      setNewUserMobileNo(""); // Reset mobile no
+                      setNewUserRole('user'); 
+                      setNewUserPassword(""); 
+                      setNewUserMobileNo("");
                     }}
                   >
                     Cancel
@@ -557,8 +641,8 @@ const UserSetting = () => {
                 setEditUserRole("user");
                 setEditUserPerms([]);
                 setEditUserFeatures([]);
-                setEditUserMobileNo(""); // Reset mobile no
-                setEditUserPassword(""); // Reset password field
+                setEditUserMobileNo(""); 
+                setEditUserPassword(""); 
               }
             }}
           >
@@ -737,28 +821,54 @@ const UserSetting = () => {
           </div>
         )}
         <div className="overflow-x-auto">
-          <div className="min-w-[600px] bg-white rounded-2xl shadow-[0px_-0.91px_3.66px_0px_#00000042] overflow-hidden">
+          <div className="min-w-[900px] bg-white rounded-2xl shadow-[0px_-0.91px_3.66px_0px_#00000042] overflow-hidden">
             <table className="w-full text-sm text-center overflow-hidden table-auto">
-              <thead>
-                <tr className="bg-[#F4F4F4] border-b-2 shadow-sm border-gray-300">
-                  <th className="px-2 py-3 sm:px-6 text-left text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">User</th>
-                  <th className="px-2 py-3 sm:px-6 text-left text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">Role</th>
-                  <th className="px-2 py-3 sm:px-6 text-left text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">Permissions</th>
-                  <th className="px-2 py-3 sm:px-6 text-left text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">Actions</th>
+              <thead className="bg-[#F4F4F4] border-b-2 shadow-sm border-gray-300">
+                <tr>
+                  <th className="px-2 py-3 sm:px-6">
+                    <div className="flex items-center justify-center h-full">
+                      <input
+                        type="checkbox"
+                        className="form-checkbox w-4 h-4"
+                        // onChange={handleSelectAllChange} // Bulk logic not implemented yet
+                        disabled
+                      />
+                    </div>
+                  </th>
+                  <th className="px-2 py-3 sm:px-6 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">User</th>
+                  <th className="px-2 py-3 sm:px-6 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">Role</th>
+                  <th className="px-2 py-3 sm:px-6 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">Permissions</th>
+                  <th className="px-2 py-3 sm:px-6 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">Actions</th>
                 </tr>
               </thead>
               <tbody className="max-h-[calc(100vh-300px)] overflow-y-auto scrollbar-hide">
+                {Array.isArray(usersMatrix) && usersMatrix.length === 0 && (
+                  <tr>
+                    <td colSpan="5" className="text-center py-4 text-gray-500">
+                      No users found.
+                    </td>
+                  </tr>
+                )}
                 {Array.isArray(usersMatrix) && usersMatrix.map((u) => (
                   <tr key={u.id} className="border-t border-b border-b-[#C3C3C3] hover:bg-gray-50 text-md">
-                    <td className="px-2 py-4 sm:px-4 whitespace-nowrap text-left">
-                      <div className="flex flex-col gap-1">
-                        <span className="font-medium text-[14px] sm:text-[16px] text-gray-700">{u.first_name} {u.last_name}</span>
-                        <span className="text-gray-500 text-xs">{u.email}</span>
+                    <td className="px-2 py-4 sm:px-4 text-[12px] sm:text-[16px] text-gray-700">
+                      <div className="flex items-center justify-center h-full">
+                        <input
+                          type="checkbox"
+                          className="form-checkbox w-4 h-4"
+                          disabled
+                        />
                       </div>
                     </td>
-                    <td className="px-2 py-4 sm:px-4 text-left">
+                    <td className="px-2 py-4 sm:px-4 sm:py-4 whitespace-nowrap text-[12px] sm:text-[16px] text-gray-700 text-left">
+                      <div className="flex flex-col gap-1">
+                        <span className="font-medium text-[12px] sm:text-[16px] text-gray-700">{u.first_name} {u.last_name}</span>
+                        <span className="text-[12px] sm:text-[16px] text-gray-500">{u.email}</span>
+                      </div>
+                    </td>
+                    <td className="px-2 py-4 sm:px-4 text-[12px] sm:text-[16px] text-gray-700 text-center">
                       {u.role === 'super_admin' ? (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-[12px] sm:text-[16px] font-medium bg-red-100 text-red-700">
                           <Crown size={14} className="inline mr-1" /> Super Admin
                         </span>
                       ) : (
@@ -786,7 +896,7 @@ const UserSetting = () => {
                         </div>
                       )}
                     </td>
-                    <td className="px-2 py-4 sm:px-4 text-left relative">
+                    <td className="px-2 py-4 sm:px-4 text-[12px] sm:text-[16px] text-gray-700 text-left relative">
                       <div className="mb-1">
                         <span className="font-semibold text-xs text-gray-600 mr-2">Routes:</span>
                         {(!u.allowed_routes || u.allowed_routes.length === 0) && (
@@ -807,9 +917,37 @@ const UserSetting = () => {
                               );
                             })}
                             {u.allowed_routes.length > 3 && (
-                              <span className="inline-block bg-gray-200 text-gray-700 px-2 py-1 rounded-full text-xs font-medium mr-1 mb-1">
+                              <span
+                                className="inline-block bg-gray-200 text-gray-700 px-2 py-1 rounded-full text-xs font-medium mr-1 mb-1 cursor-pointer hover:bg-gray-300 relative"
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  setOpenPopover({ userId: u.id, type: 'routes' });
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  setPopoverAnchorRect(rect);
+                                }}
+                                ref={el => (popoverRefs.current[`${u.id}_routes`] = el)}
+                              >
                                 +{u.allowed_routes.length - 3} more
                               </span>
+                            )}
+                            {openPopover.userId === u.id && openPopover.type === 'routes' && popoverAnchorRect && (
+                              <PopoverPortal
+                                anchorRect={popoverAnchorRect}
+                                onClose={() => { setOpenPopover({ userId: null, type: null }); setPopoverAnchorRect(null); }}
+                                position={popoverPosition}
+                              >
+                                <div className="font-semibold text-xs text-gray-600 mb-1">All Routes</div>
+                                {u.allowed_routes.map(routeKey => {
+                                  const route = allRoutes.find(r => r.key === routeKey);
+                                  return (
+                                    <div key={routeKey} className="mb-1">
+                                      <span className="inline-block bg-teal-100 text-teal-700 px-2 py-1 rounded-full text-xs font-medium mr-1 mb-1">
+                                        {route ? route.label : routeKey}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                              </PopoverPortal>
                             )}
                           </>
                         )}
@@ -822,7 +960,7 @@ const UserSetting = () => {
                         {u.allowed_features && u.allowed_features.length > 0 && (
                           <>
                             {u.allowed_features.slice(0, 3).map((featureKey, idx) => {
-                              const perm = allPermissions.find(p => p.key === featureKey);
+                              const perm = allPermissions?.find(p => p.key === featureKey);
                               return perm ? (
                                 <span key={perm.key} className="inline-block bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs font-medium mr-1 mb-1">
                                   {perm.label}
@@ -834,15 +972,43 @@ const UserSetting = () => {
                               );
                             })}
                             {u.allowed_features.length > 3 && (
-                              <span className="inline-block bg-gray-200 text-gray-700 px-2 py-1 rounded-full text-xs font-medium mr-1 mb-1">
+                              <span
+                                className="inline-block bg-gray-200 text-gray-700 px-2 py-1 rounded-full text-xs font-medium mr-1 mb-1 cursor-pointer hover:bg-gray-300 relative"
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  setOpenPopover({ userId: u.id, type: 'features' });
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  setPopoverAnchorRect(rect);
+                                }}
+                                ref={el => (popoverRefs.current[`${u.id}_features`] = el)}
+                              >
                                 +{u.allowed_features.length - 3} more
                               </span>
+                            )}
+                            {openPopover.userId === u.id && openPopover.type === 'features' && popoverAnchorRect && (
+                              <PopoverPortal
+                                anchorRect={popoverAnchorRect}
+                                onClose={() => { setOpenPopover({ userId: null, type: null }); setPopoverAnchorRect(null); }}
+                                position={popoverPosition}
+                              >
+                                <div className="font-semibold text-xs text-gray-600 mb-1">All Features</div>
+                                {u.allowed_features.map(featureKey => {
+                                  const perm = allPermissions?.find(p => p.key === featureKey);
+                                  return (
+                                    <div key={featureKey} className="mb-1">
+                                      <span className="inline-block bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs font-medium mr-1 mb-1">
+                                        {perm ? perm.label : featureKey}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                              </PopoverPortal>
                             )}
                           </>
                         )}
                       </div>
                     </td>
-                    <td className="px-2 py-4 sm:px-4 text-left">
+                    <td className="px-2 py-4 sm:px-4 text-[12px] sm:text-[16px] text-gray-700 text-left">
                       {u.role !== 'super_admin' && (
                         <>
                           <button

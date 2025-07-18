@@ -31,7 +31,7 @@ const LoginPage = () => {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [touched, setTouched] = useState({});
-  
+
   const validateField = (name, value) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const mobileRegex = /^[6-9]\d{9}$/;
@@ -85,7 +85,7 @@ const LoginPage = () => {
     return !Object.values(newErrors).some((error) => error);
   };
 
-const handleSubmit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setTouched({ loginMethod: true, password: true });
 
@@ -123,9 +123,18 @@ const handleSubmit = async (e) => {
       }
     } catch (err) {
       console.error("Login error:", err);
-      toast.error("An error occurred. Please try again later.");
+      // Try to show backend error message if available
+      const backendMsg =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        err.message;
+      if (backendMsg) {
+        toast.error(backendMsg);
+      } else {
+        toast.error("An error occurred. Please try again later.");
+      }
     } finally {
-      setLoading(false); // ✅ hide loader
+      setLoading(false);
     }
   };
 
@@ -258,9 +267,8 @@ const handleSubmit = async (e) => {
               </label>
               <input
                 name="loginMethod"
-                className={`w-full h-[50px] rounded-md px-4 text-sm sm:text-[16px] ${
-                  errors.loginMethod ? "border-red-500" : "border-[#a2a2a2]"
-                } border`}
+                className={`w-full h-[50px] rounded-md px-4 text-sm sm:text-[16px] ${errors.loginMethod ? "border-red-500" : "border-[#a2a2a2]"
+                  } border`}
                 value={loginMethod}
                 onChange={handleChange}
                 onBlur={handleBlur}
@@ -279,9 +287,8 @@ const handleSubmit = async (e) => {
               <div className="relative">
                 <input
                   name="password"
-                  className={`w-full h-[50px] rounded-md px-4 border ${
-                    errors.password ? "border-red-500" : "border-[#a2a2a2]"
-                  }`}
+                  className={`w-full h-[50px] rounded-md px-4 border ${errors.password ? "border-red-500" : "border-[#a2a2a2]"
+                    }`}
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={handleChange}
@@ -301,15 +308,15 @@ const handleSubmit = async (e) => {
               )}
             </div>
 
-{/* Forgot Password */}
-<div className="flex justify-end text-xs sm:text-sm">
-  <Link
-    to="/forgot-password"
-    className="text-blue-600 hover:underline cursor-pointer"
-  >
-    Forgot Password?
-  </Link>
-</div>
+            {/* Forgot Password */}
+            <div className="flex justify-end text-xs sm:text-sm">
+              <Link
+                to="/forgot-password"
+                className="text-blue-600 hover:underline cursor-pointer"
+              >
+                Forgot Password?
+              </Link>
+            </div>
 
             {/* Login Button */}
             <button
