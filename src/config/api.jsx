@@ -32,10 +32,10 @@ export const API_ENDPOINTS = {
   },
   GROUPS: {
     GET_ALL: `${API_BASE}/returnGroups`,
-    CREATE: `${API_BASE}/createGroup`,
+    CREATE: `${API_BASE}/addcustomers`,
     UPDATE: `${API_BASE}/updateGroup`,
     DELETE: `${API_BASE}/deleteGroup`,
-    GET_CONTACTS: (groupId) => `${API_BASE}/groupContacts?group_id=${groupId}`,
+    GET_CONTACTS: (groupId) => `${API_BASE}/groups/groupContacts?group_id=${groupId}`,
   },
   EXTERNAL: {
     COUNTRY_CODES: "https://countriesnow.space/api/v0.1/countries/codes",
