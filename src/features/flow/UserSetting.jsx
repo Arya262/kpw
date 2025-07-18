@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
+import { ROLE_PERMISSIONS } from "../../context/permissions";
 import { User, Shield, Star, Crown, Pencil, Trash2 } from "lucide-react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -50,12 +51,23 @@ function PopoverPortal({ anchorRect, children, onClose, position = 'bottom' }) {
 
 const UserSetting = () => {
   const { user } = useAuth();
+  // Map backend role values to ROLE_PERMISSIONS keys
+  const roleMap = {
+    main: "Owner",
+    owner: "Owner",
+    admin: "Admin",
+    manager: "Manager",
+    user: "User",
+    viewer: "Viewer",
+  };
+  const role = roleMap[user?.role?.toLowerCase?.()] || "Viewer";
+  const permissions = ROLE_PERMISSIONS[role];
   const [name, setName] = useState(user?.name || "");
   const [email, setEmail] = useState(user?.email || "");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  const isOwner = true; // Always show Add User for demo/testing
+  const isOwner = permissions.canManageUsers;
 
   // Define all possible routes for permissions
   const allRoutes = [
@@ -74,8 +86,8 @@ const UserSetting = () => {
     { key: "/help", label: "Help" },
   ];
 
-  // Local state for permissions
-  const [permissions, setPermissions] = useState(user?.allowed_routes || []);
+  // Local state for allowed routes (feature permissions)
+  const [allowedRoutes, setAllowedRoutes] = useState(user?.allowed_routes || []);
 
   // State for add user form
   const [showAddUser, setShowAddUser] = useState(false);
@@ -103,10 +115,13 @@ const UserSetting = () => {
   const [editUserPassword, setEditUserPassword] = useState("");
 
   // Role options for editing
+  // 1. Update roleOptions to include all roles
   const roleOptions = [
-    { value: "user", label: "User", color: "bg-gray-100 text-gray-700", icon: <User size={14} className="inline mr-1" /> },
+    { value: "owner", label: "Owner", color: "bg-blue-100 text-blue-700", icon: <Crown size={14} className="inline mr-1" /> },
     { value: "admin", label: "Admin", color: "bg-purple-100 text-purple-700", icon: <Shield size={14} className="inline mr-1" /> },
-    { value: "super_admin", label: "Super Admin", color: "bg-red-100 text-red-700", icon: <Crown size={14} className="inline mr-1" /> },
+    { value: "manager", label: "Manager", color: "bg-green-100 text-green-700", icon: <Star size={14} className="inline mr-1" /> },
+    { value: "user", label: "User", color: "bg-gray-100 text-gray-700", icon: <User size={14} className="inline mr-1" /> },
+    { value: "viewer", label: "Viewer", color: "bg-yellow-100 text-yellow-700", icon: <User size={14} className="inline mr-1" /> },
   ];
 
   // Remove mockUsers and set initial usersMatrix to []
@@ -127,7 +142,7 @@ const UserSetting = () => {
   }, [user?.customer_id]);
 
   const handlePermissionToggle = (permKey) => {
-    setPermissions((prev) =>
+    setAllowedRoutes((prev) =>
       prev.includes(permKey)
         ? prev.filter((p) => p !== permKey)
         : [...prev, permKey]
@@ -198,6 +213,7 @@ const UserSetting = () => {
   const [editUserFeatures, setEditUserFeatures] = useState([]);
 
   const handleAddUser = async (e) => {
+    if (!permissions.canManageUsers) return;
     e.preventDefault();
     if (!newUserFirstName.trim() || !newUserEmail.trim() || !newUserPassword.trim()) {
       toast.error("First Name, Email, and Password are required");
@@ -221,7 +237,8 @@ const UserSetting = () => {
           email: newUserEmail,
           mobile_no: newUserMobileNo || "",
           password: newUserPassword,
-          allowed_routes: newUserPerms,
+          role: newUserRole, // <-- send role
+          allowed_routes: newUserPerms, // <-- send allowed routes
         }),
       });
       if (!res.ok) {
@@ -275,6 +292,7 @@ const UserSetting = () => {
 
   // Save edited user
   const handleSaveEditUser = async (e) => {
+    if (!permissions.canManageUsers) return;
     e.preventDefault();
     try {
       const res = await fetch(API_ENDPOINTS.USERS.UPDATE_SUBUSER(editUser.user_id), {
@@ -286,7 +304,8 @@ const UserSetting = () => {
           email: editUser.email,
           mobile_no: editUserMobileNo || "",
           password: editUserPassword, 
-          allowed_routes: editUserPerms,
+          role: editUserRole, // <-- send role
+          allowed_routes: editUserPerms, // <-- send allowed routes
         }),
       });
       if (!res.ok) {
@@ -315,6 +334,7 @@ const UserSetting = () => {
 
   // Add this function to handle user deletion
   const handleDeleteUser = async (user_id) => {
+    if (!permissions.canManageUsers) return;
     setIsDeleting(true);
     try {
       const res = await fetch(API_ENDPOINTS.USERS.DELETE_SUBUSER(user_id), {
@@ -421,15 +441,19 @@ const UserSetting = () => {
             {/* You can add filter buttons here if needed */}
           </div>
           <div>
-            {isOwner && (
-              <button
-                className="px-4 py-2 bg-[#24AEAE] text-white rounded hover:bg-#24AEAE[] transition cursor-pointer"
-                onClick={() => setShowAddUser(true)}
-                type="button"
-              >
-                + Add User
-              </button>
-            )}
+            <button
+              className="px-4 py-2 bg-[#24AEAE] text-white rounded hover:bg-#24AEAE[] transition cursor-pointer"
+              onClick={() => {
+                if (permissions.canManageUsers) {
+                  setShowAddUser(true);
+                } else {
+                  toast.error("You do not have permission to add users.");
+                }
+              }}
+              type="button"
+            >
+              + Add User
+            </button>
           </div>
         </div>
         {/* Add User Modal */}
@@ -547,12 +571,13 @@ const UserSetting = () => {
                       className="w-full border border-gray-300 p-2 rounded-md text-gray-700 h-[38px] focus:border-[#05A3A3] focus:outline-none focus:ring-1 focus:ring-[#05A3A3] transition-all duration-150 ease-in-out bg-white"
                       required
                     >
-                      {roleOptions.filter(r => r.value !== 'super_admin').map(opt => (
+                      {roleOptions.map(opt => (
                         <option key={opt.value} value={opt.value}>{opt.label}</option>
                       ))}
                     </select>
                   </div>
                 </div>
+                {/* Restore Allowed Routes section */}
                 <div className="mb-2">
                   <label className="block text-sm font-medium mb-2 text-gray-700">Allowed Routes</label>
                   <div className="flex flex-wrap gap-4">
@@ -574,34 +599,6 @@ const UserSetting = () => {
                     ))}
                   </div>
                 </div>
-                {/* <div className="mb-2">
-                  <label className="block text-sm font-medium mb-2 text-gray-700">Allowed Features</label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-2">
-                    {permissionGroups.map((group) => (
-                      <div key={group.label} className="mb-2">
-                        <div className="font-semibold text-xs text-gray-600 mb-1">{group.label}</div>
-                        <div className="flex flex-col gap-1">
-                          {group.permissions.map((perm) => (
-                            <label key={perm.key} className="flex items-center gap-2 text-sm">
-                              <input
-                                type="checkbox"
-                                checked={newUserFeatures.includes(perm.key)}
-                                onChange={() => {
-                                  setNewUserFeatures(prev =>
-                                    prev.includes(perm.key)
-                                      ? prev.filter(f => f !== perm.key)
-                                      : [...prev, perm.key]
-                                  );
-                                }}
-                              />
-                              {perm.label}
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div> */}
                 <div className="flex justify-end gap-2 mt-4">
                   <button
                     type="submit"
@@ -631,7 +628,7 @@ const UserSetting = () => {
           </div>
         )}
         {/* Edit User Modal */}
-        {editUser && (
+        {editUser && permissions.canManageUsers && (
           <div
             className="fixed inset-0 bg-white/40 flex items-center justify-center z-50 transition-all duration-300"
             onClick={e => {
@@ -737,13 +734,15 @@ const UserSetting = () => {
                       onChange={e => setEditUserRole(e.target.value)}
                       className="w-full border border-gray-300 p-2 rounded-md text-gray-700 h-[38px] focus:border-[#05A3A3] focus:outline-none focus:ring-1 focus:ring-[#05A3A3] transition-all duration-150 ease-in-out bg-white"
                       required
+                      disabled={editUserRole === 'owner'}
                     >
-                      {roleOptions.filter(r => r.value !== 'super_admin').map(opt => (
+                      {roleOptions.map(opt => (
                         <option key={opt.value} value={opt.value}>{opt.label}</option>
                       ))}
                     </select>
                   </div>
                 </div>
+                {/* Restore Allowed Routes section */}
                 <div className="mb-2">
                   <label className="block text-sm font-medium mb-2 text-gray-700">Allowed Routes</label>
                   <div className="flex flex-wrap gap-4">
@@ -765,34 +764,6 @@ const UserSetting = () => {
                     ))}
                   </div>
                 </div>
-                {/* <div className="mb-2">
-                  <label className="block text-sm font-medium mb-2 text-gray-700">Allowed Features</label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-2">
-                    {permissionGroups.map((group) => (
-                      <div key={group.label} className="mb-2">
-                        <div className="font-semibold text-xs text-gray-600 mb-1">{group.label}</div>
-                        <div className="flex flex-col gap-1">
-                          {group.permissions.map((perm) => (
-                            <label key={perm.key} className="flex items-center gap-2 text-sm">
-                              <input
-                                type="checkbox"
-                                checked={editUserFeatures.includes(perm.key)}
-                                onChange={() => {
-                                  setEditUserFeatures(prev =>
-                                    prev.includes(perm.key)
-                                      ? prev.filter(f => f !== perm.key)
-                                      : [...prev, perm.key]
-                                  );
-                                }}
-                              />
-                              {perm.label}
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div> */}
                 <div className="flex justify-end gap-2 mt-4">
                   <button
                     type="submit"
@@ -849,8 +820,8 @@ const UserSetting = () => {
                     </td>
                   </tr>
                 )}
-                {Array.isArray(usersMatrix) && usersMatrix.map((u) => (
-                  <tr key={u.id} className="border-t border-b border-b-[#C3C3C3] hover:bg-gray-50 text-md">
+                {Array.isArray(usersMatrix) && usersMatrix.map((u, idx) => (
+                  <tr key={u.id || u.user_id || idx} className="border-t border-b border-b-[#C3C3C3] hover:bg-gray-50 text-md">
                     <td className="px-2 py-4 sm:px-4 text-[12px] sm:text-[16px] text-gray-700">
                       <div className="flex items-center justify-center h-full">
                         <input
@@ -867,9 +838,9 @@ const UserSetting = () => {
                       </div>
                     </td>
                     <td className="px-2 py-4 sm:px-4 text-[12px] sm:text-[16px] text-gray-700 text-center">
-                      {u.role === 'super_admin' ? (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-[12px] sm:text-[16px] font-medium bg-red-100 text-red-700">
-                          <Crown size={14} className="inline mr-1" /> Super Admin
+                      {u.role === 'owner' ? (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-[12px] sm:text-[16px] font-medium bg-blue-100 text-blue-700">
+                          <Crown size={14} className="inline mr-1" /> Owner
                         </span>
                       ) : (
                         <div className="inline-flex items-center gap-2">
@@ -879,12 +850,13 @@ const UserSetting = () => {
                             className={
                               `appearance-none px-2 py-1 rounded-full text-xs font-medium border-none focus:ring-2 focus:ring-teal-400 ` +
                               (u.role === 'admin' ? 'bg-purple-100 text-purple-700' :
-                               u.role === 'premium_user' ? 'bg-green-100 text-green-700' :
+                               u.role === 'manager' ? 'bg-green-100 text-green-700' :
+                               u.role === 'viewer' ? 'bg-yellow-100 text-yellow-700' :
                                'bg-gray-100 text-gray-700')
                             }
                             style={{ minWidth: 120 }}
                           >
-                            {roleOptions.filter(r => r.value !== 'super_admin').map(opt => (
+                            {roleOptions.filter(r => r.value !== 'owner').map(opt => (
                               <option key={opt.value} value={opt.value} className={opt.color}>
                                 {opt.label}
                               </option>
@@ -906,13 +878,9 @@ const UserSetting = () => {
                           <>
                             {u.allowed_routes.slice(0, 3).map((routeKey, idx) => {
                               const route = allRoutes.find(r => r.key === routeKey);
-                              return route ? (
-                                <span key={route.key} className="inline-block bg-teal-100 text-teal-700 px-2 py-1 rounded-full text-xs font-medium mr-1 mb-1">
-                                  {route.label}
-                                </span>
-                              ) : (
-                                <span key={routeKey} className="inline-block bg-teal-100 text-teal-700 px-2 py-1 rounded-full text-xs font-medium mr-1 mb-1">
-                                  {routeKey}
+                              return (
+                                <span key={`${u.id}_route_${routeKey}_${idx}`} className="inline-block bg-teal-100 text-teal-700 px-2 py-1 rounded-full text-xs font-medium mr-1 mb-1">
+                                  {route ? route.label : routeKey}
                                 </span>
                               );
                             })}
@@ -937,10 +905,10 @@ const UserSetting = () => {
                                 position={popoverPosition}
                               >
                                 <div className="font-semibold text-xs text-gray-600 mb-1">All Routes</div>
-                                {u.allowed_routes.map(routeKey => {
+                                {u.allowed_routes.map((routeKey, idx) => {
                                   const route = allRoutes.find(r => r.key === routeKey);
                                   return (
-                                    <div key={routeKey} className="mb-1">
+                                    <div key={`${u.id}_popover_route_${routeKey}_${idx}`} className="mb-1">
                                       <span className="inline-block bg-teal-100 text-teal-700 px-2 py-1 rounded-full text-xs font-medium mr-1 mb-1">
                                         {route ? route.label : routeKey}
                                       </span>
@@ -961,13 +929,9 @@ const UserSetting = () => {
                           <>
                             {u.allowed_features.slice(0, 3).map((featureKey, idx) => {
                               const perm = allPermissions?.find(p => p.key === featureKey);
-                              return perm ? (
-                                <span key={perm.key} className="inline-block bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs font-medium mr-1 mb-1">
-                                  {perm.label}
-                                </span>
-                              ) : (
-                                <span key={featureKey} className="inline-block bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs font-medium mr-1 mb-1">
-                                  {featureKey}
+                              return (
+                                <span key={`${u.id}_feature_${featureKey}_${idx}`} className="inline-block bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs font-medium mr-1 mb-1">
+                                  {perm ? perm.label : featureKey}
                                 </span>
                               );
                             })}
@@ -992,10 +956,10 @@ const UserSetting = () => {
                                 position={popoverPosition}
                               >
                                 <div className="font-semibold text-xs text-gray-600 mb-1">All Features</div>
-                                {u.allowed_features.map(featureKey => {
+                                {u.allowed_features.map((featureKey, idx) => {
                                   const perm = allPermissions?.find(p => p.key === featureKey);
                                   return (
-                                    <div key={featureKey} className="mb-1">
+                                    <div key={`${u.id}_popover_feature_${featureKey}_${idx}`} className="mb-1">
                                       <span className="inline-block bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs font-medium mr-1 mb-1">
                                         {perm ? perm.label : featureKey}
                                       </span>
@@ -1009,11 +973,17 @@ const UserSetting = () => {
                       </div>
                     </td>
                     <td className="px-2 py-4 sm:px-4 text-[12px] sm:text-[16px] text-gray-700 text-left">
-                      {u.role !== 'super_admin' && (
+                      {u.role !== 'owner' && (
                         <>
                           <button
                             className="p-1 rounded hover:bg-gray-200 text-gray-500 hover:text-teal-600 transition cursor-pointer"
-                            onClick={() => handleEditUser(u)}
+                            onClick={() => {
+                              if (permissions.canManageUsers) {
+                                handleEditUser(u);
+                              } else {
+                                toast.error("You do not have permission to edit users.");
+                              }
+                            }}
                             aria-label="Edit user"
                             type="button"
                           >
@@ -1021,7 +991,14 @@ const UserSetting = () => {
                           </button>
                           <button
                             className="p-1 rounded hover:bg-red-100 text-gray-500 hover:text-red-600 transition ml-2 cursor-pointer"
-                            onClick={() => { setUserToDelete(u); setShowDeleteDialog(true); }}
+                            onClick={() => {
+                              if (permissions.canManageUsers) {
+                                setUserToDelete(u);
+                                setShowDeleteDialog(true);
+                              } else {
+                                toast.error("You do not have permission to delete users.");
+                              }
+                            }}
                             aria-label="Delete user"
                             type="button"
                           >

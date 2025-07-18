@@ -5,6 +5,8 @@ import { Wallet, Banknote, PiggyBank, Crown, Plus } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { API_ENDPOINTS } from "../../config/api";
 import AddCreditModal from "./AddCreditModal";
+import { ROLE_PERMISSIONS } from "../../context/permissions";
+import { toast } from "react-toastify";
 
 // 🎯 Reusable animated number component using Framer Motion only
 const AnimatedNumber = ({ value, duration = 1.2 }) => {
@@ -39,6 +41,18 @@ const DashboardHome = () => {
 
   const [usageHistory, setUsageHistory] = useState([]);
   const { user } = useAuth();
+
+  // Map backend role values to ROLE_PERMISSIONS keys (same as ContactList)
+  const roleMap = {
+    main: "Owner",
+    owner: "Owner",
+    admin: "Admin",
+    manager: "Manager",
+    user: "User",
+    viewer: "Viewer",
+  };
+  const role = roleMap[user?.role?.toLowerCase?.()] || "Viewer";
+  const permissions = ROLE_PERMISSIONS[role];
 
   const [showAddCredit, setShowAddCredit] = useState(false);
   const [creditAmount, setCreditAmount] = useState("");
@@ -188,6 +202,10 @@ const DashboardHome = () => {
     }
   };
 
+  const handleUnauthorizedAddCredit = () => {
+    toast.error("You do not have permission to add credits.");
+  };
+
   return (
     <div>
       {/* Header */}
@@ -195,11 +213,12 @@ const DashboardHome = () => {
         <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
           Dashboard
         </h2>
+        {/* Always show Add Credit button, enforce permission in handler */}
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           className="bg-[#24AEAE] hover:bg-teal-600 text-white flex items-center justify-center gap-2 px-4 py-2 rounded text-sm md:text-base cursor-pointer"
-          onClick={() => setShowAddCredit(true)}
+          onClick={permissions.canAddCredits ? () => setShowAddCredit(true) : handleUnauthorizedAddCredit}
         >
           <Plus className="w-5 h-5" />
           Add Credit
@@ -238,24 +257,32 @@ const DashboardHome = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <MessagingAnalytics usageHistory={usageHistory} />
+        {permissions.canViewAnalytics ? (
+          <MessagingAnalytics usageHistory={usageHistory} />
+        ) : (
+          <div className="text-center text-gray-500 py-8">
+            You do not have access to detailed analytics.
+          </div>
+        )}
       </motion.div>
 
       {/* Add Credit Modal */}
-      <AddCreditModal
-        isOpen={showAddCredit}
-        onClose={() => {
-          setShowAddCredit(false);
-          setCreditAmount("");
-          setPaymentSuccess(false);
-          setPaymentLoading(false);
-        }}
-        creditAmount={creditAmount}
-        setCreditAmount={setCreditAmount}
-        handlePayment={handlePayment}
-        paymentLoading={paymentLoading}
-        paymentSuccess={paymentSuccess}
-      />
+      {permissions.canAddCredits && (
+        <AddCreditModal
+          isOpen={showAddCredit}
+          onClose={() => {
+            setShowAddCredit(false);
+            setCreditAmount("");
+            setPaymentSuccess(false);
+            setPaymentLoading(false);
+          }}
+          creditAmount={creditAmount}
+          setCreditAmount={setCreditAmount}
+          handlePayment={handlePayment}
+          paymentLoading={paymentLoading}
+          paymentSuccess={paymentSuccess}
+        />
+      )}
     </div>
   );
 };

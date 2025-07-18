@@ -10,6 +10,7 @@ export const useChatLogic = ({
   setMessages,
   setContacts,
   contacts,
+  permissions,
 }) => {
   const { markConversationAsRead } = useNotifications();
   const markAllAsRead = useCallback(async (conversationId) => {
@@ -194,6 +195,7 @@ export const useChatLogic = ({
 
   const sendMessage = useCallback(
     async (input) => {
+      if (permissions && !permissions.canSendMessages) return;
       if (!selectedContact?.conversation_id) return;
 
       const newMessage = { conversation_id: selectedContact.conversation_id };
@@ -243,11 +245,12 @@ export const useChatLogic = ({
         console.error("❌ Error sending message:", err);
       }
     },
-    [selectedContact, setContacts, fetchMessagesForContact]
+    [selectedContact, setContacts, fetchMessagesForContact, permissions]
   );
 
   const deleteChat = useCallback(
     async (contact) => {
+      if (permissions && !permissions.canDeleteChats) return;
       const conversationId = contact.conversation_id;
       const customerId = user?.customer_id;
 
@@ -285,7 +288,7 @@ export const useChatLogic = ({
         }
       }
     },
-    [user?.customer_id, setContacts, setMessages, setSelectedContact]
+    [user?.customer_id, setContacts, setMessages, setSelectedContact, permissions]
   );
 
   return {

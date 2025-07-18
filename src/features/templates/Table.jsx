@@ -3,6 +3,8 @@ import { HiDotsVertical } from "react-icons/hi";
 import { IoSearch } from "react-icons/io5";
 import { useNavigate } from "react-router-dom";
 import DeleteConfirmationDialog from "../shared/DeleteConfirmationDialog";
+import { toast } from "react-toastify";
+import { Edit2, Trash2 } from "lucide-react";
 
 const formatDate = (dateString) => {
   if (!dateString) return "N/A";
@@ -29,7 +31,7 @@ const formatDate = (dateString) => {
   return <span>{formattedDate}</span>;
 };
 
-const Table = ({ templates = [], onDelete, onEdit }) => {
+const Table = ({ templates = [], onDelete, onEdit, canEdit, canDelete }) => {
   const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
@@ -116,7 +118,19 @@ const Table = ({ templates = [], onDelete, onEdit }) => {
     }));
   };
 
+  // Permission-aware handlers
   const handleDeleteSelected = async () => {
+    if (!canDelete) {
+      toast.error('You do not have permission to delete templates.', {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
+      return;
+    }
     const selectedIds = Object.entries(selectedRows)
       .filter(([_, isSelected]) => isSelected)
       .map(([idx]) => displayedTemplates[idx]?.id)
@@ -132,6 +146,60 @@ const Table = ({ templates = [], onDelete, onEdit }) => {
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  const handleDeleteClick = (template) => {
+    if (!canDelete) {
+      toast.error('You do not have permission to delete templates.', {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
+      return;
+    }
+    setSelectedTemplate(template);
+    setShowDeleteDialog(true);
+    setMenuOpen(null);
+  };
+
+  const handleEditClick = (template) => {
+    if (!canEdit) {
+      toast.error('You do not have permission to edit templates.', {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
+      return;
+    }
+    setMenuOpen(null);
+    if (onEdit) {
+      onEdit(template);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedTemplate) return;
+    try {
+      setIsDeleting(true);
+      await onDelete(selectedTemplate.id);
+      setShowDeleteDialog(false);
+      setSelectedTemplate(null);
+    } catch (error) {
+      // handle error
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteDialog(false);
+    setSelectedTemplate(null);
   };
 
   const toggleMenu = (index) => {
@@ -163,40 +231,6 @@ const Table = ({ templates = [], onDelete, onEdit }) => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  const handleDeleteClick = (template) => {
-    setSelectedTemplate(template);
-    setShowDeleteDialog(true);
-    setMenuOpen(null);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!selectedTemplate) return;
-    try {
-      setIsDeleting(true);
-      console.log('Deleting template:', selectedTemplate);
-      console.log('Deleting template id:', selectedTemplate.id);
-      await onDelete(selectedTemplate.id);
-      setShowDeleteDialog(false);
-      setSelectedTemplate(null);
-    } catch (error) {
-      // handle error
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const handleDeleteCancel = () => {
-    setShowDeleteDialog(false);
-    setSelectedTemplate(null);
-  };
-
-  const handleEditClick = (template) => {
-    setMenuOpen(null);
-    if (onEdit) {
-      onEdit(template);
-    }
-  };
 
   return (
     <div className="overflow-x-auto">
@@ -255,19 +289,18 @@ const Table = ({ templates = [], onDelete, onEdit }) => {
               />
             </div>
           </div>
-          {showMobileSearch && (
-            <div className="sm:hidden w-full px-2 mt-2">
-              <div className="relative">
-                <IoSearch className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search template by Name or Category..."
-                  className="w-full pl-3 pr-6 py-1.5 border border-gray-300 text-sm rounded-md focus:outline-none focus:ring focus:border-teal-400 placeholder:text-base"
-                />
+          {Object.values(selectedRows).some(Boolean) && (
+            <th colSpan="6" className="px-2 py-3 sm:px-6">
+              <div className="flex justify-center">
+                <button
+                  onClick={handleDeleteSelected}
+                  disabled={isDeleting}
+                  className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200"
+                >
+                  Delete Selected
+                </button>
               </div>
-            </div>
+            </th>
           )}
         </div>
         <div className="overflow-x-auto">
@@ -285,19 +318,6 @@ const Table = ({ templates = [], onDelete, onEdit }) => {
                       />
                     </div>
                   </th>
-                  {Object.values(selectedRows).some(Boolean) && (
-                    <th colSpan="6" className="px-2 py-3 sm:px-6">
-                      <div className="flex justify-center">
-                        <button
-                          onClick={handleDeleteSelected}
-                          disabled={isDeleting}
-                          className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200"
-                        >
-                          Delete Selected
-                        </button>
-                      </div>
-                    </th>
-                  )}
                   {!Object.values(selectedRows).some(Boolean) && (
                     <>
                       <th className="px-2 py-3 sm:px-6 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">
@@ -397,6 +417,7 @@ const Table = ({ templates = [], onDelete, onEdit }) => {
                             </svg>
                             <span className="text-sm font-medium">Send Message</span>
                           </button>
+                          {/* Always show menu button */}
                           <button
                             onClick={() => toggleMenu(idx)}
                             className="p-2 rounded-full hover:bg-gray-100 focus:outline-none cursor-pointer"
@@ -424,15 +445,15 @@ const Table = ({ templates = [], onDelete, onEdit }) => {
                             >
                               <button
                                 onClick={() => handleEditClick(template)}
-                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                               >
-                                Edit Template
+                                <Edit2 className="w-4 h-4" /> Edit Template
                               </button>
                               <button
                                 onClick={() => handleDeleteClick(template)}
-                                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2"
                               >
-                                Delete
+                                <Trash2 className="w-4 h-4" /> Delete
                               </button>
                             </div>
                           )}

@@ -3,8 +3,10 @@ import { Send, X } from "lucide-react";
 import SendTemplate from "./chatfeautures/SendTemplate";
 import EmojiPicker from "emoji-picker-react";
 import DOMPurify from "dompurify";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
-const MessageInput = ({ onSendMessage, selectedContact }) => {
+const MessageInput = ({ onSendMessage, selectedContact, canSendMessage }) => {
   const [message, setMessage] = useState("");
   const [showTemplates, setShowTemplates] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -51,8 +53,8 @@ const MessageInput = ({ onSendMessage, selectedContact }) => {
     // Convert italic <i> or <em>
     text = text.replace(/<(i|em)>(.*?)<\/\1>/gi, "_$2_");
 
-    // Convert strikethrough <s>
-    text = text.replace(/<s>(.*?)<\/s>/gi, "~$1~");
+    // Convert strikethrough <s> or <strike>
+    text = text.replace(/<(s|strike)>(.*?)<\/\1>/gi, "~$2~");
 
     // Remove all other HTML tags
     text = text.replace(/<\/?[^>]+(>|$)/g, "");
@@ -62,6 +64,10 @@ const MessageInput = ({ onSendMessage, selectedContact }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!canSendMessage) {
+      toast.error("You do not have permission to send messages.");
+      return;
+    }
     const cleaned = sanitizeHtml(message);
     const plain = extractPlainText(cleaned);
     if (!plain.trim()) {
@@ -160,24 +166,24 @@ const MessageInput = ({ onSendMessage, selectedContact }) => {
               type="button"
               onClick={() => setShowEmojiPicker((v) => !v)}
               className="text-xl mr-2 hover:bg-gray-200 rounded-full w-8 h-8 flex items-center justify-center"
-              disabled={!isWithin24Hours}
+              disabled={!isWithin24Hours || !canSendMessage}
             >
               😊
             </button>
 
             <div className="flex gap-1 mr-2">
-              <button type="button" onClick={() => handleFormatting("bold")} className="font-bold text-sm hover:text-gray-700" title="Bold">B</button>
-              <button type="button" onClick={() => handleFormatting("italic")} className="italic text-sm hover:text-gray-700" title="Italic">I</button>
-              <button type="button" onClick={() => handleFormatting("strikeThrough")} className="line-through text-sm hover:text-gray-700" title="Strikethrough">S</button>
+              <button type="button" onClick={() => handleFormatting("bold")} className="font-bold text-sm hover:text-gray-700" title="Bold" disabled={!canSendMessage}>B</button>
+              <button type="button" onClick={() => handleFormatting("italic")} className="italic text-sm hover:text-gray-700" title="Italic" disabled={!canSendMessage}>I</button>
+              <button type="button" onClick={() => handleFormatting("strikeThrough")} className="line-through text-sm hover:text-gray-700" title="Strikethrough" disabled={!canSendMessage}>S</button>
             </div>
 
             <div
               ref={inputRef}
-              contentEditable={isWithin24Hours}
+              contentEditable={isWithin24Hours && canSendMessage}
               suppressContentEditableWarning
               onInput={(e) => setMessage(e.currentTarget.innerHTML)}
               onKeyDown={(e) => {
-                if (!isWithin24Hours) {
+                if (!isWithin24Hours || !canSendMessage) {
                   e.preventDefault();
                   return;
                 }
@@ -187,10 +193,10 @@ const MessageInput = ({ onSendMessage, selectedContact }) => {
                 }
               }}
               onPaste={(e) => {
-                if (!isWithin24Hours) e.preventDefault();
+                if (!isWithin24Hours || !canSendMessage) e.preventDefault();
               }}
               className={`flex-1 text-sm focus:outline-none max-h-36 overflow-y-auto ${
-                !isWithin24Hours ? "text-gray-400 cursor-not-allowed" : ""
+                !isWithin24Hours || !canSendMessage ? "text-gray-400 cursor-not-allowed" : ""
               }`}
               style={{ minHeight: "20px" }}
             ></div>
@@ -199,6 +205,11 @@ const MessageInput = ({ onSendMessage, selectedContact }) => {
               type="submit"
               className="ml-2 h-8 px-3 flex items-center justify-center text-white bg-teal-500 hover:bg-teal-600 rounded-full text-xs whitespace-nowrap"
               disabled={!isWithin24Hours}
+              onClick={() => {
+                if (!canSendMessage) {
+                  toast.error("You do not have permission to send messages.");
+                }
+              }}
             >
               <Send className="w-4 h-4 mr-1" />
               {sanitizeHtml(message).trim()
@@ -207,6 +218,18 @@ const MessageInput = ({ onSendMessage, selectedContact }) => {
             </button>
           </div>
         </form>
+        <ToastContainer
+          position="top-right"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="light"
+        />
       </div>
 
       {showTemplates && (
@@ -220,13 +243,6 @@ const MessageInput = ({ onSendMessage, selectedContact }) => {
               onClose={() => setShowTemplates(false)}
               returnFullTemplate={false}
             />
-            <button
-              onClick={() => setShowTemplates(false)}
-              className="absolute top-3 right-3 text-gray-500 hover:text-red-500"
-              aria-label="Close Template Modal"
-            >
-              <X className="w-5 h-5" />
-            </button>
           </div>
         </div>
       )}

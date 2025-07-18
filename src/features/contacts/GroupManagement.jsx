@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Users, Plus, Edit2, Trash2, UserCheck } from "lucide-react";
+import { Users, Plus, Edit2, Trash2, UserCheck, CloudUpload } from "lucide-react";
 import { API_ENDPOINTS } from "../../config/api";
 import { useAuth } from "../../context/AuthContext";
+import { ROLE_PERMISSIONS } from "../../context/permissions";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Loader from "../../components/Loader";
 import GroupRow from "./GroupRow";
+import vectorIcon from "../../assets/Vector.png";
 
 // Empty State Component (matches ContactListImproved)
 const EmptyState = ({ searchTerm }) => (
@@ -91,88 +93,323 @@ const GroupCard = ({ group, onEdit, onDelete, onViewContacts }) => {
   );
 };
 
+// Refactor GroupForm to only render the form content, not modal wrappers
 const GroupForm = ({ group, onSave, onCancel }) => {
   const [name, setName] = useState(group?.name || "");
   const [description, setDescription] = useState(group?.description || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [file, setFile] = useState(null);
+  const [fileRemoved, setFileRemoved] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [groupNameError, setGroupNameError] = useState("");
+  const [fileError, setFileError] = useState("");
+  const [csvHeaders, setCsvHeaders] = useState([]);
+
+  // Group name validation
+  const validateGroupName = () => {
+    if (!name.trim()) {
+      setGroupNameError("Group name is required.");
+      return false;
+    }
+    if (name.trim().length < 2) {
+      setGroupNameError("Group name must be at least 2 characters long.");
+      return false;
+    }
+    if (name.trim().length > 50) {
+      setGroupNameError("Group name must be less than 50 characters.");
+      return false;
+    }
+    setGroupNameError("");
+    return true;
+  };
+
+  // File validation
+  const validateFile = () => {
+    if (!file && !group?.file_name) {
+      setFileError("Please upload a file.");
+      return false;
+    }
+    if (file && !(file.name.endsWith(".csv") || file.name.endsWith(".docx"))) {
+      setFileError("Only .csv or .docx files are allowed.");
+      return false;
+    }
+    setFileError("");
+    return true;
+  };
+
+  // CSV content validation (only for .csv)
+  const validateCsvContent = (selectedFile) => {
+    return new Promise((resolve) => {
+      if (!selectedFile || !selectedFile.name.endsWith(".csv")) {
+        resolve(true); // skip for non-csv
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        let text = event.target.result;
+        if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
+        const lines = text.split(/\r?\n/);
+        const headersLine = lines[0];
+        if (!headersLine || headersLine.trim() === "") {
+          setFileError("CSV file appears to be empty or malformed.");
+          resolve(false);
+          return;
+        }
+        const headers = headersLine
+          .split(",")
+          .map((header) => header.trim())
+          .filter((header) => header.length > 0);
+        if (headers.length === 0) {
+          setFileError("No headers found in CSV.");
+          resolve(false);
+          return;
+        }
+        setCsvHeaders(headers);
+        resolve(true);
+      };
+      reader.onerror = () => {
+        setFileError("Failed to read CSV file.");
+        resolve(false);
+      };
+      reader.readAsText(selectedFile);
+    });
+  };
+
+  const handleFileChange = async (e) => {
+    const selectedFile = e.target.files[0];
+    setFileError("");
+    setCsvHeaders([]);
+    if (!selectedFile) {
+      setFile(null);
+      return;
+    }
+    if (!(selectedFile.name.endsWith(".csv") || selectedFile.name.endsWith(".docx"))) {
+      setFileError("Only .csv or .docx files are allowed.");
+      setFile(null);
+      return;
+    }
+    setFile(selectedFile);
+    setFileRemoved(false);
+    if (selectedFile.name.endsWith(".csv")) {
+      await validateCsvContent(selectedFile);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name.trim()) return;
-
+    const validName = validateGroupName();
+    const validFile = validateFile();
+    let validCsv = true;
+    if (file && file.name.endsWith(".csv")) {
+      validCsv = await validateCsvContent(file);
+    }
+    if (!validName || !validFile || !validCsv) return;
     setIsSubmitting(true);
     try {
-      await onSave({ name: name.trim(), description: description.trim(), file });
+      await onSave({ name: name.trim(), description: description.trim(), file, fileRemoved });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md">
-        <h3 className="text-lg font-semibold mb-4">
-          {group ? "Edit Group" : "Create New Group"}
-        </h3>
-        
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Group Name *
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Enter group name"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
-              required
-            />
+    <form onSubmit={handleSubmit}>
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Group Name *
+        </label>
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => { setName(e.target.value); setGroupNameError(""); }}
+          placeholder="Enter group name"
+          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 ${groupNameError ? "border-red-500" : "border-gray-300"}`}
+          required
+        />
+        {groupNameError && (
+          <p className="text-red-500 text-sm mt-1">{groupNameError}</p>
+        )}
+      </div>
+      <div className="mb-6">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Description (Optional)
+        </label>
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Enter group description"
+          rows="3"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+        />
+      </div>
+      <div className="mb-6">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Upload File (.csv or .docx)
+        </label>
+        <div
+          className={`mb-2 border-2 rounded-md p-4 text-center transition-all duration-200 ${
+            isDragging ? "border-blue-500 bg-blue-50" : "border-dashed border-gray-300"
+          }`}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setIsDragging(true);
+          }}
+          onDragLeave={(e) => {
+            e.preventDefault();
+            setIsDragging(false);
+          }}
+          onDrop={async (e) => {
+            e.preventDefault();
+            setIsDragging(false);
+            const droppedFile = e.dataTransfer.files[0];
+            if (droppedFile) {
+              const fakeEvent = { target: { files: [droppedFile] } };
+              await handleFileChange(fakeEvent);
+            }
+          }}
+        >
+          <input
+            type="file"
+            accept=".csv,.docx"
+            onChange={handleFileChange}
+            className="hidden"
+            id="fileUpload"
+          />
+          <label
+            htmlFor="fileUpload"
+            className="cursor-pointer text-gray-500 flex flex-col items-center"
+          >
+            <CloudUpload className="w-12 h-12 mb-2" />
+            <p className="text-sm">
+              Drag & drop a CSV or DOCX file here
+            </p>
+            <p className="text-xs mt-1">Max 50MB and 200K contacts allowed.</p>
+          </label>
+          {fileError && (
+            <p className="text-red-500 text-sm mt-1">{fileError}</p>
+          )}
+          {file && (
+            <div className="mt-4 flex items-center justify-center gap-4">
+              <span className="text-sm text-green-700">{file.name}</span>
+              <button
+                type="button"
+                onClick={() => setFile(null)}
+                className="text-red-600 text-sm underline hover:text-red-800"
+              >
+                Remove
+              </button>
+            </div>
+          )}
+          {!file && group?.file_name && !fileRemoved && (
+            <div className="mb-2 text-sm text-gray-500 flex items-center gap-2">
+              <span>
+                Current file: <b>{group.file_name}</b>
+                {group.total_contacts !== undefined && (
+                  <> | Contacts: <b>{group.total_contacts}</b></>
+                )}
+              </span>
+              <button
+                type="button"
+                onClick={() => { setFileRemoved(true); }}
+                className="text-red-600 underline"
+              >
+                Remove
+              </button>
+            </div>
+          )}
+          <div className="text-xs text-gray-500 mt-2">
+            <a href="/sample.csv" download className="text-blue-600 underline">Download sample file</a>
           </div>
-          
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Description (Optional)
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Enter group description"
-              rows="3"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
-            />
-          </div>
+        </div>
+      </div>
+      <div className="flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="px-4 py-2 text-gray-600 hover:text-gray-800"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={isSubmitting || !name.trim()}
+          className="px-4 py-2 bg-teal-500 text-white rounded-md hover:bg-teal-600 disabled:opacity-50"
+        >
+          {isSubmitting ? "Submitting..." : "Submit"}
+        </button>
+      </div>
+    </form>
+  );
+};
 
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Upload File (.csv or .docx)
-            </label>
-            <input
-              type="file"
-              accept=".csv,.docx"
-              onChange={e => setFile(e.target.files[0])}
-              className="w-full"
-            />
-          </div>
-          
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="px-4 py-2 text-gray-600 hover:text-gray-800"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting || !name.trim()}
-              className="px-4 py-2 bg-teal-500 text-white rounded-md hover:bg-teal-600 disabled:opacity-50"
-            >
-              {isSubmitting ? "Saving..." : "Save"}
-            </button>
-          </div>
-        </form>
+// ConfirmationDialog component (copy from ContactList)
+const ConfirmationDialog = ({ showExitDialog, cancelExit, confirmExit }) => {
+  const dialogRef = useRef(null);
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        cancelExit();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [cancelExit]);
+  useEffect(() => {
+    dialogRef.current?.focus();
+  }, []);
+  if (!showExitDialog) return null;
+  return (
+    <div
+      className="fixed inset-0 bg-opacity-5 flex items-center justify-center z-50 transition-opacity duration-300"
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      <div
+        ref={dialogRef}
+        className="bg-white rounded-xl p-6 w-full max-w-sm shadow-lg transform transition-all duration-300 scale-100"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="dialog-title"
+        aria-describedby="dialog-message"
+        tabIndex="-1"
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <svg
+            className="w-6 h-6 text-teal-500"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            ></path>
+          </svg>
+          <h3 id="dialog-title" className="text-lg font-semibold text-gray-800">
+            Exit Confirmation
+          </h3>
+        </div>
+        <p id="dialog-message" className="text-gray-600 mb-6">
+          Are you sure you want to exit?
+        </p>
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={cancelExit}
+            className="px-3 py-2 w-[70px] bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
+            aria-label="Cancel"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={confirmExit}
+            className="px-3 py-2 w-[70px] bg-[#0AA89E] text-white rounded-md hover:bg-[#0AA89E] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
+            aria-label="Confirm"
+          >
+            OK
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -191,8 +428,25 @@ export default function GroupManagement() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [error, setError] = useState(null);
   const { user } = useAuth();
+  // Map backend role values to ROLE_PERMISSIONS keys
+  const roleMap = {
+    main: "Owner",
+    owner: "Owner",
+    admin: "Admin",
+    manager: "Manager",
+    user: "User",
+    viewer: "Viewer",
+  };
+  const role = roleMap[user?.role?.toLowerCase?.()] || "Viewer";
+  const permissions = ROLE_PERMISSIONS[role];
   const searchInputRef = useRef(null);
   const [deletingGroup, setDeletingGroup] = useState(null);
+  const modalRef = useRef(null);
+  // Add state for close icon highlight
+  const [isCrossHighlighted, setIsCrossHighlighted] = useState(false);
+  // Add state for border glow
+  const [isModalGlow, setIsModalGlow] = useState(false);
+  const [showExitDialog, setShowExitDialog] = useState(false);
 
   const fetchGroups = async () => {
     try {
@@ -221,6 +475,7 @@ export default function GroupManagement() {
         store_mapped: group.store_mapped || '',
         created_at: group.created_at,
         updated_at: group.updated_at,
+        file_name: group.file_name, // Add file_name to the transformed data
       }));
       setGroups(transformedGroups);
     } catch (error) {
@@ -235,18 +490,36 @@ export default function GroupManagement() {
     fetchGroups();
   }, [user?.customer_id]);
 
+  // In all handlers, check permissions.canManageGroups before proceeding
   const handleCreateGroup = async (groupData) => {
+    if (!permissions.canManageGroups) return;
     try {
+      const formData = new FormData();
+      const customerId = user?.customer_id;
+      const groupName = groupData.name;
+      const file = groupData.file;
+      const fileRemoved = groupData.fileRemoved; // Pass fileRemoved
+      console.log("Creating group with:", {
+        customer_id: customerId,
+        group_name: groupName,
+        file: file,
+        fileRemoved: fileRemoved,
+      });
+      formData.append('customer_id', customerId);
+      formData.append('group_name', groupName);
+      formData.append('description', groupData.description || '');
+      if (file) {
+        formData.append('file', file);
+      }
+      if (fileRemoved) {
+        formData.append('remove_file', 'true'); // Indicate file removal
+      }
+
       const response = await fetch(`${API_ENDPOINTS.GROUPS.CREATE}`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         credentials: "include",
-        body: JSON.stringify({
-          ...groupData,
-          customer_id: user?.customer_id,
-        }),
+        body: formData,
+        // Do NOT set headers!
       });
 
       if (response.ok) {
@@ -264,6 +537,7 @@ export default function GroupManagement() {
   };
 
   const handleUpdateGroup = async (groupData) => {
+    if (!permissions.canManageGroups) return;
     try {
       const formData = new FormData();
       formData.append('group_id', editingGroup.id);
@@ -272,6 +546,9 @@ export default function GroupManagement() {
       formData.append('description', groupData.description || '');
       if (groupData.file) {
         formData.append('file', groupData.file);
+      }
+      if (groupData.fileRemoved) {
+        formData.append('remove_file', 'true'); // Indicate file removal
       }
 
       const response = await fetch(`${API_ENDPOINTS.GROUPS.UPDATE}`, {
@@ -296,6 +573,7 @@ export default function GroupManagement() {
   };
 
   const handleDeleteGroup = async (group) => {
+    if (!permissions.canManageGroups) return;
     // No window.confirm here; confirmation handled by dialog
     try {
       setIsDeleting(true);
@@ -404,32 +682,40 @@ export default function GroupManagement() {
   return (
     <div className="flex-1">
       <ErrorDisplay error={error} setError={setError} />
-      <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
-        <div className="flex items-center gap-4 flex-wrap">
-          <h2 className="text-xl font-bold">Groups</h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold">Groups</h2>
+        <div className="flex items-center gap-2">
+          <div className="relative max-w-xs">
+            <input
+              type="text"
+              ref={searchInputRef}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search by group name or description..."
+              aria-label="Search groups"
+              className="pl-3 pr-10 py-2 border border-gray-300 text-sm rounded-md w-full focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400"
+            />
+            <svg
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              strokeWidth="2"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </div>
+          {permissions.canManageGroups && (
+            <button
+              className="bg-[#0AA89E] hover:bg-[#0AA89E] text-white flex items-center gap-2 px-4 py-2 rounded cursor-pointer"
+              onClick={() => setShowForm(true)}
+            >
+              <img src={vectorIcon} alt="plus sign" className="w-5 h-5" />
+              Add Group
+            </button>
+          )}
         </div>
-        <div className="relative max-w-xs ml-auto">
-          <input
-            type="text"
-            ref={searchInputRef}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search by group name or description..."
-            aria-label="Search groups"
-            className="pl-3 pr-10 py-2 border border-gray-300 text-sm rounded-md w-full focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400"
-          />
-          <svg
-            className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            strokeWidth="2"
-          >
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-        </div>
-
       </div>
       <div className="overflow-x-auto">
         <div className="min-w-[900px] bg-white rounded-2xl shadow-[0px_-0.91px_3.66px_0px_#00000042] overflow-hidden">
@@ -534,15 +820,57 @@ export default function GroupManagement() {
         </div>
       )}
       {/* Group Form Modal */}
-      {(showForm || editingGroup) && (
-        <GroupForm
-          group={editingGroup}
-          onSave={handleSave}
-          onCancel={() => {
-            setShowForm(false);
-            setEditingGroup(null);
+      {(showForm || editingGroup) && permissions.canManageGroups && (
+        <div
+          className="fixed inset-0 bg-white/40 flex items-center justify-center z-50 transition-all duration-300"
+          onClick={e => {
+            if (e.target === e.currentTarget) {
+              setIsCrossHighlighted(true);
+              setTimeout(() => setIsCrossHighlighted(false), 2000);
+            }
           }}
-        />
+        >
+          <div
+            ref={modalRef}
+            className={`bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto relative sm:animate-slideUp border transition-all duration-300 ${
+              isCrossHighlighted ? 'border-teal-500' : 'border-gray-300'
+            }`}
+            onClick={e => e.stopPropagation()}
+            tabIndex="-1"
+          >
+            <button
+              onClick={() => setShowExitDialog(true)}
+              className={`absolute top-2 right-4 text-gray-600 hover:text-black text-3xl font-bold w-8 h-8 flex items-center justify-center pb-2 rounded-full transition-colors cursor-pointer ${
+                isCrossHighlighted
+                  ? "bg-red-500 text-white hover:text-white"
+                  : "bg-gray-100"
+              }`}
+            >
+              ×
+            </button>
+            <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-xl text-gray-500 p-6">
+              <h2 className="text-xl font-semibold mb-2 text-black">{editingGroup ? "Edit Group" : "Create New Group"}</h2>
+              <GroupForm
+                group={editingGroup}
+                onSave={handleSave}
+                onCancel={() => {
+                  setShowForm(false);
+                  setEditingGroup(null);
+                }}
+              />
+            </div>
+          </div>
+          <ConfirmationDialog
+            showExitDialog={showExitDialog}
+            cancelExit={() => setShowExitDialog(false)}
+            confirmExit={() => {
+              setShowForm(false);
+              setEditingGroup(null);
+              setShowExitDialog(false);
+              setIsCrossHighlighted(false);
+            }}
+          />
+        </div>
       )}
       {/* Group Delete Confirmation Dialog */}
       {deletingGroup && (

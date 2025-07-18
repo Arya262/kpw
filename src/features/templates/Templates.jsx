@@ -10,6 +10,8 @@ import SuccessErrorMessage from "../contacts/SuccessErrorMessage";
 import Modal from "./Modal";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { ROLE_PERMISSIONS } from "../../context/permissions";
+import NotAuthorized from "../../components/NotAuthorized";
 
 const Templates = () => {
   const [templates, setTemplates] = useState([]);
@@ -19,6 +21,18 @@ const Templates = () => {
   const [editForm, setEditForm] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+
+  // Map user role to permissions
+  const roleMap = {
+    main: "Owner",
+    owner: "Owner",
+    admin: "Admin",
+    manager: "Manager",
+    user: "User",
+    viewer: "Viewer",
+  };
+  const role = roleMap[user?.role?.toLowerCase?.()] || "Viewer";
+  const permissions = ROLE_PERMISSIONS[role];
 
   useEffect(() => {
     const fetchTemplates = async () => {
@@ -39,15 +53,12 @@ const Templates = () => {
         }
 
         const data = await response.json();
-        console.log(data);
         if (Array.isArray(data.templates)) {
           setTemplates(data.templates);
         } else {
-          console.error("Invalid response format:", data);
           //setError("Unexpected response format from server.");
         }
       } catch (err) {
-        console.error("Fetch error:", err);
         //setError("Failed to load templates. Please try again.");
       } finally {
         setLoading(false);
@@ -55,7 +66,7 @@ const Templates = () => {
     };
 
     fetchTemplates();
-  }, []);
+  }, [user?.customer_id]);
 
   const approvedCount = templates.filter(
     (t) => t.status?.toLowerCase() === "approved"
@@ -136,9 +147,7 @@ const Templates = () => {
 
   const handleDelete = async (ids) => {
     const idArray = Array.isArray(ids) ? ids : [ids];
-    
     try {
-      // Delete each template via API
       for (const id of idArray) {
         const response = await fetch(API_ENDPOINTS.TEMPLATES.DELETE(id), {
           method: 'DELETE',
@@ -147,17 +156,12 @@ const Templates = () => {
           },
           credentials: 'include',
         });
-
         if (!response.ok) {
           throw new Error(`Failed to delete template ${id}`);
         }
       }
-
-      // Update local state after successful API calls
       const newTemplates = templates.filter((template) => !idArray.includes(template.id));
       setTemplates(newTemplates);
-      
-      // Show success notification
       toast.success(idArray.length > 1 ? 'Templates deleted successfully!' : 'Template deleted successfully!', {
         position: "top-right",
         autoClose: 3000,
@@ -167,7 +171,6 @@ const Templates = () => {
         draggable: true,
       });
     } catch (error) {
-      console.error('Error deleting template(s):', error);
       toast.error('Failed to delete template(s)', {
         position: "top-right",
         autoClose: 3000,
@@ -178,6 +181,11 @@ const Templates = () => {
       });
     }
   };
+
+  // If not allowed to view templates, show NotAuthorized
+  if (!permissions.canViewTemplates) {
+    return <NotAuthorized />;
+  }
 
   return (
     <div className="flex flex-col gap-4 pt-2">
@@ -228,38 +236,23 @@ const Templates = () => {
                 footer: updatedTemplate.footer,
                 buttons: updatedTemplate.buttons || [],
               };
-              
-              console.log('Updating template with id:', updatedTemplate.id);
-              console.log('Update endpoint:', API_ENDPOINTS.TEMPLATES.UPDATE(updatedTemplate.id));
-              
               const response = await fetch(API_ENDPOINTS.TEMPLATES.UPDATE(updatedTemplate.id), {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
                 body: JSON.stringify(requestBody),
               });
-
-              console.log('Response status:', response.status);
-              console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-              
               if (!response.ok) {
-                const errorText = await response.text();
-                console.log('Error response body:', errorText);
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
               }
-              
               const data = await response.json();
-              console.log('Response data:', data);
-              
               if (data.success) {
-                // Update local state with the updated template from backend
                 setTemplates((prev) =>
                   prev.map((t) =>
                     t.id === updatedTemplate.id
                       ? {
                           ...t,
                           ...updatedTemplate,
-                          // Keep existing fields that might not be in the update
                           created_on: t.created_on,
                           id: t.id,
                           element_name: t.element_name,
@@ -283,54 +276,14 @@ const Templates = () => {
                 });
               }
             } catch (error) {
-              console.error('Error updating template:', error);
-              
-              // If it's a 404 error, try updating locally as a fallback
-              if (error.message.includes('HTTP 404')) {
-                console.log('Backend update endpoint not available, updating locally...');
-                
-                // Update local state
-                setTemplates((prev) =>
-                  prev.map((t) =>
-                    t.id === updatedTemplate.id
-                      ? {
-                          ...t,
-                          ...updatedTemplate,
-                          container_meta: {
-                            ...t.container_meta,
-                            header: updatedTemplate.header,
-                            footer: updatedTemplate.footer,
-                            sampleText: updatedTemplate.content,
-                          },
-                        }
-                      : t
-                  )
-                );
-                
-                setSuccessMessage("Template updated successfully! (Local update - backend endpoint not available)");
-                setTimeout(() => setSuccessMessage(""), 3000);
-                setEditingTemplate(null);
-                setEditForm(null);
-                
-                toast.warning('Template updated locally. Backend update endpoint not available.', {
-                  position: "top-right",
-                  autoClose: 5000,
-                  hideProgressBar: false,
-                  closeOnClick: true,
-                  pauseOnHover: true,
-                  draggable: true,
-                });
-              } else {
-                const errorMessage = 'Failed to update template. Please try again.';
-                toast.error(errorMessage, {
-                  position: "top-right",
-                  autoClose: 5000,
-                  hideProgressBar: false,
-                  closeOnClick: true,
-                  pauseOnHover: true,
-                  draggable: true,
-                });
-              }
+              toast.error('Failed to update template. Please try again.', {
+                position: "top-right",
+                autoClose: 5000,
+                hideProgressBar: false,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true,
+              });
             }
           }}
         />
@@ -342,8 +295,10 @@ const Templates = () => {
         ) : (
           <Table
             templates={templates}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
+            onEdit={permissions.canEditTemplate ? handleEdit : undefined}
+            onDelete={permissions.canDeleteTemplate ? handleDelete : undefined}
+            canEdit={permissions.canEditTemplate}
+            canDelete={permissions.canDeleteTemplate}
           />
         )}
       </ErrorBoundary>

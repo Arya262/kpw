@@ -74,7 +74,14 @@ const SendTemplate = ({ onSelect, onClose, returnFullTemplate = false }) => {
   };
 
   return (
-    <div className="w-full max-w-3xl p-4 bg-white">
+    <div className="w-full max-w-3xl p-4 bg-white relative">
+      <button
+        onClick={onClose}
+        className="absolute top-2 right-4 text-gray-600 hover:text-black text-3xl font-bold w-8 h-8 flex items-center justify-center pb-2 rounded-full transition-colors cursor-pointer bg-gray-100"
+        aria-label="Close"
+      >
+        ×
+      </button>
       <h2 className="text-lg font-semibold mb-4 text-center text-gray-800">
         Choose a Template
       </h2>

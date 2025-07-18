@@ -9,6 +9,8 @@ import MessageInput from "./MessageInput";
 import UserDetails from "./UserDetails";
 import { MessageCircle } from "lucide-react";
 import { useChatLogic } from "../../hooks/useChatLogic";
+import { ROLE_PERMISSIONS } from "../../context/permissions";
+import { toast } from "react-toastify";
 
 const Chat = () => {
   const [showUserDetails, setShowUserDetails] = useState(false);
@@ -21,6 +23,18 @@ const Chat = () => {
   const location = useLocation();
   const socket = useSocket();
   const { user } = useAuth();
+
+  // Map backend role values to ROLE_PERMISSIONS keys
+  const roleMap = {
+    main: "Owner",
+    owner: "Owner",
+    admin: "Admin",
+    manager: "Manager",
+    user: "User",
+    viewer: "Viewer",
+  };
+  const role = roleMap[user?.role?.toLowerCase?.()] || "Viewer";
+  const permissions = ROLE_PERMISSIONS[role];
 
   const userDetailsRef = useRef(null);
   const profileButtonRef = useRef(null);
@@ -48,6 +62,7 @@ const Chat = () => {
     setMessages,
     setContacts,
     contacts,
+    permissions,
   });
 
   useEffect(() => {
@@ -88,6 +103,22 @@ const Chat = () => {
 
   const toggleUserDetails = () => setShowUserDetails((prev) => !prev);
 
+  const handleSendMessageWithSessionUpdate = async (message) => {
+    // Call the original sendMessage
+    await sendMessage(message);
+    // If a template was sent, update lastMessageTime locally
+    if (typeof message === "object" && message.template_name) {
+      setSelectedContact((prev) =>
+        prev
+          ? {
+              ...prev,
+              lastMessageTime: new Date().toISOString(),
+            }
+          : prev
+      );
+    }
+  };
+
   return (
     <div className="flex flex-col md:flex-row w-full flex-1 min-h-0 h-full border border-gray-300 rounded-2xl bg-white mx-auto max-w-screen-2xl overflow-hidden">
       {/* Sidebar */}
@@ -126,8 +157,9 @@ const Chat = () => {
                 ref={profileButtonRef}
                 isMobile={isMobile}
                 onBack={() => setShowMobileChat(false)}
-                onDeleteChat={() => deleteChat(selectedContact)}
+                onDeleteChat={permissions.canDeleteChats ? deleteChat : undefined}
                 authCustomerId={user?.customer_id}
+                canDeleteChat={permissions.canDeleteChats}
               />
 
               <div className="flex-1 flex flex-row min-h-0 h-full">
@@ -141,8 +173,13 @@ const Chat = () => {
                   </div>
                   <div className="bg-white">
                     <MessageInput
-                      onSendMessage={sendMessage}
+                      onSendMessage={
+                        permissions.canSendMessages
+                          ? handleSendMessageWithSessionUpdate
+                          : () => toast.error("You do not have permission to send messages.")
+                      }
                       selectedContact={selectedContact}
+                      canSendMessage={permissions.canSendMessages}
                     />
                   </div>
                 </div>

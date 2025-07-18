@@ -19,7 +19,7 @@ const GroupNameErrorDialog = ({ isOpen, message, onClose }) => {
         <div className="flex justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-teal-500 text-white rounded-md hover:bg-teal-600"
+            className="px-4 py-2 bg-[#0AA89E] text-white rounded-md hover:bg-[#0AA89E]"
           >
             OK
           </button>
@@ -238,7 +238,7 @@ export default function AddContact({ closePopup, onSuccess }) {
         />
         <p className="text-sm text-gray-600 mb-4">
           Add one contact at a time or bulk upload contacts from a CSV.{" "}
-          <a href="#" className="text-blue-600 underline">
+          <a href="#" className="text-[#0AA89E] underline">
             Learn more
           </a>
         </p>

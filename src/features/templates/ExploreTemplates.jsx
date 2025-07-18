@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { API_ENDPOINTS } from "../../config/api";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { ROLE_PERMISSIONS } from "../../context/permissions";
 
 const ExploreTemplates = () => {
   console.log('ExploreTemplates rendered');
@@ -15,6 +16,18 @@ const ExploreTemplates = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [error, setError] = useState(null);
   const { user } = useAuth();
+
+  // Map user role to permissions
+  const roleMap = {
+    main: "Owner",
+    owner: "Owner",
+    admin: "Admin",
+    manager: "Manager",
+    user: "User",
+    viewer: "Viewer",
+  };
+  const role = roleMap[user?.role?.toLowerCase?.()] || "Viewer";
+  const permissions = ROLE_PERMISSIONS[role];
 
   useEffect(() => {
     const fetchTemplates = async () => {
@@ -117,6 +130,17 @@ const ExploreTemplates = () => {
         <button
           className="bg-teal-500 text-white flex items-center gap-2 px-4 py-2 rounded cursor-pointer"
           onClick={() => {
+            if (!permissions.canAddTemplate) {
+              toast.error('You do not have permission to add templates.', {
+                position: "top-right",
+                autoClose: 3000,
+                hideProgressBar: false,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true,
+              });
+              return;
+            }
             setIsModalOpen(true);
           }}
         >

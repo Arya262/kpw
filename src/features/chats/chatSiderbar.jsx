@@ -60,7 +60,16 @@ const getMessagePreview = (message, type) => {
 
 // Reusable Avatar component
 const Avatar = ({ name = "User", image }) => {
-  const firstLetter = name.charAt(0).toUpperCase();
+  // Extract first letter of first and last name
+  let initials = "U";
+  if (name && typeof name === "string") {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) {
+      initials = parts[0][0]?.toUpperCase() || "U";
+    } else if (parts.length > 1) {
+      initials = (parts[0][0] || "").toUpperCase() + (parts[parts.length - 1][0] || "").toUpperCase();
+    }
+  }
   const bgColor = getAvatarColor(name);
 
   if (image) {
@@ -78,7 +87,7 @@ const Avatar = ({ name = "User", image }) => {
       className="w-10 h-10 rounded-full mr-4 flex items-center justify-center text-white font-semibold"
       style={{ backgroundColor: bgColor }}
     >
-      {firstLetter}
+      {initials}
     </div>
   );
 };

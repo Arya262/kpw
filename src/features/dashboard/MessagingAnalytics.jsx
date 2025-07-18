@@ -11,7 +11,9 @@ import {
   startOfWeek, endOfWeek
 } from "date-fns";
 import { useAuth } from "../../context/AuthContext";
+import { ROLE_PERMISSIONS } from "../../context/permissions";
 import { API_ENDPOINTS } from "../../config/api";
+import { toast } from "react-toastify";
 
 // Utility: Get date range for filter
 function getDateRange(filter, options) {
@@ -36,6 +38,8 @@ const FILTER_OPTIONS = ["Weekly", "Monthly", "Yearly", "Custom"];
 
 export default function MessagingAnalytics({ usageHistory }) {
   const { user } = useAuth();
+  const role = user?.role || "User";
+  const permissions = ROLE_PERMISSIONS[role] || {};
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -289,6 +293,10 @@ doc.text(`App ID: ${appId}`, 300, 175);
     );
   }
 
+  const handleUnauthorizedDownload = () => {
+    toast.error("You do not have permission to download reports.");
+  };
+
   return (
     <div className="p-6 space-y-10">
       {/* Download PDF Button */}
@@ -296,7 +304,7 @@ doc.text(`App ID: ${appId}`, 300, 175);
         <div className="flex justify-end mb-4">
           <button
             className="bg-[#24AEAE] hover:bg-[#24AEAE] text-white px-4 py-2 rounded shadow cursor-pointer"
-            onClick={handleDownloadPDF}
+            onClick={permissions.canDownloadReports ? handleDownloadPDF : handleUnauthorizedDownload}
           >
             Download PDF
           </button>

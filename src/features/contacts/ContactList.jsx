@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../context/AuthContext";
+import { ROLE_PERMISSIONS } from "../../context/permissions";
 import ContactRow from "./ContactRow";
 import AddContact from "./Addcontact";
 import vendor from "../../assets/Vector.png";
@@ -108,7 +109,7 @@ const ConfirmationDialog = ({
           </button>
           <button
             onClick={confirmExit}
-            className="px-3 py-2 w-[70px] bg-teal-500 text-white rounded-md hover:bg-teal-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
+            className="px-3 py-2 w-[70px] bg-[#0AA89E] text-white rounded-md hover:bg-[#0AA89E] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
             aria-label="Confirm"
           >
             OK
@@ -225,6 +226,17 @@ export default function ContactList() {
   const [error, setError] = useState(null);
   const popupRef = useRef(null);
   const { user } = useAuth();
+  // Map backend role values to ROLE_PERMISSIONS keys
+  const roleMap = {
+    main: "Owner",
+    owner: "Owner",
+    admin: "Admin",
+    manager: "Manager",
+    user: "User",
+    viewer: "Viewer",
+  };
+  const role = roleMap[user?.role?.toLowerCase?.()] || "Viewer";
+  const permissions = ROLE_PERMISSIONS[role];
   const [editContact, setEditContact] = useState(null);
   const [deleteContact, setDeleteContact] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -247,7 +259,7 @@ export default function ContactList() {
 
       const transformed = data.map((item) => ({
         ...item,
-        status: item.is_active ? "Opted-in" : "Opted-Out",
+        status: "Opted-in", // Default status for all contacts
         contact_id: item.contact_id,
         customer_id: item.customer_id,
         date: formatDate(item.created_at),
@@ -285,16 +297,35 @@ export default function ContactList() {
       c.number.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // For 'User' role, only allow edit/delete for own contacts
+  const canEditContact = (contact) => {
+    if (!permissions.canEdit) return false;
+    if (role === "User") {
+      return contact.created_by === user?.id; // assuming contact.created_by is the user id
+    }
+    return true;
+  };
+  const canDeleteContact = (contact) => {
+    if (!permissions.canDelete) return false;
+    if (role === "User") {
+      return contact.created_by === user?.id;
+    }
+    return true;
+  };
+
   const filterButtons = ["All", "Opted-in", "Opted-Out"];
 
   // Handle Select All checkbox change
   const handleSelectAllChange = (event) => {
+    if (!permissions.canDelete) return;
     const checked = event.target.checked;
     setSelectAll(checked);
     const newSelected = {};
     if (checked) {
-      displayedContacts.forEach((_, idx) => {
-        newSelected[idx] = true;
+      displayedContacts.forEach((contact, idx) => {
+        if (canDeleteContact(contact)) {
+          newSelected[idx] = true;
+        }
       });
     }
     setSelectedRows(newSelected);
@@ -302,6 +333,7 @@ export default function ContactList() {
 
   // Handle individual checkbox change
   const handleCheckboxChange = (idx, event) => {
+    if (!canDeleteContact(displayedContacts[idx])) return;
     setSelectedRows((prev) => ({
       ...prev,
       [idx]: event.target.checked,
@@ -323,7 +355,13 @@ export default function ContactList() {
     };
   }, []);
 
-  const openPopup = () => setIsPopupOpen(true);
+  const openPopup = () => {
+    if (!permissions.canAdd || !permissions.canAccessModals) {
+      toast.error("You do not have permission to add contacts.");
+      return;
+    }
+    setIsPopupOpen(true);
+  };
   const closePopup = () => setIsPopupOpen(false);
 
   useEffect(() => {
@@ -333,6 +371,7 @@ export default function ContactList() {
   }, [selectedRows, displayedContacts.length]);
 
   const handleCloseAndNavigate = () => {
+    if (!permissions.canAccessModals) return;
     setShowExitDialog(true);
   };
 
@@ -348,6 +387,10 @@ export default function ContactList() {
   };
 
   const handleDeleteClick = () => {
+    if (!permissions.canDelete) {
+      toast.error("You do not have permission to delete contacts.");
+      return;
+    }
     setShowDeleteDialog(true);
   };
 
@@ -356,16 +399,26 @@ export default function ContactList() {
   };
 
   const confirmDelete = async () => {
+    if (!permissions.canDelete) {
+      toast.error("You do not have permission to delete contacts.");
+      return;
+    }
     await handleDeleteSelected();
     setShowDeleteDialog(false);
   };
 
   const handleDeleteSelected = async () => {
+    if (!permissions.canDelete) {
+      toast.error("You do not have permission to delete contacts.");
+      return;
+    }
     const selectedIds = Object.entries(selectedRows)
-      .filter(([_, isSelected]) => isSelected)
+      .filter(([idx, isSelected]) => {
+        const contact = displayedContacts[idx];
+        return isSelected && canDeleteContact(contact);
+      })
       .map(([idx]) => {
         const contact = displayedContacts[idx];
-        console.log(`Index: ${idx}, Contact:`, contact);
         return contact?.contact_id;
       });
     console.log("Final selected contact_ids:", selectedIds);
@@ -436,6 +489,10 @@ export default function ContactList() {
   };
 
   const handleSingleContactDelete = async (contact_id) => {
+    if (!permissions.canDelete) {
+      toast.error("You do not have permission to delete contacts.");
+      return;
+    }
     try {
       setIsDeleting(true);
       setError(null);
@@ -487,6 +544,10 @@ export default function ContactList() {
   };
 
   const handleContactEdit = async () => {
+    if (!permissions.canEdit) {
+      toast.error("You do not have permission to edit contacts.");
+      return;
+    }
     // Refresh the contacts list after a successful edit
     await fetchContacts();
     toast.success("Contact updated successfully!", {
@@ -501,6 +562,10 @@ export default function ContactList() {
   };
 
   const handleContactAdd = (message) => {
+    if (!permissions.canAdd) {
+      toast.error("You do not have permission to add contacts.");
+      return;
+    }
     fetchContacts();
     toast.success(message || "Contact added successfully!", {
       position: "top-right",
@@ -512,6 +577,16 @@ export default function ContactList() {
       theme: "light",
     });
     setIsPopupOpen(false);
+  };
+
+  const handleUnauthorizedEdit = () => {
+    toast.error("You do not have permission to edit contacts.");
+  };
+  const handleUnauthorizedDelete = () => {
+    toast.error("You do not have permission to delete contacts.");
+  };
+  const handleUnauthorizedAdd = () => {
+    toast.error("You do not have permission to add contacts.");
   };
 
   return (
@@ -530,46 +605,51 @@ export default function ContactList() {
       <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
         <div className="flex items-center gap-4 flex-wrap">
           <h2 className="text-xl font-bold">Contacts</h2>
-          <div className="flex gap-2 flex-wrap">
-            {filterButtons.map((btn) => (
-              <button
-                key={btn}
-                onClick={() => setFilter(btn)}
-                className={`px-4 py-2 min-h-[40px] rounded-md text-sm font-medium transition cursor-pointer 
-                  ${
-                    filter === btn
-                      ? "bg-[#05a3a3] text-white"
-                      : "text-gray-700 hover:text-[#05a3a3]"
-                  }`}
-              >
-                {btn} ({filterCounts[btn]})
-              </button>
-            ))}
+          {permissions.canSeeFilters && (
+            <div className="flex gap-2 flex-wrap">
+              {filterButtons.map((btn) => (
+                <button
+                  key={btn}
+                  onClick={() => setFilter(btn)}
+                  className={`px-4 py-2 min-h-[40px] rounded-md text-sm font-medium transition cursor-pointer 
+                    ${
+                      filter === btn
+                        ? "bg-[#0AA89E] text-white"
+                        : "text-gray-700 hover:text-[#0AA89E]"
+                    }`}
+                >
+                  {btn} ({filterCounts[btn]})
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        {permissions.canSeeFilters && (
+          <div className="relative max-w-xs ml-auto">
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search by name or number..."
+              aria-label="Search"
+              className="pl-3 pr-10 py-2 border border-gray-300 text-sm rounded-md w-full focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400"
+            />
+            <svg
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              strokeWidth="2"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
           </div>
-        </div>
-        <div className="relative max-w-xs ml-auto">
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search by name or number..."
-            aria-label="Search"
-            className="pl-3 pr-10 py-2 border border-gray-300 text-sm rounded-md w-full focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400"
-          />
-          <svg
-            className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            strokeWidth="2"
-          >
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-        </div>
+        )}
+        {/* Always show Add Contact button, enforce permission in handler */}
         <button
-          className="bg-teal-500 hover:bg-teal-600 text-white flex items-center gap-2 px-4 py-2 rounded cursor-pointer"
-          onClick={openPopup}
+          className="bg-[#0AA89E] hover:bg-[#0AA89E] text-white flex items-center gap-2 px-4 py-2 rounded cursor-pointer"
+          onClick={permissions.canAdd && permissions.canAccessModals ? openPopup : handleUnauthorizedAdd}
         >
           <img src={vendor} alt="plus sign" className="w-5 h-5" />
           Add Contact
@@ -581,17 +661,21 @@ export default function ContactList() {
           <table className="w-full text-sm text-center overflow-hidden table-auto">
             <thead className="bg-[#F4F4F4] border-b-2 shadow-sm border-gray-300">
               <tr>
-                <th className="px-2 py-3 sm:px-6">
-                  <div className="flex items-center justify-center h-full">
-                    <input
-                      type="checkbox"
-                      className="form-checkbox w-4 h-4"
-                      checked={selectAll}
-                      onChange={handleSelectAllChange}
-                    />
-                  </div>
-                </th>
-                {Object.values(selectedRows).some(Boolean) && (
+                {permissions.canDelete ? (
+                  <th className="px-2 py-3 sm:px-6">
+                    <div className="flex items-center justify-center h-full">
+                      <input
+                        type="checkbox"
+                        className="form-checkbox w-4 h-4"
+                        checked={selectAll}
+                        onChange={handleSelectAllChange}
+                      />
+                    </div>
+                  </th>
+                ) : (
+                  <th className="px-2 py-3 sm:px-6"></th>
+                )}
+                {permissions.canDelete && Object.values(selectedRows).some(Boolean) && (
                   <th colSpan="6" className="px-2 py-3 sm:px-6">
                     <div className="flex justify-center">
                       <button
@@ -651,8 +735,12 @@ export default function ContactList() {
                     contact={contact}
                     isChecked={!!selectedRows[idx]}
                     onCheckboxChange={(e) => handleCheckboxChange(idx, e)}
-                    onEditClick={setEditContact}
-                    onDeleteClick={setDeleteContact}
+                    onEditClick={permissions.canEdit && canEditContact(contact) ? setEditContact : handleUnauthorizedEdit}
+                    onDeleteClick={permissions.canDelete && canDeleteContact(contact) ? setDeleteContact : handleUnauthorizedDelete}
+                    canEdit={true}
+                    canDelete={true}
+                    userId={user?.id}
+                    userRole={role}
                   />
                 ))
               )}
@@ -660,7 +748,7 @@ export default function ContactList() {
           </table>
         </div>
       </div>
-      {isPopupOpen && (
+      {isPopupOpen && permissions.canAdd && permissions.canAccessModals && (
         <div
           className="fixed inset-0 bg-white/40 flex items-center justify-center z-50 transition-all duration-300"
           onClick={(e) => {
@@ -692,14 +780,14 @@ export default function ContactList() {
         </div>
       )}
       <DeleteConfirmationDialog
-        showDeleteDialog={showDeleteDialog}
+        showDeleteDialog={showDeleteDialog && permissions.canDelete}
         selectedCount={Object.values(selectedRows).filter(Boolean).length}
         cancelDelete={cancelDelete}
         confirmDelete={confirmDelete}
         isDeleting={isDeleting}
       />
       <ConfirmationDialog
-        showExitDialog={showExitDialog}
+        showExitDialog={showExitDialog && permissions.canAccessModals}
         hasUnsavedChanges={false}
         cancelExit={cancelExit}
         confirmExit={confirmExit}
@@ -716,7 +804,7 @@ export default function ContactList() {
         pauseOnHover
         theme="light"
       />
-      {editContact && (
+      {editContact && permissions.canEdit && permissions.canAccessModals && (
         <div className="fixed inset-0 bg-white/40 flex items-center justify-center z-50 transition-all duration-300">
           <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto relative sm:animate-slideUp border border-gray-300 transition-all duration-300">
             <button
@@ -733,7 +821,7 @@ export default function ContactList() {
           </div>
         </div>
       )}
-      {deleteContact && (
+      {deleteContact && permissions.canDelete && permissions.canAccessModals && (
         <SingleDeleteDialog
           showDialog={!!deleteContact}
           contactName={deleteContact.fullName}

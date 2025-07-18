@@ -18,7 +18,7 @@ const BroadcastPages = ({ onClose, showCustomAlert, onBroadcastCreated }) => {
 
   const [formData, setFormData] = useState({
     broadcastName: "",
-    customerList: "Select Customer List",
+    group_id: "",
     messageType: "Pre-approved template message",
     schedule: "No",
     scheduleDate: "",

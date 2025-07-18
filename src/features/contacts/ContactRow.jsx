@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { API_ENDPOINTS } from "../../config/api";
 import SingleDeleteDialog from "./SingleDeleteDialog";
 import EditContact from "./EditContact";
+import { Edit2, Trash2 } from "lucide-react";
 
 const SingleDeleteConfirmationDialog = ({
   showDialog,
@@ -262,7 +263,7 @@ export default function ContactRow({
         <div ref={dropdownRef} className="flex justify-center">
           <button
             onClick={handleChat}
-            className="flex items-center gap-2 bg-teal-500 hover:bg-teal-600 text-white px-3 py-2 rounded-full whitespace-nowrap mr-2 cursor-pointer"
+            className="flex items-center gap-2 bg-[#0AA89E] hover:bg-[#0AA89E] text-white px-3 py-2 rounded-full whitespace-nowrap mr-2 cursor-pointer"
             aria-label={`Send message to ${contact.fullName}`}
           >
             <svg
@@ -309,15 +310,15 @@ export default function ContactRow({
             >
               <button
                 onClick={() => onEditClick(contact)}
-                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
               >
-                Edit Contact
+                <Edit2 className="w-4 h-4" /> Edit Contact
               </button>
               <button
                 onClick={handleDeleteClick}
-                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2"
               >
-                Delete
+                <Trash2 className="w-4 h-4" /> Delete
               </button>
             </div>
           )}

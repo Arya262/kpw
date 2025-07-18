@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { CloudUpload } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
+import { ROLE_PERMISSIONS } from "../../context/permissions";
 
 const EXPECTED_FIELDS = ["Name", "Mobile", "Country", "Tags"];
 
@@ -12,6 +14,19 @@ export default function BulkContactForm({
     fieldMapping,
   setFieldMapping,
 }) {
+  const { user } = useAuth();
+  const roleMap = {
+    main: "Owner",
+    owner: "Owner",
+    admin: "Admin",
+    manager: "Manager",
+    user: "User",
+    viewer: "Viewer",
+  };
+  const role = roleMap[user?.role?.toLowerCase?.()] || "Viewer";
+  const permissions = ROLE_PERMISSIONS[role];
+  if (!permissions || !permissions.canBulkUpload) return null;
+
   const [csvHeaders, setCsvHeaders] = useState([]);
   // const [fieldMapping, setFieldMapping] = useState({});
   const [isDragging, setIsDragging] = useState(false);

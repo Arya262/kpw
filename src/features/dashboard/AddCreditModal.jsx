@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ShieldCheck } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
+import { ROLE_PERMISSIONS } from "../../context/permissions";
 
 const ConfirmationDialog = ({ showExitDialog, cancelExit, confirmExit }) => {
   const dialogRef = useRef(null);
@@ -93,6 +95,9 @@ const AddCreditModal = ({
   paymentLoading,
   paymentSuccess,
 }) => {
+  const { user } = useAuth();
+  const role = user?.role || "User";
+  const permissions = ROLE_PERMISSIONS[role] || {};
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [isCrossHighlighted, setIsCrossHighlighted] = useState(false);
   const modalRef = useRef(null);

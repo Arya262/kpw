@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import ScheduleSelector from './ScheduleSelector';
@@ -37,8 +38,8 @@ const BroadcastForm = ({
       newErrors.broadcastName = 'Broadcast name is required';
     }
 
-    if (!formData.customerList || formData.customerList === 'Select Customer List') {
-      newErrors.customerList = 'Please select a customer list';
+    if (!formData.group_id || formData.group_id === "") {
+      newErrors.group_id = 'Please select a group';
     }
 
     if (!formData.selectedTemplate) {
@@ -80,28 +81,28 @@ const BroadcastForm = ({
         </div>
         <div className="w-full sm:w-1/2">
           <select
-            name="customerList"
-            value={formData.customerList}
+            name="group_id"
+            value={formData.group_id}
             onChange={handleInputChange}
-            className={`w-full p-2 border ${errors.customerList ? 'border-red-500' : 'border-[#606060]'} rounded text-gray-500 focus:outline-none`}
+            className={`w-full p-2 border ${errors.group_id ? 'border-red-500' : 'border-[#606060]'} rounded text-gray-500 focus:outline-none`}
             required
             disabled={isSubmitting}
           >
-            <option value="Select Customer List">Select Customer List</option>
+            <option value="">Select Group</option>
             {loading ? (
               <option>Loading...</option>
             ) : error ? (
               <option>{error}</option>
             ) : (
-              customerLists.map((customer, group_id) => (
-                <option key={group_id} value={customer.group_name}>
+              customerLists.map((customer) => (
+                <option key={customer.group_id} value={customer.group_id}>
                   {customer.group_name}
                 </option>
               ))
             )}
           </select>
-          {errors.customerList && (
-            <p className="text-red-500 text-sm mt-1">{errors.customerList}</p>
+          {errors.group_id && (
+            <p className="text-red-500 text-sm mt-1">{errors.group_id}</p>
           )}
         </div>
       </div>
@@ -207,4 +208,4 @@ const BroadcastForm = ({
   );
 };
 
-export default BroadcastForm; 
+export default BroadcastForm;

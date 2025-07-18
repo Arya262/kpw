@@ -94,7 +94,7 @@ const BroadcastTable = ({
     if (loading) {
       return (
         <tr>
-          <td colSpan="8" className="text-center py-8">
+          <td colSpan="6" className="text-center py-8">
             <div className="flex items-center justify-center">
               <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-teal-500"></div>
             </div>
@@ -106,7 +106,7 @@ const BroadcastTable = ({
     if (error) {
       return (
         <tr>
-          <td colSpan="8" className="text-center py-4 text-red-500">
+          <td colSpan="6" className="text-center py-4 text-red-500">
             Error: {error}
           </td>
         </tr>
@@ -116,7 +116,7 @@ const BroadcastTable = ({
     if (filteredData.length === 0) {
       return (
         <tr>
-          <td colSpan="8" className="text-center py-4 text-gray-500">
+          <td colSpan="6" className="text-center py-4 text-gray-500">
             No broadcasts available.
           </td>
         </tr>
@@ -131,7 +131,7 @@ const BroadcastTable = ({
           ref={(el) => (rowRefs.current[idx] = el)}
           className="border-t border-b border-b-[#C3C3C3] hover:bg-gray-50 text-md"
         >
-          <td className="px-2 py-4 sm:px-4">
+          {/* <td className="px-2 py-4 sm:px-4">
             <div className="flex items-center justify-center h-full">
               <input
                 type="checkbox"
@@ -140,7 +140,7 @@ const BroadcastTable = ({
                 onChange={(e) => handleCheckboxChange(idx, e)}
               />
             </div>
-          </td>
+          </td> */}
           <td className="px-2 py-4 sm:px-4 sm:py-4 whitespace-nowrap text-[12px] sm:text-[16px] text-gray-700">
             {formatDate(row.created_at)}
           </td>
@@ -148,7 +148,14 @@ const BroadcastTable = ({
             {row.broadcast_name}
           </td>
           <td className="px-2 py-4 text-[12px] sm:text-[16px] text-gray-700">
-            {row.message_type}
+            {/* Show template sample text if available, else fallback to previous logic */}
+            {row.selectedTemplate?.container_meta?.sampleText
+              || row.selectedTemplate?.element_name
+              || row.template_name
+              || row.selectedTemplate?.container_meta?.header
+              || row.selectedTemplate?.container_meta?.data
+              || row.template_message
+              || row.message_type}
           </td>
           <td className="px-2 py-4 text-[12px] sm:text-[16px] text-gray-700">
             {row.schedule.toLowerCase() === "yes"
@@ -161,7 +168,7 @@ const BroadcastTable = ({
           <td className="px-2 py-4 text-[12px] justify-end sm:text-[16px] w-auto font-semibold text-gray-700">
             {renderMessageFunnel(row)}
           </td>
-          <td className="relative py-4">
+          {/* <td className="relative py-4">
             <div ref={dropdownRef} className="flex justify-center">
               <button
                 onClick={() => toggleDropdown(idx)}
@@ -199,7 +206,7 @@ const BroadcastTable = ({
                 </div>
               )}
             </div>
-          </td>
+          </td> */}
         </tr>
       ));
   };
@@ -210,7 +217,7 @@ const BroadcastTable = ({
         <table className="w-full text-sm text-center overflow-hidden table-auto">
           <thead className="bg-[#F4F4F4] border-b-2 shadow-sm border-gray-300">
             <tr>
-              <th className="px-2 py-3 sm:px-6">
+              {/* <th className="px-2 py-3 sm:px-6">
                 <div className="flex items-center justify-center h-full">
                   <input
                     type="checkbox"
@@ -219,7 +226,7 @@ const BroadcastTable = ({
                     onChange={handleSelectAllChange}
                   />
                 </div>
-              </th>
+              </th> */}
               <th className="px-2 py-3 sm:px-6 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">
                 Date
               </th>
@@ -238,9 +245,9 @@ const BroadcastTable = ({
               <th className="px-2 py-3 sm:px-6 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">
                 Message Funnel
               </th>
-              <th className="px-2 py-3 sm:px-6 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">
+              {/* <th className="px-2 py-3 sm:px-6 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">
                 Action
-              </th>
+              </th> */}
             </tr>
           </thead>
           <tbody className="max-h-[calc(100vh-300px)] overflow-y-auto">
@@ -248,14 +255,14 @@ const BroadcastTable = ({
           </tbody>
         </table>
       </div>
-      <DeleteConfirmationDialog
+      {/* <DeleteConfirmationDialog
         showDialog={showDeleteDialog}
         title="Delete Broadcast"
         message={`Are you sure you want to delete ${selectedBroadcast?.broadcast_name}? This action cannot be undone.`}
         onCancel={handleDeleteCancel}
         onConfirm={handleDeleteConfirm}
         isDeleting={isDeleting}
-      />
+      /> */}
     </div>
   );
 };
