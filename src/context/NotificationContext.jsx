@@ -167,6 +167,12 @@ export const NotificationProvider = ({ children }) => {
           0
         );
         setUnreadCount(totalUnread);
+        // Initialize unreadConversations map for correct badge behavior after reload
+        const unreadMap = {};
+        response.data.forEach(c => {
+          if (c.unread_count > 0 && c.conversation_id) unreadMap[c.conversation_id] = c.unread_count;
+        });
+        setUnreadConversations(unreadMap);
       } catch (error) {
         console.error("Failed to fetch contacts for unread count:", error);
       }
