@@ -43,7 +43,14 @@ const ExploreTemplates = () => {
         );
         const data = await response.json();
         if (Array.isArray(data.templates)) {
-          setTemplates(data.templates);
+          const normalizedTemplates = data.templates.map(t => ({
+            ...t,
+            container_meta: {
+              ...t.container_meta,
+              sampleText: t.container_meta?.sampleText || t.container_meta?.sample_text
+            }
+          }));
+          setTemplates(normalizedTemplates);
         } else {
           setError("Invalid response format");
         }
@@ -159,51 +166,55 @@ const ExploreTemplates = () => {
         <p>No templates available.</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {templates.map((template) => (
-            <div
-              key={template.id || template.element_name}
-              className="bg-white rounded-xl shadow-[0px_4px_20px_rgba(0,0,0,0.25)] overflow-hidden flex flex-col"
-            >
-              {template.image_url && (
-                <img
-                  src={template.image_url}
-                  alt={template.element_name}
-                  className="w-full h-48 object-cover p-2 rounded-2xl"
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src = "/placeholder.jpg";
-                  }}
-                />
-              )}
-              <div className="p-4 flex-1">
-                <h3 className="font-semibold text-lg mb-2">
-                  {template.element_name}
-                </h3>
-                <p className="text-sm text-gray-500 mb-2">
-                  {template.category}
-                </p>
-                <p className="text-sm text-gray-700 whitespace-pre-line mb-2">
-                  {template.container_meta?.sampleText ||
-                    "No sample text available"}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  navigate("/broadcast", {
-                    state: {
-                      selectedTemplate: template,
-                      openForm: true,
-                    },
-                  });
-                }}
-                className="bg-teal-500 text-black px-6 py-3 font-medium rounded 
-                  border border-teal-500 hover:bg-teal-400 hover:text-white hover:border-teal-400 transition duration-300 ease-in-out cursor-pointer"
+          {templates.map((template) => {
+            console.log('TEMPLATE:', template);
+            return (
+              <div
+                key={template.id || template.element_name}
+                className="bg-white rounded-xl shadow-[0px_4px_20px_rgba(0,0,0,0.25)] overflow-hidden flex flex-col"
               >
-                Send Template
-              </button>
-            </div>
-          ))}
+                {template.image_url && (
+                  <img
+                    src={template.image_url}
+                    alt={template.element_name}
+                    className="w-full h-48 object-cover p-2 rounded-2xl"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = "/placeholder.jpg";
+                    }}
+                  />
+                )}
+                <div className="p-4 flex-1">
+                  <h3 className="font-semibold text-lg mb-2">
+                    {template.element_name}
+                  </h3>
+                  <p className="text-sm text-gray-500 mb-2">
+                    {template.category}
+                  </p>
+                  <p className="text-sm text-gray-700 whitespace-pre-line mb-2">
+                    {template.container_meta?.sampleText ||
+                     template.container_meta?.sample_text ||
+                     "No sample text available"}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigate("/broadcast", {
+                      state: {
+                        selectedTemplate: template,
+                        openForm: true,
+                      },
+                    });
+                  }}
+                  className="bg-teal-500 text-black px-6 py-3 font-medium rounded 
+                    border border-teal-500 hover:bg-teal-400 hover:text-white hover:border-teal-400 transition duration-300 ease-in-out cursor-pointer"
+                >
+                  Send Template
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
 
