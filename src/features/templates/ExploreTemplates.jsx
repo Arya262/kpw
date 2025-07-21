@@ -192,9 +192,9 @@ const ExploreTemplates = () => {
                     {template.category}
                   </p>
                   <p className="text-sm text-gray-700 whitespace-pre-line mb-2">
-                    {template.container_meta?.sampleText ||
-                     template.container_meta?.sample_text ||
-                     "No sample text available"}
+                    {template.data ||
+                    //  template.container_meta?.sample_text ||
+                     "No  data available"}
                   </p>
                 </div>
                 <button
