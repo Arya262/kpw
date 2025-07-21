@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { API_ENDPOINTS } from "../../config/api";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { ROLE_PERMISSIONS } from "../../context/permissions";
+import { getPermissions } from "../../utils/getPermissions";
 
 const ExploreTemplates = () => {
   console.log('ExploreTemplates rendered');
@@ -16,18 +16,7 @@ const ExploreTemplates = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [error, setError] = useState(null);
   const { user } = useAuth();
-
-  // Map user role to permissions
-  const roleMap = {
-    main: "Owner",
-    owner: "Owner",
-    admin: "Admin",
-    manager: "Manager",
-    user: "User",
-    viewer: "Viewer",
-  };
-  const role = roleMap[user?.role?.toLowerCase?.()] || "Viewer";
-  const permissions = ROLE_PERMISSIONS[role];
+  const permissions = getPermissions(user);
 
   useEffect(() => {
     const fetchTemplates = async () => {
@@ -191,11 +180,10 @@ const ExploreTemplates = () => {
                   <p className="text-sm text-gray-500 mb-2">
                     {template.category}
                   </p>
-                  <p className="text-sm text-gray-700 whitespace-pre-line mb-2">
-                    {template.data ||
-                    //  template.container_meta?.sample_text ||
-                     "No  data available"}
-                  </p>
+                <p className="text-sm text-gray-700 whitespace-pre-line mb-2">
+                  {template.container_meta?.sampleText ||
+                    "No sample text available"}
+                </p>
                 </div>
                 <button
                   type="button"

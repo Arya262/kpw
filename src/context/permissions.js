@@ -1,7 +1,7 @@
 // Centralized role permissions for the app
 
 export const ROLE_PERMISSIONS = {
-  Owner: {
+  main: {
     canViewDashboard: true,
     canAddCredits: true,
     canViewAnalytics: true,
@@ -15,8 +15,6 @@ export const ROLE_PERMISSIONS = {
     canManageUsers: true,
     canAccessModals: true,
     canSeeFilters: true,
-
-    // Chat-specific permissions
     canAccessChat: true,
     canSendMessages: true,
     canDeleteChats: true,
@@ -31,120 +29,30 @@ export const ROLE_PERMISSIONS = {
     canEditTemplate: true,
     canDeleteTemplate: true,
   },
-  Admin: {
+  sub_user: {
     canViewDashboard: true,
     canAddCredits: true,
     canViewAnalytics: true,
-    canExportAnalytics: true,
-    canView: true,
-    canAdd: true,
-    canEdit: true,
-    canDelete: true,
-    canBulkUpload: true,
-    canManageGroups: true,
-    canManageUsers: false,
-    canAccessModals: true,
-    canSeeFilters: true,
-
-    canAccessChat: true,
-    canSendMessages: true,
-    canDeleteChats: true,
-    canUseTemplateModal: true,
-    canDownloadReports: true,
-    canAddBroadcast: true,
-    canEditBroadcast: true,
-    canDeleteBroadcast: true,
-    canViewBroadcast: true,
-    canViewTemplates: true,
-    canAddTemplate: true,
-    canEditTemplate: true,
-    canDeleteTemplate: true,
-  },
-  Manager: {
-    canViewDashboard: true,
-    canAddCredits: false, 
-    canViewAnalytics: true,
-    canExportAnalytics: true,
-    canView: true,
-    canAdd: true,
-    canEdit: true,
-    canDelete: true,
-    canBulkUpload: true,
-    canManageGroups: true,
-    canManageUsers: false,
-    canAccessModals: true,
-    canSeeFilters: true,
-
-    canAccessChat: true,
-    canSendMessages: true,
-    canDeleteChats: true,
-    canUseTemplateModal: true,
-    canDownloadReports: true,
-    canAddBroadcast: true,
-    canEditBroadcast: true,
-    canDeleteBroadcast: true,
-    canViewBroadcast: true,
-    canViewTemplates: true,
-    canAddTemplate: true,
-    canEditTemplate: true,
-    canDeleteTemplate: true,
-  },
-  User: {
-    canViewDashboard: true,
-    canAddCredits: false,
-    canViewAnalytics: true,
     canExportAnalytics: false,
     canView: true,
-    canAdd: true, // for own contacts
-    canEdit: true, // for own contacts
-    canDelete: true, 
-    canBulkUpload: false,
-    canManageGroups: false,
-    canManageUsers: false,
-    canAccessModals: true,
-    canSeeFilters: true,
-
-    canAccessChat: true,
-    canSendMessages: true,
-    canDeleteChats: true,
-    canUseTemplateModal: true,
-    canDownloadReports: false,
-    canAddBroadcast: true, // for own broadcasts
-    canEditBroadcast: true, // for own broadcasts
-    canDeleteBroadcast: true, // for own broadcasts
-    canViewBroadcast: true,
-    canViewTemplates: true,
-    canAddTemplate: true, // for own templates
-    canEditTemplate: true, // for own templates
-    canDeleteTemplate: true, // for own templates
-  },
-  Viewer: {
-    canViewDashboard: true,
-    canAddCredits: false,
-    canViewAnalytics: true,
-    canExportAnalytics: false,
-    canView: true,
-    canAdd: false,
-    canEdit: false,
-    canDelete: false,
+    canAdd: false, // for own contacts
+    canEdit: false, // for own contacts
+    canDelete: false, 
     canBulkUpload: false,
     canManageGroups: false,
     canManageUsers: false,
     canAccessModals: false,
     canSeeFilters: true,
-
     canAccessChat: true,
-    canSendMessages: false,
+    canSendMessages: true,
     canDeleteChats: false,
     canUseTemplateModal: false,
     canDownloadReports: false,
-    canAddBroadcast: false,
-    canEditBroadcast: false,
-    canDeleteBroadcast: false,
+    canAddBroadcast: false, 
     canViewBroadcast: true,
     canViewTemplates: true,
-    canAddTemplate: false,
-    canEditTemplate: false,
-    canDeleteTemplate: false,
+    canAddTemplate:false, // for own templates
+    canEditTemplate: false, // for own templates
+    canDeleteTemplate: false, // for own templates
   },
 };

@@ -8,6 +8,7 @@ import "react-toastify/dist/ReactToastify.css";
 import Loader from "../../components/Loader";
 import GroupRow from "./GroupRow";
 import vectorIcon from "../../assets/Vector.png";
+import { getPermissions } from "../../utils/getPermissions";
 
 // Empty State Component (matches ContactListImproved)
 const EmptyState = ({ searchTerm }) => (
@@ -428,17 +429,7 @@ export default function GroupManagement() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [error, setError] = useState(null);
   const { user } = useAuth();
-  // Map backend role values to ROLE_PERMISSIONS keys
-  const roleMap = {
-    main: "Owner",
-    owner: "Owner",
-    admin: "Admin",
-    manager: "Manager",
-    user: "User",
-    viewer: "Viewer",
-  };
-  const role = roleMap[user?.role?.toLowerCase?.()] || "Viewer";
-  const permissions = ROLE_PERMISSIONS[role];
+  const permissions = getPermissions(user);
   const searchInputRef = useRef(null);
   const [deletingGroup, setDeletingGroup] = useState(null);
   const modalRef = useRef(null);
@@ -706,15 +697,21 @@ export default function GroupManagement() {
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
           </div>
-          {permissions.canManageGroups && (
+          
             <button
               className="bg-[#0AA89E] hover:bg-[#0AA89E] text-white flex items-center gap-2 px-4 py-2 rounded cursor-pointer"
-              onClick={() => setShowForm(true)}
+              onClick={() => {
+                if (!permissions.canManageGroups) {
+                  toast.error("You do not have permission to add groups.");
+                  return;
+                }
+                setShowForm(true);
+              }}
             >
               <img src={vectorIcon} alt="plus sign" className="w-5 h-5" />
               Add Group
             </button>
-          )}
+          
         </div>
       </div>
       <div className="overflow-x-auto">
@@ -781,6 +778,7 @@ export default function GroupManagement() {
                     onEditClick={setEditingGroup}
                     onDeleteClick={setDeletingGroup}
                     isDeleting={isDeleting}
+                    permissions={permissions}
                   />
                 ))
               )}
@@ -820,7 +818,7 @@ export default function GroupManagement() {
         </div>
       )}
       {/* Group Form Modal */}
-      {(showForm || editingGroup) && permissions.canManageGroups && (
+      {(showForm || editingGroup)  && (
         <div
           className="fixed inset-0 bg-white/40 flex items-center justify-center z-50 transition-all duration-300"
           onClick={e => {
@@ -874,7 +872,7 @@ export default function GroupManagement() {
       )}
       {/* Group Delete Confirmation Dialog */}
       {deletingGroup && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+        <div className="fixed inset-0  flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-lg">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Delete Confirmation</h3>
             <p className="text-gray-600 mb-6">

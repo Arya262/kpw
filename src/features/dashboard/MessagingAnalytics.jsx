@@ -14,6 +14,7 @@ import { useAuth } from "../../context/AuthContext";
 import { ROLE_PERMISSIONS } from "../../context/permissions";
 import { API_ENDPOINTS } from "../../config/api";
 import { toast } from "react-toastify";
+import { getPermissions } from "../../utils/getPermissions";
 
 // Utility: Get date range for filter
 function getDateRange(filter, options) {
@@ -38,8 +39,7 @@ const FILTER_OPTIONS = ["Weekly", "Monthly", "Yearly", "Custom"];
 
 export default function MessagingAnalytics({ usageHistory }) {
   const { user } = useAuth();
-  const role = user?.role || "User";
-  const permissions = ROLE_PERMISSIONS[role] || {};
+  const permissions = getPermissions(user);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
 

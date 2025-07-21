@@ -10,29 +10,18 @@ import SuccessErrorMessage from "../contacts/SuccessErrorMessage";
 import Modal from "./Modal";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { ROLE_PERMISSIONS } from "../../context/permissions";
+import { getPermissions } from "../../utils/getPermissions";
 import NotAuthorized from "../../components/NotAuthorized";
 
 const Templates = () => {
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const permissions = getPermissions(user);
   const [editingTemplate, setEditingTemplate] = useState(null);
   const [editForm, setEditForm] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-
-  // Map user role to permissions
-  const roleMap = {
-    main: "Owner",
-    owner: "Owner",
-    admin: "Admin",
-    manager: "Manager",
-    user: "User",
-    viewer: "Viewer",
-  };
-  const role = roleMap[user?.role?.toLowerCase?.()] || "Viewer";
-  const permissions = ROLE_PERMISSIONS[role];
 
   useEffect(() => {
     const fetchTemplates = async () => {

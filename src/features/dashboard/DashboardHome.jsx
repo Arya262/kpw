@@ -5,7 +5,7 @@ import { Wallet, Banknote, PiggyBank, Crown, Plus } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { API_ENDPOINTS } from "../../config/api";
 import AddCreditModal from "./AddCreditModal";
-import { ROLE_PERMISSIONS } from "../../context/permissions";
+import { getPermissions } from "../../utils/getPermissions";
 import { toast } from "react-toastify";
 
 // 🎯 Reusable animated number component using Framer Motion only
@@ -41,18 +41,7 @@ const DashboardHome = () => {
 
   const [usageHistory, setUsageHistory] = useState([]);
   const { user } = useAuth();
-
-  // Map backend role values to ROLE_PERMISSIONS keys (same as ContactList)
-  const roleMap = {
-    main: "Owner",
-    owner: "Owner",
-    admin: "Admin",
-    manager: "Manager",
-    user: "User",
-    viewer: "Viewer",
-  };
-  const role = roleMap[user?.role?.toLowerCase?.()] || "Viewer";
-  const permissions = ROLE_PERMISSIONS[role];
+  const permissions = getPermissions(user);
 
   const [showAddCredit, setShowAddCredit] = useState(false);
   const [creditAmount, setCreditAmount] = useState("");

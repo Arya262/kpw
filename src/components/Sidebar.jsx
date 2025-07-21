@@ -19,7 +19,12 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
 
   const menuItems = [
     { name: "Dashboard", icon: <LayoutDashboard size={22} />, path: "/" },
-    { name: "My Contact", icon: <Contact2 size={22} />, path: "/contact", submenu: true },
+    {
+      name: "My Contact",
+      icon: <Contact2 size={22} />,
+      path: "/contact",
+      submenu: true,
+    },
     {
       name: "Templates",
       icon: <FileText size={22} />,
@@ -28,7 +33,7 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
     },
     { name: "Chats", icon: <MessageCircle size={22} />, path: "/chats" },
     { name: "Broadcast", icon: <Megaphone size={22} />, path: "/broadcast" },
-    { name: "Setting", icon: <Settings size={22} />, path: "/settings",},
+    { name: "Setting", icon: <Settings size={22} />, path: "/settings" },
     { name: "Flow", icon: <Megaphone size={22} />, path: "/flow" },
     { name: "Help", icon: <HelpCircle size={22} />, path: "/help" },
   ];
@@ -100,7 +105,7 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
               isOpen={isOpen}
               setIsOpen={setIsOpen}
               item={item}
-                           icon={item.icon}
+              icon={item.icon}
               submenuItems={item.submenuItems}
               path={item.path}
             />
@@ -118,18 +123,27 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
                 }`
               }
             >
-              <span className="w-5 h-5 flex items-center justify-center relative">
-                {item.icon}
-                {item.name === "Chats" && unreadCount > 0 && (
-                  <span
-                    className="absolute -top-1 -right-44 inline-flex items-center justify-center min-w-[20px] h-5 px-2 text-xs font-bold leading-none text-white rounded-full shadow"
-                    style={{ backgroundColor: '#0AA89E' }} 
-                  >
-                    {unreadCount > 99 ? "99+" : unreadCount}
+              {({ isActive }) => (
+                <>
+                  <span className="w-5 h-5 flex items-center justify-center relative">
+                    {item.icon}
+                    {item.name === "Chats" && unreadCount > 0 && (
+                      <span
+                        className="absolute -top-1 -right-44 inline-flex items-center justify-center min-w-[30px] h-7 text-xs font-bold leading-none rounded-full shadow p-0"
+                        style={{
+                          backgroundColor: isActive ? "#fff" : "#0AA89E",
+                          color: isActive ? "#24AEAE" : "#fff",
+                          border: isActive ? "1px solid #24AEAE" : "none",
+                          padding: "0",
+                        }}
+                      >
+                        {unreadCount > 99 ? "99+" : unreadCount}
+                      </span>
+                    )}
                   </span>
-                )}
-              </span>
-              <span>{item.name}</span>
+                  <span>{item.name}</span>
+                </>
+              )}
             </NavLink>
           )
         )}

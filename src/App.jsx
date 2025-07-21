@@ -8,7 +8,7 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 import { useAuth } from "./context/AuthContext";
-
+import PrivacyPolicy from "./PrivacyPolicy";
 // Lazy load components
 const ContactList = lazy(() => import("./features/contacts/ContactList"));
 const Templates = lazy(() => import("./features/templates/Templates"));
@@ -61,6 +61,14 @@ function App() {
             element={
               <ErrorBoundary>
                 <NotAuthorized />
+              </ErrorBoundary>
+            }
+          />
+                    <Route
+            path="/privacy-policy"
+            element={
+              <ErrorBoundary>
+                <PrivacyPolicy />
               </ErrorBoundary>
             }
           />

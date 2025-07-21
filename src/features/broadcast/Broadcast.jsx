@@ -8,7 +8,7 @@ import vendor from "../../assets/Vector.png";
 import BroadcastDashboard from "./BroadcastDashboard";
 import BroadcastPages from "./BroadcastPages";
 import { useAuth } from "../../context/AuthContext";
-import { ROLE_PERMISSIONS } from "../../context/permissions";
+import { getPermissions } from "../../utils/getPermissions";
 
 const Broadcast = () => {
   const broadcastDashboardRef = useRef(null);
@@ -22,22 +22,12 @@ const Broadcast = () => {
 
   const location = useLocation();
   const { user } = useAuth();
-  // Map backend role values to ROLE_PERMISSIONS keys
-  const roleMap = {
-    main: "Owner",
-    owner: "Owner",
-    admin: "Admin",
-    manager: "Manager",
-    user: "User",
-    viewer: "Viewer",
-  };
-  const role = roleMap[user?.role?.toLowerCase?.()] || "Viewer";
-  const permissions = ROLE_PERMISSIONS[role];
+  const permissions = getPermissions(user);
 
   // Helper for delete permission (for 'User' role, only own broadcasts)
   const canDeleteBroadcast = (broadcast) => {
     if (!permissions.canDelete) return false;
-    if (role === "User") {
+    if (user?.role?.toLowerCase?.() === "user") {
       return broadcast.created_by === user?.id;
     }
     return true;

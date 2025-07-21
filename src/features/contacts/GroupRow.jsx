@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Edit2, Trash2 } from "lucide-react";
 import { createPortal } from "react-dom";
 import ContactList from "./ContactList";
+import { toast } from "react-toastify";
 
 function PortalDropdown({ children, position, onClose }) {
   const dropdownRef = useRef(null);
@@ -48,6 +49,7 @@ export default function GroupRow({
   onEditClick,
   onDeleteClick,
   isDeleting,
+  permissions,
 }) {
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const [shouldFlipUp, setShouldFlipUp] = useState(false);
@@ -154,13 +156,27 @@ export default function GroupRow({
           {isDropdownOpen && dropdownPos && (
             <PortalDropdown position={dropdownPos} onClose={() => setDropdownOpen(false)}>
               <button
-                onClick={() => { setDropdownOpen(false); onEditClick(group); }}
+                onClick={() => {
+                  setDropdownOpen(false);
+                  if (!permissions?.canManageGroups) {
+                    toast.error("You do not have permission to edit groups.");
+                    return;
+                  }
+                  onEditClick(group);
+                }}
                 className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
               >
                 <Edit2 className="w-4 h-4" /> Edit Group
               </button>
               <button
-                onClick={() => { setDropdownOpen(false); onDeleteClick(group); }}
+                onClick={() => {
+                  setDropdownOpen(false);
+                  if (!permissions?.canManageGroups) {
+                    toast.error("You do not have permission to delete groups.");
+                    return;
+                  }
+                  onDeleteClick(group);
+                }}
                 className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2"
                 disabled={isDeleting}
               >

@@ -415,7 +415,7 @@ const Table = ({ templates = [], onDelete, onEdit, canEdit, canDelete }) => {
                                 d="M5 12h14M12 5l7 7-7 7"
                               />
                             </svg>
-                            <span className="text-sm font-medium">Send Message</span>
+                            <span className="text-sm font-medium">Send Broadcast</span>
                           </button>
                           {/* Always show menu button */}
                           <button

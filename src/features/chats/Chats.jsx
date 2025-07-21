@@ -9,7 +9,7 @@ import MessageInput from "./MessageInput";
 import UserDetails from "./UserDetails";
 import { MessageCircle } from "lucide-react";
 import { useChatLogic } from "../../hooks/useChatLogic";
-import { ROLE_PERMISSIONS } from "../../context/permissions";
+import { getPermissions } from "../../utils/getPermissions";
 import { toast } from "react-toastify";
 
 const Chat = () => {
@@ -23,18 +23,7 @@ const Chat = () => {
   const location = useLocation();
   const socket = useSocket();
   const { user } = useAuth();
-
-  // Map backend role values to ROLE_PERMISSIONS keys
-  const roleMap = {
-    main: "Owner",
-    owner: "Owner",
-    admin: "Admin",
-    manager: "Manager",
-    user: "User",
-    viewer: "Viewer",
-  };
-  const role = roleMap[user?.role?.toLowerCase?.()] || "Viewer";
-  const permissions = ROLE_PERMISSIONS[role];
+  const permissions = getPermissions(user);
 
   const userDetailsRef = useRef(null);
   const profileButtonRef = useRef(null);

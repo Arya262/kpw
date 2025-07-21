@@ -51,17 +51,16 @@ function PopoverPortal({ anchorRect, children, onClose, position = 'bottom' }) {
 
 const UserSetting = () => {
   const { user } = useAuth();
-  // Map backend role values to ROLE_PERMISSIONS keys
-  const roleMap = {
-    main: "Owner",
-    owner: "Owner",
-    admin: "Admin",
-    manager: "Manager",
-    user: "User",
-    viewer: "Viewer",
-  };
-  const role = roleMap[user?.role?.toLowerCase?.()] || "Viewer";
-  const permissions = ROLE_PERMISSIONS[role];
+  const permissions = useMemo(() => {
+    if (!user?.role) return {};
+    if (["owner", "admin", "main"].includes(user.role)) {
+      return ROLE_PERMISSIONS.main;
+    }
+    if (["manager", "user", "viewer", "sub_user"].includes(user.role)) {
+      return ROLE_PERMISSIONS.sub_user;
+    }
+    return {};
+  }, [user]);
   const [name, setName] = useState(user?.name || "");
   const [email, setEmail] = useState(user?.email || "");
   const [password, setPassword] = useState("");
@@ -571,7 +570,7 @@ const UserSetting = () => {
                       className="w-full border border-gray-300 p-2 rounded-md text-gray-700 h-[38px] focus:border-[#05A3A3] focus:outline-none focus:ring-1 focus:ring-[#05A3A3] transition-all duration-150 ease-in-out bg-white"
                       required
                     >
-                      {roleOptions.map(opt => (
+                      {roleOptions.filter(r => r.value !== 'owner').map(opt => (
                         <option key={opt.value} value={opt.value}>{opt.label}</option>
                       ))}
                     </select>
@@ -736,7 +735,7 @@ const UserSetting = () => {
                       required
                       disabled={editUserRole === 'owner'}
                     >
-                      {roleOptions.map(opt => (
+                      {roleOptions.filter(opt => opt.value !== 'owner').map(opt => (
                         <option key={opt.value} value={opt.value}>{opt.label}</option>
                       ))}
                     </select>

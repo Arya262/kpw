@@ -1,7 +1,7 @@
-import React, { useState } from "react";
-import { FaSearch } from "react-icons/fa";
+import React, { useState, useRef, useEffect } from "react";
+import { FaSearch, FaKey, FaPowerOff } from "react-icons/fa";
 import { Menu, X } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import { API_ENDPOINTS } from "../config/api";
 import { toast } from "react-toastify"; // No need to import ToastContainer here
@@ -14,8 +14,10 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [showSearchPanel, setShowSearchPanel] = useState(false);
   const [whatsAppData, setWhatsAppData] = useState([]);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const userMenuRef = useRef(null);
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
 
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
@@ -78,6 +80,23 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
       toast.error("Unable to load WhatsApp numbers.");
     }
   };
+
+  // Close user menu on outside click
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setShowUserMenu(false);
+      }
+    }
+    if (showUserMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showUserMenu]);
 
   return (
     <>
@@ -163,21 +182,74 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
           </div>
 
           {/* Buttons */}
-          <button
+          {/* <button
             type="button"
             aria-label="Upgrade account"
-            className="bg-[#05a3a3] hover:bg-[#048080] text-white text-sm px-4 h-10 flex items-center justify-center rounded whitespace-nowrap cursor-pointer transition-colors"
+            className="bg-[#0AA89E] hover:bg-[#0AA89E] text-white text-sm px-4 h-10 flex items-center justify-center rounded whitespace-nowrap cursor-pointer transition-colors"
           >
             Upgrade
-          </button>
-          <button
-            type="button"
-            onClick={handleLogout}
-            aria-label="Logout"
-            className="bg-[#05a3a3] hover:bg-[#048080] text-white text-sm px-4 h-10 flex items-center justify-center rounded whitespace-nowrap cursor-pointer transition-colors"
-          >
-            Logout
-          </button>
+          </button> */}
+
+          {/* User Info + Avatar & Dropdown */}
+          <div className="flex items-center gap-2">
+            {/* User Info */}
+            <div className="hidden sm:flex flex-col items-end justify-center mr-1">
+              <span className="font-semibold text-sm text-gray-900 truncate max-w-[160px]">{user?.email || "Username"}</span>
+              <span className="text-xs text-gray-500">Merchant ID: {user?.customer_id || "-"}</span>
+            </div>
+            {/* User Avatar & Dropdown */}
+            <div className="relative" ref={userMenuRef}>
+              <button
+                type="button"
+                aria-label="User menu"
+                className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-200 overflow-hidden border border-gray-300 focus:outline-none ml-2"
+                onClick={() => setShowUserMenu((prev) => !prev)}
+              >
+                <img
+                  src="/default-avatar.jpeg"
+                  alt="User Avatar"
+                  className="w-9 h-9 rounded-full object-cover"
+                />
+                <span className="absolute bottom-1 right-1 w-2.5 h-2.5 bg-teal-400 border-2 border-white rounded-full"></span>
+              </button>
+              {showUserMenu && (
+                <div className="absolute right-0 mt-2 w-72 bg-white border border-gray-200 rounded shadow-lg z-50 min-w-[220px] p-4 flex flex-col items-center">
+                  {/* Avatar */}
+                  <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-gray-200 flex items-center justify-center mb-2">
+                    <img
+                      src="/default-avatar.jpeg"
+                      alt="User Avatar"
+                      className="w-full h-full object-cover"
+                    />
+                    <span className="absolute bottom-2 right-2 w-3 h-3 bg-teal-400 border-2 border-white rounded-full"></span>
+                  </div>
+                  {/* Username and Role */}
+                  <div className="text-center w-full mb-4">
+                    <div className="font-semibold text-base text-gray-800 truncate">{user?.email || "Username"}</div>
+                    <div className="text-sm text-gray-500 mt-1">{user?.role || "-"}</div>
+                  </div>
+                  {/* Menu Options */}
+                  <div className="w-full flex flex-col gap-1">
+                    <Link to="/privacy-policy" className="flex items-center justify-between px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition">
+                      <span>Privacy Policy</span>
+                      <span className="ml-2 text-xs bg-red-100 text-red-500 px-2 py-0.5 rounded font-bold">UPDATE</span>
+                    </Link>
+                    <Link to="/forgot-password" className="flex items-center justify-between px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition">
+                      <span>Change Password</span>
+                      <FaKey className="ml-2 text-lg text-gray-400" />
+                    </Link>
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center justify-between w-full px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition"
+                    >
+                      <span>Logout</span>
+                      <FaPowerOff className="ml-2 text-lg text-red-500" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </header>
 

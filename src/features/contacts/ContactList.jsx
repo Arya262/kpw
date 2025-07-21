@@ -9,6 +9,7 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import EditContact from "./EditContact";
 import SingleDeleteDialog from "./SingleDeleteDialog";
+import { getPermissions } from "../../utils/getPermissions";
 
 const formatDate = (dateString) => {
   if (!dateString) return "N/A";
@@ -226,17 +227,7 @@ export default function ContactList() {
   const [error, setError] = useState(null);
   const popupRef = useRef(null);
   const { user } = useAuth();
-  // Map backend role values to ROLE_PERMISSIONS keys
-  const roleMap = {
-    main: "Owner",
-    owner: "Owner",
-    admin: "Admin",
-    manager: "Manager",
-    user: "User",
-    viewer: "Viewer",
-  };
-  const role = roleMap[user?.role?.toLowerCase?.()] || "Viewer";
-  const permissions = ROLE_PERMISSIONS[role];
+  const permissions = getPermissions(user);
   const [editContact, setEditContact] = useState(null);
   const [deleteContact, setDeleteContact] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -300,14 +291,14 @@ export default function ContactList() {
   // For 'User' role, only allow edit/delete for own contacts
   const canEditContact = (contact) => {
     if (!permissions.canEdit) return false;
-    if (role === "User") {
+    if (user?.role?.toLowerCase?.() === "user") {
       return contact.created_by === user?.id; // assuming contact.created_by is the user id
     }
     return true;
   };
   const canDeleteContact = (contact) => {
     if (!permissions.canDelete) return false;
-    if (role === "User") {
+    if (user?.role?.toLowerCase?.() === "user") {
       return contact.created_by === user?.id;
     }
     return true;
@@ -740,7 +731,7 @@ export default function ContactList() {
                     canEdit={true}
                     canDelete={true}
                     userId={user?.id}
-                    userRole={role}
+                    userRole={user?.role?.toLowerCase?.()}
                   />
                 ))
               )}
