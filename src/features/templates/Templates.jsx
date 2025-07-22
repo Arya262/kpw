@@ -12,6 +12,8 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { getPermissions } from "../../utils/getPermissions";
 import NotAuthorized from "../../components/NotAuthorized";
+import Loader from "../../components/Loader";
+import vendor from "../../assets/Vector.png";
 
 const Templates = () => {
   const [templates, setTemplates] = useState([]);
@@ -45,10 +47,10 @@ const Templates = () => {
         if (Array.isArray(data.templates)) {
           setTemplates(data.templates);
         } else {
-          //setError("Unexpected response format from server.");
+          setErrorMessage("Unexpected response format from server.");
         }
       } catch (err) {
-        //setError("Failed to load templates. Please try again.");
+        setErrorMessage("Failed to load templates. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -102,36 +104,29 @@ const Templates = () => {
     });
   };
 
-  const handleEditFormChange = (e) => {
-    const { name, value } = e.target;
-    setEditForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleEditFormSave = async (e) => {
-    e.preventDefault();
-    if (!editingTemplate) return;
-    const updatedTemplate = {
-      ...editingTemplate,
-      ...editForm,
-      container_meta: {
-        ...editingTemplate.container_meta,
-        header: editForm.header,
-        footer: editForm.footer,
-        sampleText: editForm.data,
-      },
-    };
-    setTemplates((prev) =>
-      prev.map((t) => (t.id === updatedTemplate.id ? updatedTemplate : t))
-    );
-    setSuccessMessage("Template updated successfully!");
-    setTimeout(() => setSuccessMessage(""), 2000);
-    setEditingTemplate(null);
-    setEditForm(null);
-  };
-
-  const handleEditFormCancel = () => {
-    setEditingTemplate(null);
-    setEditForm(null);
+  // Add New Template handler
+  const handleAddTemplate = () => {
+    setEditingTemplate({
+      id: null,
+      element_name: '',
+      category: '',
+      header: '',
+      footer: '',
+      data: '',
+      template_type: '',
+      status: '',
+      container_meta: {},
+    });
+    setEditForm({
+      id: null,
+      element_name: '',
+      category: '',
+      header: '',
+      footer: '',
+      data: '',
+      template_type: '',
+      status: '',
+    });
   };
 
   const handleDelete = async (ids) => {
@@ -210,7 +205,7 @@ const Templates = () => {
       {editingTemplate && (
         <Modal
           isOpen={!!editingTemplate}
-          mode="edit"
+          mode={editingTemplate.id ? "edit" : "add"}
           initialValues={editingTemplate}
           onClose={() => { setEditingTemplate(null); setEditForm(null); }}
           onSubmit={async (updatedTemplate) => {
@@ -225,8 +220,12 @@ const Templates = () => {
                 footer: updatedTemplate.footer,
                 buttons: updatedTemplate.buttons || [],
               };
-              const response = await fetch(API_ENDPOINTS.TEMPLATES.UPDATE(updatedTemplate.id), {
-                method: 'PUT',
+              const url = updatedTemplate.id
+                ? API_ENDPOINTS.TEMPLATES.UPDATE(updatedTemplate.id)
+                : API_ENDPOINTS.TEMPLATES.CREATE;
+              const method = updatedTemplate.id ? 'PUT' : 'POST';
+              const response = await fetch(url, {
+                method,
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
                 body: JSON.stringify(requestBody),
@@ -236,26 +235,31 @@ const Templates = () => {
               }
               const data = await response.json();
               if (data.success) {
-                setTemplates((prev) =>
-                  prev.map((t) =>
-                    t.id === updatedTemplate.id
-                      ? {
-                          ...t,
-                          ...updatedTemplate,
-                          created_on: t.created_on,
-                          id: t.id,
-                          element_name: t.element_name,
-                          status: t.status,
-                        }
-                      : t
-                  )
-                );
-                setSuccessMessage("Template updated successfully!");
+                if (updatedTemplate.id) {
+                  setTemplates((prev) =>
+                    prev.map((t) =>
+                      t.id === updatedTemplate.id
+                        ? {
+                            ...t,
+                            ...updatedTemplate,
+                            created_on: t.created_on,
+                            id: t.id,
+                            element_name: t.element_name,
+                            status: t.status,
+                          }
+                        : t
+                    )
+                  );
+                  setSuccessMessage("Template updated successfully!");
+                } else {
+                  setTemplates((prev) => [data.template, ...prev]);
+                  setSuccessMessage("Template added successfully!");
+                }
                 setTimeout(() => setSuccessMessage(""), 2000);
                 setEditingTemplate(null);
                 setEditForm(null);
               } else {
-                toast.error(data.message || 'Failed to update template', {
+                toast.error(data.message || 'Failed to save template', {
                   position: "top-right",
                   autoClose: 3000,
                   hideProgressBar: false,
@@ -265,7 +269,7 @@ const Templates = () => {
                 });
               }
             } catch (error) {
-              toast.error('Failed to update template. Please try again.', {
+              toast.error('Failed to save template. Please try again.', {
                 position: "top-right",
                 autoClose: 5000,
                 hideProgressBar: false,
@@ -280,7 +284,7 @@ const Templates = () => {
 
       <ErrorBoundary>
         {loading ? (
-          <p className="text-center">Loading templates...</p>
+          <Loader />
         ) : (
           <Table
             templates={templates}
@@ -288,6 +292,14 @@ const Templates = () => {
             onDelete={permissions.canDeleteTemplate ? handleDelete : undefined}
             canEdit={permissions.canEditTemplate}
             canDelete={permissions.canDeleteTemplate}
+            onAddTemplate={permissions.canAddTemplate ? () => {
+              if (!permissions.canAddTemplate) {
+                toast.error('You do not have permission to add templates.');
+                return;
+              }
+              handleAddTemplate();
+            } : undefined}
+            vendorIcon={vendor}
           />
         )}
       </ErrorBoundary>

@@ -7,6 +7,7 @@ import { API_ENDPOINTS } from "../../config/api";
 import AddCreditModal from "./AddCreditModal";
 import { getPermissions } from "../../utils/getPermissions";
 import { toast } from "react-toastify";
+import vendor from "../../assets/Vector.png"
 
 // 🎯 Reusable animated number component using Framer Motion only
 const AnimatedNumber = ({ value, duration = 1.2 }) => {
@@ -203,15 +204,13 @@ const DashboardHome = () => {
           Dashboard
         </h2>
         {/* Always show Add Credit button, enforce permission in handler */}
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          className="bg-[#24AEAE] hover:bg-teal-600 text-white flex items-center justify-center gap-2 px-4 py-2 rounded text-sm md:text-base cursor-pointer"
+                <button
+          className="bg-[#0AA89E] hover:bg-[#0AA89E] text-white flex items-center gap-2 px-4 py-2 rounded cursor-pointer"
           onClick={permissions.canAddCredits ? () => setShowAddCredit(true) : handleUnauthorizedAddCredit}
         >
-          <Plus className="w-5 h-5" />
+          <img src={vendor} alt="plus sign" className="w-5 h-5" />
           Add Credit
-        </motion.button>
+        </button>
       </div>
 
       {/* Summary Cards */}

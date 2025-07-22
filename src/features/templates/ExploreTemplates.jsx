@@ -7,6 +7,7 @@ import { API_ENDPOINTS } from "../../config/api";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { getPermissions } from "../../utils/getPermissions";
+import Loader from "../../components/Loader"; // <-- Add this import
 
 const ExploreTemplates = () => {
   console.log('ExploreTemplates rendered');
@@ -146,9 +147,7 @@ const ExploreTemplates = () => {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-teal-500"></div>
-        </div>
+        <Loader /> // <-- Use your Loader component here
       ) : error ? (
         <p className="text-red-500">{error}</p>
       ) : templates.length === 0 ? (

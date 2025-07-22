@@ -21,7 +21,7 @@ const ConfirmationDialog = ({ showExitDialog, hasUnsavedChanges, cancelExit, con
 
   return (
     <div
-      className="fixed inset-0  bg-opacity-5 flex items-center justify-center z-50 transition-opacity duration-300"
+      className="fixed inset-0  bg-[#4a4a4a]/90 flex items-center justify-center z-50 transition-opacity duration-300"
       onMouseDown={(e) => e.stopPropagation()}
     >
       <div
@@ -35,7 +35,7 @@ const ConfirmationDialog = ({ showExitDialog, hasUnsavedChanges, cancelExit, con
       >
         <div className="flex items-center gap-3 mb-4">
           <svg
-            className="w-6 h-6 text-teal-500"
+            className="w-6 h-6 text-[#0AA89E]"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -60,14 +60,14 @@ const ConfirmationDialog = ({ showExitDialog, hasUnsavedChanges, cancelExit, con
         <div className="flex justify-end gap-3">
           <button
             onClick={cancelExit}
-            className="px-3 py-2 w-[70px] bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500"
+            className="px-3 py-2 w-[70px] bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors duration-200 cursor-pointer"
             aria-label="Cancel"
           >
             Cancel
           </button>
           <button
             onClick={confirmExit}
-            className="px-3 py-2 w-[70px] bg-teal-500 text-white rounded-md hover:bg-teal-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500"
+            className="px-3 py-2 w-[70px] bg-[#0AA89E] text-white rounded-md hover:bg-teal-500 transition-colors duration-200 cursor-pointer "
             aria-label="Confirm"
           >
             OK

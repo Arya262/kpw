@@ -304,7 +304,13 @@ doc.text(`App ID: ${appId}`, 300, 175);
         <div className="flex justify-end mb-4">
           <button
             className="bg-[#24AEAE] hover:bg-[#24AEAE] text-white px-4 py-2 rounded shadow cursor-pointer"
-            onClick={permissions.canDownloadReports ? handleDownloadPDF : handleUnauthorizedDownload}
+            onClick={() => {
+              if (permissions.canDownloadReports) {
+                handleDownloadPDF();
+              } else {
+                handleUnauthorizedDownload();
+              }
+            }}
           >
             Download PDF
           </button>

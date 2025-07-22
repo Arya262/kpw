@@ -35,7 +35,7 @@ const ConfirmationDialog = ({ showExitDialog, cancelExit, confirmExit }) => {
   if (!showExitDialog) return null;
 
   return (
-    <div className="fixed inset-0 bg-opacity-5 flex items-center justify-center z-50 transition-opacity duration-300">
+    <div className="fixed inset-0 bg-[#4a4a4a]/90  flex items-center justify-center z-50 transition-opacity duration-300">
       <div
         ref={dialogRef}
         className="bg-white rounded-xl p-6 w-full max-w-sm shadow-lg transform transition-all duration-300 scale-100"
@@ -146,21 +146,23 @@ const AddCreditModal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-white/40 flex items-center justify-center z-50 transition-all duration-300">
+    <div className="fixed inset-0 bg-[#4a4a4a]/90  flex items-center justify-center z-50 transition-all duration-300">
       <div
         ref={modalRef}
-        className={`bg-white rounded-lg w-full max-w-sm shadow-lg p-6 relative border transition-all duration-300 ${isCrossHighlighted
+        className={`bg-white rounded-lg w-full max-w-sm shadow-lg p-6 relative border transition-all duration-300 ${
+          isCrossHighlighted
             ? "border-teal-500 border-2 shadow-[0_0_20px_rgba(5,163,163,0.3)]"
             : "border-gray-300"
-          }`}
+        }`}
       >
         <button
           onClick={handleCloseAndNavigate}
           disabled={paymentLoading}
-          className={`absolute top-2 right-4 text-gray-600 hover:text-black text-3xl font-bold w-8 h-8 flex items-center justify-center pb-2 rounded-full transition-colors cursor-pointer ${isCrossHighlighted
+          className={`absolute top-2 right-4 text-gray-600 hover:text-black text-3xl font-bold w-8 h-8 flex items-center justify-center pb-2 rounded-full transition-colors cursor-pointer ${
+            isCrossHighlighted
               ? "bg-red-500 text-white hover:text-white"
               : "bg-gray-100"
-            } ${paymentLoading ? "opacity-50 cursor-not-allowed" : ""}`}
+          } ${paymentLoading ? "opacity-50 cursor-not-allowed" : ""}`}
         >
           ×
         </button>
@@ -182,10 +184,11 @@ const AddCreditModal = ({
                 <button
                   key={amount}
                   type="button"
-                  className={`px-3 py-1 rounded border w-full text-sm ${creditAmount === amount
-                      ? "bg-blue-600 text-white"
+                  className={`px-3 py-1 rounded border w-full text-sm ${
+                    creditAmount === amount
+                      ? "bg-[#0AA89E] text-white"
                       : "bg-gray-100 text-gray-800 hover:bg-gray-200"
-                    }`}
+                  }`}
                   onClick={() => setCreditAmount(amount)}
                   disabled={paymentLoading}
                 >
@@ -214,7 +217,7 @@ const AddCreditModal = ({
                 value={creditAmount}
                 onChange={(e) => setCreditAmount(Number(e.target.value))}
                 disabled={paymentLoading}
-                className="w-full border rounded-md px-3 py-2 text-sm mb-4 focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full border rounded-md px-3 py-2 text-sm mb-4 focus:outline-none focus:ring-1 focus:ring-[#0AA89E] focus:border-[#0AA89E]"
               />
 
               <motion.button
@@ -226,14 +229,15 @@ const AddCreditModal = ({
                   isNaN(creditAmount) ||
                   creditAmount <= 0
                 }
-                className={`w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-md font-semibold transition-all duration-200 flex items-center justify-center 
-    ${paymentLoading ||
-                    !creditAmount ||
-                    isNaN(creditAmount) ||
-                    creditAmount <= 0
-                    ? "opacity-50 cursor-pointer"
-                    : "cursor-pointer"
-                  }`}
+                className={`w-full bg-[#0AA89E] hover:bg-[#0AA89E] text-white py-2 rounded-md font-semibold transition-all duration-200 flex items-center justify-center 
+    ${
+      paymentLoading ||
+      !creditAmount ||
+      isNaN(creditAmount) ||
+      creditAmount <= 0
+        ? "opacity-90 cursor-pointer"
+        : "cursor-pointer"
+    }`}
               >
                 {paymentLoading ? (
                   <span className="flex items-center gap-2">

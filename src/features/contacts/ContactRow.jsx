@@ -32,7 +32,7 @@ const SingleDeleteConfirmationDialog = ({
 
   return (
     <div
-      className="fixed inset-0 bg-opacity-5 flex items-center justify-center z-50 transition-opacity duration-300"
+      className="fixed inset-0 bg-[#4a4a4a]/90 flex items-center justify-center z-50 "
       onMouseDown={(e) => e.stopPropagation()}
     >
       <div

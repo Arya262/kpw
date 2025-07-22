@@ -249,7 +249,7 @@ const GroupForm = ({ group, onSave, onCancel }) => {
         </label>
         <div
           className={`mb-2 border-2 rounded-md p-4 text-center transition-all duration-200 ${
-            isDragging ? "border-blue-500 bg-blue-50" : "border-dashed border-gray-300"
+            isDragging ? "border-[#0AA89E] bg-blue-50" : "border-dashed border-gray-300"
           }`}
           onDragOver={(e) => {
             e.preventDefault();
@@ -319,7 +319,7 @@ const GroupForm = ({ group, onSave, onCancel }) => {
             </div>
           )}
           <div className="text-xs text-gray-500 mt-2">
-            <a href="/sample.csv" download className="text-blue-600 underline">Download sample file</a>
+            <a href="/sample.csv" download className="text-[#0AA89E] underline">Download sample file</a>
           </div>
         </div>
       </div>
@@ -907,4 +907,4 @@ export default function GroupManagement() {
       <ToastContainer />
     </div>
   );
-} 
+}

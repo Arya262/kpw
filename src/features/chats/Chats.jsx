@@ -11,6 +11,7 @@ import { MessageCircle } from "lucide-react";
 import { useChatLogic } from "../../hooks/useChatLogic";
 import { getPermissions } from "../../utils/getPermissions";
 import { toast } from "react-toastify";
+import Loader from "../../components/Loader"; // Adjust the import based on your project structure
 
 const Chat = () => {
   const [showUserDetails, setShowUserDetails] = useState(false);
@@ -30,7 +31,7 @@ const Chat = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [showMobileChat, setShowMobileChat] = useState(false);
 
-    useEffect(() => {
+  useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
@@ -113,7 +114,7 @@ const Chat = () => {
       {/* Sidebar */}
       {loading ? (
         <div className="basis-full md:basis-1/4 flex items-center justify-center p-6 border-r border-gray-200">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-teal-500"></div>
+          <Loader />
         </div>
       ) : (
         (!isMobile || (isMobile && !showMobileChat)) && (

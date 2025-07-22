@@ -7,9 +7,8 @@ import PrivateRoute from "./PrivateRoute";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-import { useAuth } from "./context/AuthContext";
 import PrivacyPolicy from "./PrivacyPolicy";
-// Lazy load components
+
 const ContactList = lazy(() => import("./features/contacts/ContactList"));
 const Templates = lazy(() => import("./features/templates/Templates"));
 const Chats = lazy(() => import("./features/chats/Chats"));
@@ -64,7 +63,7 @@ function App() {
               </ErrorBoundary>
             }
           />
-                    <Route
+          <Route
             path="/privacy-policy"
             element={
               <ErrorBoundary>
@@ -73,7 +72,8 @@ function App() {
             }
           />
 
-            {/* User Routes */}
+          {/* Protected User Routes */}
+          <Route element={<PrivateRoute />}>
             <Route path="/" element={<DashboardLayout />}>
               <Route
                 index
@@ -160,7 +160,9 @@ function App() {
                 element={<Navigate to="/contact" replace />}
               />
             </Route>
-          {/* Place the NotFound route globally at the end */}
+          </Route>
+
+          {/* 404 - Not Found Route */}
           <Route
             path="*"
             element={
@@ -171,6 +173,8 @@ function App() {
           />
         </Routes>
       </Suspense>
+
+      {/* Toast Notification */}
       <ToastContainer
         position="top-right"
         autoClose={5000}

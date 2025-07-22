@@ -10,6 +10,7 @@ import "react-toastify/dist/ReactToastify.css";
 import EditContact from "./EditContact";
 import SingleDeleteDialog from "./SingleDeleteDialog";
 import { getPermissions } from "../../utils/getPermissions";
+import Loader from "../../components/Loader"; // Import the Loader component
 
 const formatDate = (dateString) => {
   if (!dateString) return "N/A";
@@ -64,7 +65,7 @@ const ConfirmationDialog = ({
 
   return (
     <div
-      className="fixed inset-0 bg-opacity-5 flex items-center justify-center z-50 transition-opacity duration-300"
+      className="fixed inset-0 bg-[#4a4a4a]/90 flex items-center justify-center z-50 "
       onMouseDown={(e) => e.stopPropagation()}
     >
       <div
@@ -103,14 +104,14 @@ const ConfirmationDialog = ({
         <div className="flex justify-end gap-3">
           <button
             onClick={cancelExit}
-            className="px-3 py-2 w-[70px] bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
+            className="px-3 py-2 w-[70px] bg-gray-200 text-gray-700 rounded-md cursor-pointer"
             aria-label="Cancel"
           >
             Cancel
           </button>
           <button
             onClick={confirmExit}
-            className="px-3 py-2 w-[70px] bg-[#0AA89E] text-white rounded-md hover:bg-[#0AA89E] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
+            className="px-3 py-2 w-[70px] bg-[#0AA89E] text-white rounded-md cursor-pointer"
             aria-label="Confirm"
           >
             OK
@@ -148,7 +149,7 @@ const DeleteConfirmationDialog = ({
 
   return (
     <div
-      className="fixed inset-0 bg-opacity-5 flex items-center justify-center z-50 transition-opacity duration-300"
+      className="fixed inset-0 bg-[#4a4a4a]/90  flex items-center justify-center z-50"
       onMouseDown={(e) => e.stopPropagation()}
     >
       <div
@@ -704,13 +705,10 @@ export default function ContactList() {
               </tr>
             </thead>
             <tbody className="max-h-[calc(100vh-300px)] overflow-y-auto scrollbar-hide">
-              
               {loading ? (
                 <tr>
                   <td colSpan="7" className="text-center py-8">
-                    <div className="flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-teal-500"></div>
-                    </div>
+                    <Loader />
                   </td>
                 </tr>
               ) : displayedContacts.length === 0 ? (
@@ -741,7 +739,7 @@ export default function ContactList() {
       </div>
       {isPopupOpen && permissions.canAdd && permissions.canAccessModals && (
         <div
-          className="fixed inset-0 bg-white/40 flex items-center justify-center z-50 transition-all duration-300"
+          className="fixed inset-0 bg-[#4a4a4a]/90  flex items-center justify-center z-50 transition-all duration-300"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setIsCrossHighlighted(true);
@@ -796,7 +794,7 @@ export default function ContactList() {
         theme="light"
       />
       {editContact && permissions.canEdit && permissions.canAccessModals && (
-        <div className="fixed inset-0 bg-white/40 flex items-center justify-center z-50 transition-all duration-300">
+        <div className="fixed inset-0 bg-[#4a4a4a]/90 flex items-center justify-center z-50 transition-all duration-300">
           <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto relative sm:animate-slideUp border border-gray-300 transition-all duration-300">
             <button
               onClick={() => setEditContact(null)}

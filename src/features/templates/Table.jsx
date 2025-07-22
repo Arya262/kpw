@@ -31,7 +31,15 @@ const formatDate = (dateString) => {
   return <span>{formattedDate}</span>;
 };
 
-const Table = ({ templates = [], onDelete, onEdit, canEdit, canDelete }) => {
+const Table = ({
+  templates = [],
+  onDelete,
+  onEdit,
+  canEdit,
+  canDelete,
+  onAddTemplate,      // <-- Add this prop
+  vendorIcon,         // <-- Add this prop
+}) => {
   const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
@@ -249,7 +257,7 @@ const Table = ({ templates = [], onDelete, onEdit, canEdit, canDelete }) => {
                   <button
                     key={i}
                     className={`px-4 py-2 min-h-[40px] rounded-md text-sm font-medium transition 
-                      ${activeFilter === f.label ? "bg-[#05a3a3] text-white" : "text-gray-700 hover:text-[#05a3a3]"}`}
+                      ${activeFilter === f.label ? "bg-[#0AA89E] text-white" : "text-gray-700 hover:text-[#0AA89E]"}`}
                     onClick={() => setActiveFilter(f.label)}
                   >
                     {f.label} ({f.count})
@@ -271,7 +279,7 @@ const Table = ({ templates = [], onDelete, onEdit, canEdit, canDelete }) => {
                 <button
                   key={i}
                   className={`px-4 py-2 min-h-[40px] rounded-md text-sm font-medium transition 
-                    ${activeFilter === f.label ? "bg-[#05a3a3] text-white" : "text-gray-700 hover:text-[#05a3a3]"}`}
+                    ${activeFilter === f.label ? "bg-[#0AA89E] text-white" : "text-gray-700 hover:text-[#0AA89E]"}`}
                   onClick={() => setActiveFilter(f.label)}
                 >
                   {f.label} ({f.count})
@@ -285,9 +293,29 @@ const Table = ({ templates = [], onDelete, onEdit, canEdit, canDelete }) => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search template by Name or Category..."
-                className="pl-3 pr-7 py-1.5 sm:py-2 border border-gray-300 text-sm sm:text-base rounded-md w-full focus:outline-none focus:ring focus:border-teal-400 placeholder:text-sm sm:placeholder:text-base"
+                className="pl-3 pr-7 py-1.5 sm:py-2 border border-gray-300 text-sm sm:text-base rounded-md w-full focus:outline-none focus:ring-1 focus:ring-[#0AA89E] focus:border-[#0AA89E] placeholder:text-sm sm:placeholder:text-base"
               />
             </div>
+            {/* Add New Templates Button */}
+            {onAddTemplate && (
+              <button
+                className={`ml-2 flex items-center gap-2 px-4 py-2 rounded cursor-pointer 
+                  ${canEdit || canDelete || onAddTemplate ? "bg-[#0AA89E] text-white" : "bg-gray-300 text-gray-500 cursor-not-allowed"}`}
+                onClick={() => {
+                  if (onAddTemplate) {
+                    onAddTemplate();
+                  } else {
+                    // Show error if no permission
+                    toast.error('You do not have permission to add templates.');
+                  }
+                }}
+                disabled={!onAddTemplate}
+                title={onAddTemplate ? "Add a new template" : "You do not have permission to add templates"}
+              >
+                <img src={vendorIcon} alt="plus sign" className="w-5 h-5" />
+                Add New Templates
+              </button>
+            )}
           </div>
           {Object.values(selectedRows).some(Boolean) && (
             <th colSpan="6" className="px-2 py-3 sm:px-6">
@@ -398,7 +426,7 @@ const Table = ({ templates = [], onDelete, onEdit, canEdit, canDelete }) => {
                                 },
                               })
                             }
-                            className="flex items-center gap-2 bg-teal-500 hover:bg-teal-600 text-white px-3 py-2 rounded-full whitespace-nowrap mr-2 cursor-pointer"
+                            className="flex items-center gap-2 bg-[#0AA89E] text-white px-3 py-2 rounded-full whitespace-nowrap mr-2 cursor-pointer"
                             aria-label={`Send message to ${template.element_name}`}
                           >
                             <svg

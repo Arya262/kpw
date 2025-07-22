@@ -28,7 +28,7 @@ export default function DeleteConfirmationDialog({
 
   return (
     <div
-      className="fixed inset-0 bg-white/30 backdrop-blur-sm flex items-center justify-center z-[60] transition-opacity duration-300"
+      className="fixed inset-0 bg-[#4a4a4a]/90 flex items-center justify-center z-[60]"
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >

@@ -117,7 +117,7 @@ const BroadcastForm = ({
         <div className="flex items-start gap-4">
           <button
             type="button"
-            className={`w-[200px] px-4 py-2 border border-[#0AA89E] text-[#0AA89E] text-[15px] font-medium rounded ${
+            className={`w-[200px] px-4 py-2 border border-[#0AA89E] text-[#0AA89E] text-[15px] font-medium rounded cursor-pointer ${
               isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#0AA89E] hover:text-white'
             }`}
             onClick={openTemplate}
@@ -185,10 +185,10 @@ const BroadcastForm = ({
         <button
           type="submit"
           disabled={isSubmitting}
-          className={`w-full sm:w-[20%] py-2 rounded transition-all duration-200 flex items-center justify-center ${
+          className={`w-full sm:w-[20%] py-2 rounded transition-all duration-200 flex items-center justify-center cursor-pointer ${
             isSubmitting
               ? 'bg-gray-400 cursor-not-allowed'
-              : 'bg-teal-500 hover:bg-teal-600 text-white'
+              : 'bg-[#0AA89E] hover:bg-teal-600 text-white'
           }`}
         >
           {isSubmitting ? (

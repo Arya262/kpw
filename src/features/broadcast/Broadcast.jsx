@@ -154,7 +154,7 @@ const Broadcast = () => {
       {/* Add Broadcast Popup */}
       {showPopup && (
         <div
-          className="fixed inset-0 bg-white/40 flex items-center justify-center z-50 transition-all duration-300"
+          className="fixed inset-0 bg-[#4a4a4a]/90 flex items-center justify-center z-50 transition-all duration-300"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setHighlightCancel(true);
@@ -188,7 +188,7 @@ const Broadcast = () => {
       )}
 
       {/* Delete Confirmation Modal */}
-      {showConfirmModal && permissions.canDelete && (
+      {/* {showConfirmModal && permissions.canDelete && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
           <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md animate-fadeIn">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">
@@ -214,7 +214,7 @@ const Broadcast = () => {
             </div>
           </div>
         </div>
-      )}
+      )} */}
     </div>
   );
 };
