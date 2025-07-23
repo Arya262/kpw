@@ -33,10 +33,10 @@ export const ROLE_PERMISSIONS = {
     canViewDashboard: true,
     canAddCredits: true,
     canViewAnalytics: true,
-    canExportAnalytics: false,
+    canExportAnalytics: true,
     canView: true,
-    canAdd: false, // for own contacts
-    canEdit: false, // for own contacts
+    canAdd: false, 
+    canEdit: false, 
     canDelete: false, 
     canBulkUpload: false,
     canManageGroups: false,

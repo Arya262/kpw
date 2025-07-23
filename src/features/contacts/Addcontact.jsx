@@ -237,16 +237,17 @@ export default function AddContact({ closePopup, onSuccess }) {
           errorMessage={errorMessage}
         />
         <p className="text-sm text-gray-600 mb-4">
-          Add one contact at a time or bulk upload contacts from a CSV.{" "}
-          <a href="#" className="text-[#0AA89E] underline">
+          Add one contact
+          {/* <a href="#" className="text-[#0AA89E] underline">
             Learn more
-          </a>
+          </a> */}
         </p>
         <ContactTabs tab={tab} setTab={handleTabChange} />
         {tab === "single" ? (
           <SingleContactForm
             phone={phone}
             setPhone={setPhone}
+              setPhoneError={setPhoneError}
             selectedCountry={selectedCountry}
             setSelectedCountry={setSelectedCountry}
             countryCodes={countryCodes}
