@@ -6,10 +6,9 @@ import { useAuth } from "../../context/AuthContext";
 import { API_ENDPOINTS } from "../../config/api";
 import AddCreditModal from "./AddCreditModal";
 import { getPermissions } from "../../utils/getPermissions";
-import { toast } from "react-toastify";
-import vendor from "../../assets/Vector.png"
 
-// 🎯 Reusable animated number component using Framer Motion only
+import vendor from "../../assets/Vector.png";
+
 const AnimatedNumber = ({ value, duration = 1.2 }) => {
   const count = useMotionValue(0);
   const formatted = useTransform(count, (latest) =>
@@ -204,9 +203,13 @@ const DashboardHome = () => {
           Dashboard
         </h2>
         {/* Always show Add Credit button, enforce permission in handler */}
-                <button
+        <button
           className="bg-[#0AA89E] hover:bg-[#0AA89E] text-white flex items-center gap-2 px-4 py-2 rounded cursor-pointer"
-          onClick={permissions.canAddCredits ? () => setShowAddCredit(true) : handleUnauthorizedAddCredit}
+          onClick={
+            permissions.canAddCredits
+              ? () => setShowAddCredit(true)
+              : handleUnauthorizedAddCredit
+          }
         >
           <img src={vendor} alt="plus sign" className="w-5 h-5" />
           Add Credit

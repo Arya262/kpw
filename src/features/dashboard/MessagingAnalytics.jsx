@@ -2,32 +2,13 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import html2canvas from "html2canvas";
 import React, { useEffect, useState, useMemo } from "react";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
-import {
-  parseISO,
-  startOfMonth,
-  endOfMonth,
-  startOfWeek,
-  endOfWeek,
-} from "date-fns";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, } from "recharts";
+import { parseISO, startOfMonth, endOfMonth, startOfWeek, endOfWeek, } from "date-fns";
 import { useAuth } from "../../context/AuthContext";
-import { ROLE_PERMISSIONS } from "../../context/permissions";
-import { API_ENDPOINTS } from "../../config/api";
-import { toast } from "react-toastify";
+import { toast, ToastContainer } from "react-toastify";
+import 'react-toastify/dist/ReactToastify.css';
 import { getPermissions } from "../../utils/getPermissions";
-
+import Loader from "../../components/Loader";
 // Utility: Get date range for filter
 function getDateRange(filter, options) {
   switch (filter) {
@@ -198,7 +179,7 @@ export default function MessagingAnalytics({ usageHistory }) {
       format: "a4",
     });
 
-    // ✅ Load logo from public/logo.png
+  
     const logoBase64 = await getImageAsBase64("/logo.png");
     const customerName = user?.company_name || "FOODCHOW";
     const appId = user?.details?.app_id || "WhatsappMarketing";
@@ -290,7 +271,7 @@ export default function MessagingAnalytics({ usageHistory }) {
 
     // ✅ Header with logo only
     if (logoBase64) {
-      doc.addImage(logoBase64, "PNG", 40, 20, 100, 40); // Logo only
+      doc.addImage(logoBase64, "PNG", 40, 20, 100, 40); 
     }
 
     doc.setFontSize(12);
@@ -362,26 +343,43 @@ export default function MessagingAnalytics({ usageHistory }) {
     doc.save(`Foodchow_Report_${rangeText.replace(/ /g, "_")}.pdf`);
   };
   if (loading) {
-    return (
-      <div className="flex justify-center items-center h-60">
-        <span className="animate-spin rounded-full h-8 w-8 border-4 border-t-transparent border-blue-500"></span>
-      </div>
-    );
+    return <Loader />;
   }
 
   const handleUnauthorizedDownload = () => {
-    toast.error("You do not have permission to download reports.");
+    toast.error("You don't have permission to download reports.", {
+      position: "top-right",
+      autoClose: 5000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      theme: "light",
+    });
   };
 
   return (
+    
     <div className="p-6 space-y-10">
+          <ToastContainer 
+      position="top-right"
+      autoClose={5000}
+      hideProgressBar={false}
+      newestOnTop
+      closeOnClick
+      rtl={false}
+      pauseOnFocusLoss
+      draggable
+      pauseOnHover
+      theme="light"
+    />
       {/* Download PDF Button */}
       {filteredData.length > 0 && (
         <div className="flex justify-end mb-4">
           <button
             className="bg-[#24AEAE] hover:bg-[#24AEAE] text-white px-4 py-2 rounded shadow cursor-pointer"
             onClick={() => {
-              if (permissions.canDownloadReports) {
+              if (permissions?.canDownloadReports) {
                 handleDownloadPDF();
               } else {
                 handleUnauthorizedDownload();
@@ -426,7 +424,7 @@ export default function MessagingAnalytics({ usageHistory }) {
               type="month"
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              max={todayMonth} // ✅ prevent future months
+              max={todayMonth} 
               className="border px-3 py-2 rounded"
             />
           )}
@@ -436,7 +434,7 @@ export default function MessagingAnalytics({ usageHistory }) {
               type="date"
               value={selectedWeekStart}
               onChange={(e) => setSelectedWeekStart(e.target.value)}
-              max={todayDate} // ✅ prevent future dates
+              max={todayDate} 
               className="border px-3 py-2 rounded"
             />
           )}
@@ -447,14 +445,14 @@ export default function MessagingAnalytics({ usageHistory }) {
                 type="date"
                 value={customStart}
                 onChange={(e) => setCustomStart(e.target.value)}
-                max={todayDate} // ✅ prevent future start date
+                max={todayDate}
                 className="border px-3 py-2 rounded"
               />
               <input
                 type="date"
                 value={customEnd}
                 onChange={(e) => setCustomEnd(e.target.value)}
-                max={todayDate} // ✅ prevent future end date
+                max={todayDate} 
                 className="border px-3 py-2 rounded"
               />
             </>
@@ -579,5 +577,6 @@ function ChartBlock({ title, dataKey, stroke, data }) {
         </LineChart>
       </ResponsiveContainer>
     </div>
+    
   );
 }

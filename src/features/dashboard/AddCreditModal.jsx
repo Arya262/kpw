@@ -35,7 +35,7 @@ const ConfirmationDialog = ({ showExitDialog, cancelExit, confirmExit }) => {
   if (!showExitDialog) return null;
 
   return (
-    <div className="fixed inset-0 bg-[#4a4a4a]/90  flex items-center justify-center z-50 transition-opacity duration-300">
+    <div className="fixed inset-0 bg-[#000]/50  flex items-center justify-center z-50 transition-opacity duration-300">
       <div
         ref={dialogRef}
         className="bg-white rounded-xl p-6 w-full max-w-sm shadow-lg transform transition-all duration-300 scale-100"
@@ -146,7 +146,7 @@ const AddCreditModal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-[#4a4a4a]/90  flex items-center justify-center z-50 transition-all duration-300">
+    <div className="fixed inset-0 bg-[#000]/50  flex items-center justify-center z-50 transition-all duration-300">
       <div
         ref={modalRef}
         className={`bg-white rounded-lg w-full max-w-sm shadow-lg p-6 relative border transition-all duration-300 ${

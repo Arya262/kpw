@@ -47,26 +47,26 @@ const handleLogout = useCallback(async () => {
     );
 
     if (response.data?.success) {
-      logout();
       notify("success", "Successfully logged out!");
 
-      // ✅ Delay navigation so toast shows
+      // ✅ Delay logout + navigation so toast is visible
       setTimeout(() => {
+        logout(); // Now logout happens *after* toast is shown
         navigate("/login", { replace: true });
-      }, 2000);
+      }, 1500); // 1.5s delay
     } else {
       notify("error", "Logout failed. Please try again.");
       setIsLoggingOut(false);
     }
   } catch (error) {
     console.error("Logout error:", error);
-    logout();
     notify("info", "Logged out locally. Please re-login to sync.");
 
-    // ✅ Also delay navigation here
+    // ✅ Delay logout + navigation here as well
     setTimeout(() => {
+      logout();
       navigate("/login", { replace: true });
-    }, 2000);
+    }, 1500);
   }
 }, [logout, navigate]);
 
@@ -209,7 +209,7 @@ const handleLogout = useCallback(async () => {
               {showUserMenu && (
                 <div
                   id="user-menu"
-                  className="absolute right-0 mt-2 w-72 max-w-[90vw] bg-white border border-gray-200 rounded shadow-lg z-50italia z-50 p-4 flex flex-col items-center transition-all duration-200 scale-100 opacity-100"
+                  className="absolute right-0 mt-2 w-72 max-w-[90vw] bg-white border border-gray-200 rounded shadow-lg  z-50 p-4 flex flex-col items-center transition-all duration-200 scale-100 opacity-100"
                 >
                   <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-gray-200 flex items-center justify-center mb-2">
                     <img
