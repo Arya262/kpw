@@ -42,7 +42,6 @@ const TemplateModal = ({
   initialValues = {},
   mode = "add",
 }) => {
-  console.log("Modal rendered");
   const [templateType, setTemplateType] = useState("Text");
   const [header, setHeader] = useState("");
   const [format, setFormat] = useState("");

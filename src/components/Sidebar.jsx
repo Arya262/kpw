@@ -39,7 +39,11 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
       submenu: true,
       submenuItems: [
         { name: "Template List", path: "/templates", icon: <List size={22} /> },
-        { name: "Explore Templates", path: "/templates/explore", icon: <Compass size={22} /> },
+        {
+          name: "Explore Templates",
+          path: "/templates/explore",
+          icon: <Compass size={22} />,
+        },
       ],
     },
     { name: "Chats", icon: <MessageCircle size={22} />, path: "/chats" },
@@ -136,7 +140,7 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
                     {item.icon}
                     {item.name === "Chats" && unreadCount > 0 && (
                       <span
-                        className="absolute -top-1 right-0 translate-x-1/2 inline-flex items-center justify-center min-w-[30px] h-7 text-xs font-bold leading-none rounded-full shadow"
+                        className="absolute -top-1 -right-44 min-w-[20px] h-5 px-2 py-1 text-xs font-bold leading-none rounded-full shadow"
                         style={{
                           backgroundColor: isActive ? "#fff" : "#0AA89E",
                           color: isActive ? "#24AEAE" : "#fff",
