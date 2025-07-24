@@ -1,8 +1,7 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { HiDotsVertical } from "react-icons/hi";
-import ActionMenu from "./ActionMenu";
 import { useNavigate } from "react-router-dom";
-import DeleteConfirmationDialog from "../../shared/DeleteConfirmationDialog";
+import { MessageCircle } from "lucide-react";
 
 const BroadcastTable = ({
   filteredData,
@@ -26,6 +25,9 @@ const BroadcastTable = ({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedBroadcast, setSelectedBroadcast] = useState(null);
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [currentMessage, setCurrentMessage] = useState("");
+  const [highlightCancel, setHighlightCancel] = useState(false);
 
   const toggleDropdown = (idx) => {
     setDropdownOpen((prev) => {
@@ -90,13 +92,34 @@ const BroadcastTable = ({
     }
   };
 
+  const parsedData = useMemo(() => {
+    return filteredData.map((row) => {
+      let parsedMeta = undefined;
+      if (row.container_meta) {
+        if (typeof row.container_meta === "string") {
+          try {
+            parsedMeta = JSON.parse(row.container_meta);
+          } catch (err) {
+            console.error(
+              "Invalid JSON in container_meta:",
+              row.container_meta
+            );
+          }
+        } else if (typeof row.container_meta === "object") {
+          parsedMeta = row.container_meta;
+        }
+      }
+      return { ...row, container_meta: parsedMeta };
+    });
+  }, [filteredData]);
+
   const renderTableBody = () => {
     if (loading) {
       return (
         <tr>
           <td colSpan="6" className="text-center py-8">
             <div className="flex items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-teal-500"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#0AA89E]"></div>
             </div>
           </td>
         </tr>
@@ -113,7 +136,7 @@ const BroadcastTable = ({
       );
     }
 
-    if (filteredData.length === 0) {
+    if (parsedData.length === 0) {
       return (
         <tr>
           <td colSpan="6" className="text-center py-4 text-gray-500">
@@ -123,7 +146,7 @@ const BroadcastTable = ({
       );
     }
 
-    return filteredData
+    return parsedData
       .filter((row) => row.status !== "Stopped" && row.status !== "Paused")
       .map((row, idx) => (
         <tr
@@ -131,16 +154,6 @@ const BroadcastTable = ({
           ref={(el) => (rowRefs.current[idx] = el)}
           className="border-t border-b border-b-[#C3C3C3] hover:bg-gray-50 text-md"
         >
-          {/* <td className="px-2 py-4 sm:px-4">
-            <div className="flex items-center justify-center h-full">
-              <input
-                type="checkbox"
-                className="form-checkbox w-4 h-4"
-                checked={selectedRows[idx] || false}
-                onChange={(e) => handleCheckboxChange(idx, e)}
-              />
-            </div>
-          </td> */}
           <td className="px-2 py-4 sm:px-4 sm:py-4 whitespace-nowrap text-[12px] sm:text-[16px] text-gray-700">
             {formatDate(row.created_at)}
           </td>
@@ -148,14 +161,28 @@ const BroadcastTable = ({
             {row.broadcast_name}
           </td>
           <td className="px-2 py-4 text-[12px] sm:text-[16px] text-gray-700">
-            {/* Show template sample text if available, else fallback to previous logic */}
-            {row.selectedTemplate?.container_meta?.sampleText
-              || row.selectedTemplate?.element_name
-              || row.template_name
-              || row.selectedTemplate?.container_meta?.header
-              || row.selectedTemplate?.container_meta?.data
-              || row.template_message
-              || row.message_type}
+            {row.container_meta?.sampleText ? (
+              <div className="flex flex-col items-start">
+                <span>{`${row.container_meta.sampleText.slice(
+                  0,
+                  40
+                )}...`}</span>
+                <div className="w-full flex justify-center mt-1">
+                  <button
+                    onClick={() => {
+                      setCurrentMessage(row.container_meta.sampleText);
+                      setShowMessageModal(true);
+                    }}
+                    className="text-[#0AA89E] text-xs flex items-center gap-1 cursor-pointer"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    View Message
+                  </button>
+                </div>
+              </div>
+            ) : (
+              row.message_type
+            )}
           </td>
           <td className="px-2 py-4 text-[12px] sm:text-[16px] text-gray-700">
             {row.schedule.toLowerCase() === "yes"
@@ -168,101 +195,107 @@ const BroadcastTable = ({
           <td className="px-2 py-4 text-[12px] justify-end sm:text-[16px] w-auto font-semibold text-gray-700">
             {renderMessageFunnel(row)}
           </td>
-          {/* <td className="relative py-4">
-            <div ref={dropdownRef} className="flex justify-center">
-              <button
-                onClick={() => toggleDropdown(idx)}
-                className="p-2 rounded-full hover:bg-gray-100 focus:outline-none"
-                aria-label="Broadcast options"
-              >
-                <svg
-                  className="w-5 h-5 text-[#000]"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M12 5v.01M12 12v.01M12 19v.01"
-                  />
-                </svg>
-              </button>
-              {menuOpen === idx && (
-                <div className="absolute right-0 top-12 w-44 bg-white border border-gray-200 rounded-md shadow-lg z-20">
-                  <button
-                    onClick={() => handleEditClick(row)}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDeleteClick(row)}
-                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
-                  >
-                    Delete
-                  </button>
-                </div>
-              )}
-            </div>
-          </td> */}
         </tr>
       ));
   };
 
   return (
-    <div className="overflow-x-auto">
-      <div className="min-w-[900px] bg-white  shadow-[0px_-0.91px_3.66px_0px_#00000042] overflow-hidden">
-        <table className="w-full text-sm text-center overflow-hidden table-auto">
-          <thead className="bg-[#F4F4F4] border-b-2 shadow-sm border-gray-300">
-            <tr>
-              {/* <th className="px-2 py-3 sm:px-6">
-                <div className="flex items-center justify-center h-full">
-                  <input
-                    type="checkbox"
-                    className="form-checkbox w-4 h-4"
-                    checked={selectAll}
-                    onChange={handleSelectAllChange}
-                  />
-                </div>
-              </th> */}
-              <th className="px-2 py-3 sm:px-6 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">
-                Date
-              </th>
-              <th className="px-2 py-3 sm:px-6 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">
-                Broadcast Name
-              </th>
-              <th className="px-2 py-3 sm:px-6 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">
-                Message Type
-              </th>
-              <th className="px-2 py-3 sm:px-6 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">
-                Scheduled Broadcast
-              </th>
-              <th className="px-2 py-3 sm:px-6 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">
-                Status
-              </th>
-              <th className="px-2 py-3 sm:px-6 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">
-                Message Funnel
-              </th>
-              {/* <th className="px-2 py-3 sm:px-6 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">
-                Action
-              </th> */}
-            </tr>
-          </thead>
-          <tbody className="max-h-[calc(100vh-300px)] overflow-y-auto">
-            {renderTableBody()}
-          </tbody>
-        </table>
+    <>
+      <div className="overflow-x-auto">
+        <div className="min-w-[900px] bg-white shadow-[0px_-0.91px_3.66px_0px_#00000042] overflow-hidden">
+          <table className="w-full text-sm text-center table-auto">
+            <thead className="bg-[#F4F4F4] border-b-2 shadow-sm border-gray-300">
+              <tr>
+                <th className="px-2 py-3 sm:px-6 text-[12px] sm:text-[16px] font-semibold text-gray-700">
+                  Date
+                </th>
+                <th className="px-2 py-3 sm:px-6 text-[12px] sm:text-[16px] font-semibold text-gray-700">
+                  Broadcast Name
+                </th>
+                <th className="px-2 py-3 sm:px-6 text-[12px] sm:text-[16px] font-semibold text-gray-700">
+                  Message Type
+                </th>
+                <th className="px-2 py-3 sm:px-6 text-[12px] sm:text-[16px] font-semibold text-gray-700">
+                  Scheduled Broadcast
+                </th>
+                <th className="px-2 py-3 sm:px-6 text-[12px] sm:text-[16px] font-semibold text-gray-700">
+                  Status
+                </th>
+                <th className="px-2 py-3 sm:px-6 text-[12px] sm:text-[16px] font-semibold text-gray-700">
+                  Message Funnel
+                </th>
+              </tr>
+            </thead>
+            <tbody>{renderTableBody()}</tbody>
+          </table>
+        </div>
       </div>
-      {/* <DeleteConfirmationDialog
-        showDialog={showDeleteDialog}
-        title="Delete Broadcast"
-        message={`Are you sure you want to delete ${selectedBroadcast?.broadcast_name}? This action cannot be undone.`}
-        onCancel={handleDeleteCancel}
-        onConfirm={handleDeleteConfirm}
-        isDeleting={isDeleting}
-      /> */}
+
+      {/* ✅ Modal for Viewing Full Message */}
+      {showMessageModal && (
+        <MessageModal
+          message={currentMessage}
+          onClose={() => setShowMessageModal(false)}
+          highlightCancel={highlightCancel}
+        />
+      )}
+    </>
+  );
+};
+
+// ✅ Message Modal Component (inline)
+const MessageModal = ({ message, onClose, highlightCancel }) => {
+  const modalRef = useRef();
+
+  // ESC key support
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleEsc);
+    return () => document.removeEventListener("keydown", handleEsc);
+  }, [onClose]);
+
+  // Click outside to close
+  const handleOutsideClick = (e) => {
+    if (modalRef.current && !modalRef.current.contains(e.target)) {
+      onClose();
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#000]/40"
+      onMouseDown={handleOutsideClick}
+    >
+      <div
+        ref={modalRef}
+        className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md relative"
+        role="dialog"
+        aria-modal="true"
+      >
+        <button
+          onClick={onClose}
+          className={`absolute top-2 right-4 text-gray-600 hover:text-black text-3xl font-bold w-8 h-8 flex items-center justify-center pb-2 rounded-full transition-colors cursor-pointer ${
+            highlightCancel
+              ? "bg-red-500 text-white hover:text-white"
+              : "bg-gray-100"
+          }`}
+          aria-label="Close"
+        >
+          ×
+        </button>
+        <h2 className="text-lg font-semibold mb-4 text-gray-900">Message</h2>
+        <div className="text-gray-700 whitespace-pre-wrap max-h-96 overflow-y-auto text-[15px] leading-relaxed scrollbar-hide">
+          {message}
+        </div>
+        <button
+          onClick={onClose}
+          className="mt-6 w-full py-2 bg-[#0AA89E] text-white font-medium rounded hover:bg-[#08847C] transition-colors duration-200 cursor-pointer"
+        >
+          Okay
+        </button>
+      </div>
     </div>
   );
 };

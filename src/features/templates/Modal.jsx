@@ -79,9 +79,9 @@ const TemplateModal = ({
     setFormat("");
     setFooter("");
     setUrlCtas([{ title: "", url: "" }]);
-    setCategory("MARKETING"); // <-- default
+    setCategory("MARKETING"); 
     setTemplateName("");
-    setLanguage("en_US"); // <-- default
+    setLanguage("en_US"); 
     setPhoneCta({ title: "", country: "", number: "" });
     setQuickReplies([""]);
     setOfferCode("");
@@ -424,7 +424,7 @@ const TemplateModal = ({
 
   return (
     <div
-      className="fixed inset-0 bg-[#4a4a4a]/90 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-[#000]/50 flex items-center justify-center z-50 p-4"
       onClick={showExitDialog ? undefined : handleClose}
     >
       <div
@@ -460,7 +460,7 @@ const TemplateModal = ({
                       id="templateCategory"
                       className={`border rounded p-2 w-full ${
                         errors.category ? "border-red-500" : "border-gray-300"
-                      } focus:outline-none`}
+                      } focus:outline-none focus:border-teal-500`}
                       value={category}
                       onChange={(e) => {
                         setCategory(e.target.value);
@@ -496,7 +496,7 @@ const TemplateModal = ({
                         errors.templateName
                           ? "border-red-500"
                           : "border-gray-300"
-                      } focus:outline-none`}
+                      } focus:outline-none focus:border-teal-500`}
                       value={templateName}
                       onChange={(e) => {
                         setTemplateName(e.target.value);
@@ -523,7 +523,7 @@ const TemplateModal = ({
                       id="language"
                       className={`border rounded p-2 w-full ${
                         errors.language ? "border-red-500" : "border-gray-300"
-                      } focus:outline-none`}
+                      } focus:outline-none focus:border-teal-500`}
                       value={language}
                       onChange={(e) => {
                         setLanguage(e.target.value);
@@ -561,7 +561,7 @@ const TemplateModal = ({
                       value={header}
                       className={`border rounded p-2 w-full ${
                         errors.header ? "border-red-500" : "border-gray-300"
-                      } focus:outline-none`}
+                      } focus:outline-none focus:border-teal-500`}
                     />
                     {errors.header && (
                       <p className="text-red-500 text-sm mt-1">
@@ -620,7 +620,7 @@ const TemplateModal = ({
                     <textarea
                       className={`w-full border rounded p-2 ${
                         errors.format ? "border-red-500" : "border-gray-300"
-                      } focus:outline-none`}
+                      } focus:outline-none focus:border-teal-500`}
                       rows={4}
                       placeholder="Template Format (use {{1}}, {{2}}... for variables)"
                       value={format}
@@ -688,7 +688,7 @@ const TemplateModal = ({
                     type="text"
                     className={`w-full border rounded p-2 mb-1 ${
                       errors.footer ? "border-red-500" : "border-gray-300"
-                    } focus:outline-none`}
+                    } focus:outline-none focus:border-teal-500`}
                     placeholder="Template Footer"
                     value={footer}
                     onChange={(e) => {

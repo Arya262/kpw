@@ -95,25 +95,25 @@ const BroadcastDashboard = forwardRef(
       {
         label: "All",
         count: statuses["All"],
-        color: "bg-teal-500",
+        color: "bg-[#0AA89E]",
         width: "w-[90px]",
       },
       {
         label: "Live",
         count: statuses["Live"],
-        color: "bg-teal-500",
+        color: "bg-[#0AA89E]",
         width: "w-[120px]",
       },
       {
         label: "Sent",
         count: statuses["Sent"],
-        color: "bg-teal-500",
+        color: "bg-[#0AA89E]",
         width: "w-[120px]",
       },
       {
         label: "Scheduled",
         count: statuses["Scheduled"],
-        color: "bg-teal-500",
+        color: "bg-[#0AA89E]",
         width: "w-[130px]",
       },
     ];

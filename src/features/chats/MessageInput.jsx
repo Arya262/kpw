@@ -233,7 +233,7 @@ const MessageInput = ({ onSendMessage, selectedContact, canSendMessage }) => {
       </div>
 
       {showTemplates && (
-        <div className="fixed inset-0 bg-white/30 backdrop-blur-sm z-50 flex justify-center items-center p-2">
+        <div className="fixed inset-0 bg-[#000]/50  z-50 flex justify-center items-center p-2">
           <div ref={modalRef} className="relative bg-white rounded-xl shadow-lg w-full max-w-3xl p-4 sm:p-6">
             <SendTemplate
               onSelect={(templateName) => {

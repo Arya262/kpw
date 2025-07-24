@@ -27,7 +27,7 @@ export default function SingleDeleteDialog({
 
   return (
     <div
-      className="fixed inset-0 bg-[#4a4a4a]/90 flex items-center justify-center z-50 transition-opacity duration-300"
+      className="fixed inset-0 bg-[#000]/50 flex items-center justify-center z-50 transition-opacity duration-300"
       onMouseDown={(e) => e.stopPropagation()}
     >
       <div
@@ -65,7 +65,7 @@ export default function SingleDeleteDialog({
           <button
             onClick={onCancel}
             disabled={isDeleting}
-            className="px-3 py-2 w-[70px] bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors duration-200 "
+            className="px-3 py-2 w-[70px] bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors duration-200 cursor-pointer "
             aria-label="Cancel"
           >
             Cancel
@@ -73,7 +73,7 @@ export default function SingleDeleteDialog({
           <button
             onClick={onConfirm}
             disabled={isDeleting}
-            className="px-3 py-2 w-[70px] bg-red-500 text-white rounded-md  disabled:opacity-50 flex items-center justify-center"
+            className="px-3 py-2 w-[70px] bg-red-500 text-white rounded-md  disabled:opacity-50 flex items-center justify-center cursor-pointer"
             aria-label="Delete"
           >
             {isDeleting ? (

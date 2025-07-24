@@ -13,11 +13,11 @@ const CallToActionSection = ({
     <>
       {/* Call To Action 1 (URL) */}
       <div className="border border-[#CACACA] rounded p-4 mb-4">
-        <div className="flex justify-between items-center mb-2 border-b border-[#CACACA] pb-2">
+        <div className="flex justify-between items-center mb-2  border-[#CACACA] pb-2">
           <div className="font-semibold">Call To Action 1 (URL)</div>
           <button
             type="button"
-            className="bg-teal-500 text-white px-3 py-1 rounded text-sm"
+            className="bg-[#0AA89E] text-white px-3 py-2 rounded text-sm cursor-pointer"
             onClick={() => setUrlCtas([...urlCtas, { title: "", url: "" }])}
           >
             + Add URL
@@ -31,7 +31,7 @@ const CallToActionSection = ({
             <input
               type="text"
               placeholder="Enter Button Title"
-              className="border rounded p-2 border-[#606060]"
+              className="border border-[#CACACA] rounded p-2 w-full focus:outline-none focus:border-teal-500"
               value={cta.title}
               onChange={(e) => {
                 const updated = [...urlCtas];
@@ -39,7 +39,7 @@ const CallToActionSection = ({
                 setUrlCtas(updated);
               }}
             />
-            <select className="border rounded p-2 border-[#606060]">
+            <select className="border border-[#CACACA] rounded p-2 w-full focus:outline-none focus:border-teal-500">
               <option value={"Static"}>Static</option>
               <option value={"Dynamic"}>Dynamic</option>
             </select>
@@ -47,7 +47,7 @@ const CallToActionSection = ({
               <input
                 type="text"
                 placeholder="Enter Static URL"
-                className="border rounded p-2 w-full border-[#606060]"
+                className="border rounded p-2 w-full border-[#CACACA]"
                 value={cta.url}
                 onChange={(e) => {
                   const updated = [...urlCtas];
@@ -57,7 +57,7 @@ const CallToActionSection = ({
               />
               <button
                 type="button"
-                className="bg-red-500 text-white px-2 py-1 rounded hover:cursor-pointer"
+                className="text-red-600 hover:bg-red-100 px-2 py-1 rounded hover:cursor-pointer"
                 onClick={() => {
                   const updated = urlCtas.filter((_, i) => i !== index);
                   setUrlCtas(updated);
@@ -76,14 +76,14 @@ const CallToActionSection = ({
           <input
             type="text"
             placeholder="Enter Button Title"
-            className="border rounded p-2 border-[#606060]"
+            className="border border-[#CACACA] rounded p-2 w-full focus:outline-none focus:border-teal-500"
             value={phoneCta.title}
             onChange={(e) =>
               setPhoneCta({ ...phoneCta, title: e.target.value })
             }
           />
           <select
-            className="border rounded p-2 border-[#606060]"
+            className="border border-[#CACACA] rounded p-2 w-full focus:outline-none focus:border-teal-500"
             value={phoneCta.country}
             onChange={(e) =>
               setPhoneCta({
@@ -100,7 +100,7 @@ const CallToActionSection = ({
             <input
               type="text"
               placeholder="Enter mobile Number"
-              className="border rounded p-2 w-full border-[#606060]"
+              className="border border-[#CACACA] rounded p-2 w-full focus:outline-none focus:border-teal-500"
               value={phoneCta.number}
               onChange={(e) =>
                 setPhoneCta({
@@ -111,7 +111,7 @@ const CallToActionSection = ({
             />
             <button
               type="button"
-              className="bg-red-500 text-white px-2 py-1 rounded hover:cursor-pointer"
+              className="text-red-600 hover:bg-red-100 px-2 py-1 rounded hover:cursor-pointer"
               onClick={() =>
                 setPhoneCta({
                   title: "",

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { FaSearch, FaKey, FaPowerOff } from "react-icons/fa";
 import { Menu, X } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
@@ -20,11 +20,11 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
 
-  const avatarSrc = "/default-avatar.jpeg";
+ const avatarSrc = user?.avatar || "/default-avatar.jpeg";
 
   const handleSearchChange = (e) => setSearchTerm(e.target.value);
   const handleClearSearch = () => setSearchTerm("");
-
+const [isLoading, setIsLoading] = useState(false);
   const notify = (type, message) => {
     toast[type](message, {
       position: "top-right",
@@ -37,31 +37,41 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
     });
   };
 
-  const handleLogout = useCallback(async () => {
-    setIsLoggingOut(true);
-    try {
-      const response = await axios.post(
-        API_ENDPOINTS.AUTH.LOGOUT,
-        {},
-        { withCredentials: true }
-      );
-      if (response.data?.success) {
-        logout();
-        notify("success", "Successfully logged out!");
-      } else {
-        notify("error", "Logout failed. Please try again.");
-      }
-    } catch (error) {
-      console.error("Logout error:", error);
+const handleLogout = useCallback(async () => {
+  setIsLoggingOut(true);
+  try {
+    const response = await axios.post(
+      API_ENDPOINTS.AUTH.LOGOUT,
+      {},
+      { withCredentials: true }
+    );
+
+    if (response.data?.success) {
       logout();
-      notify("info", "Logged out locally. Please re-login to sync.");
-    } finally {
+      notify("success", "Successfully logged out!");
+
+      // ✅ Delay navigation so toast shows
+      setTimeout(() => {
+        navigate("/login", { replace: true });
+      }, 2000);
+    } else {
+      notify("error", "Logout failed. Please try again.");
       setIsLoggingOut(false);
-      navigate("/login", { replace: true });
     }
-  }, [logout, navigate]);
+  } catch (error) {
+    console.error("Logout error:", error);
+    logout();
+    notify("info", "Logged out locally. Please re-login to sync.");
+
+    // ✅ Also delay navigation here
+    setTimeout(() => {
+      navigate("/login", { replace: true });
+    }, 2000);
+  }
+}, [logout, navigate]);
 
   const fetchWhatsAppNumbers = useCallback(async () => {
+    setIsLoading(true);
     try {
       const response = await axios.get(API_ENDPOINTS.WHATSAPP.NUMBERS, {
         withCredentials: true,
@@ -71,22 +81,23 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
     } catch (error) {
       console.error("Failed to fetch WhatsApp numbers:", error);
       notify("error", "Unable to load WhatsApp numbers.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const handleClickOutside = useCallback((event) => {
+    if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+      setShowUserMenu(false);
     }
   }, []);
 
   useEffect(() => {
-    function handleClickOutside(event) {
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
-        setShowUserMenu(false);
-      }
-    }
-    if (showUserMenu) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [showUserMenu]);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [handleClickOutside]);
+
+  const memoizedWhatsAppData = useMemo(() => whatsAppData, [whatsAppData]);
 
   return (
     <>
@@ -120,15 +131,16 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
           <div
             className="hidden sm:flex items-center gap-2 bg-[#f0f2f5] rounded-full px-4 py-2 w-auto min-w-[220px] relative cursor-pointer"
             onClick={() => {
-              if (!showSearchPanel) fetchWhatsAppNumbers();
+              if (!showSearchPanel && !isLoading) fetchWhatsAppNumbers();
             }}
           >
             <button
               type="button"
               aria-label="Search"
               className="text-gray-500 hover:text-gray-700"
+              disabled={isLoading}
             >
-              <FaSearch />
+              {isLoading ? <Spinner /> : <FaSearch />}
             </button>
             <div className="text-sm text-gray-600 whitespace-nowrap hidden sm:block">
               WhatsApp Number:
@@ -137,10 +149,9 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
               type="text"
               value={searchTerm}
               onChange={handleSearchChange}
-              readOnly
               placeholder="+91 92743 34248"
               aria-label="WhatsApp number input"
-              className="bg-white text-sm text-gray-800 placeholder-transparent sm:placeholder-gray-500 placeholder:italic placeholder:font-medium outline-none flex-1 min-w-0 cursor-pointer rounded"
+              className="bg-white text-sm text-gray-800 placeholder-gray-500 placeholder:italic placeholder:font-medium outline-none flex-1 min-w-0 cursor-pointer rounded"
             />
             {searchTerm && (
               <button
@@ -148,7 +159,7 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
                 className="text-gray-500 hover:text-gray-700 absolute right-3 top-1/2 transform -translate-y-1/2"
                 aria-label="Clear search"
               >
-                &times;
+                ×
               </button>
             )}
           </div>
@@ -157,10 +168,10 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
           <div
             className="sm:hidden flex items-center justify-center bg-[#f0f2f5] rounded-full p-2 cursor-pointer"
             onClick={() => {
-              if (!showSearchPanel) fetchWhatsAppNumbers();
+              if (!showSearchPanel && !isLoading) fetchWhatsAppNumbers();
             }}
           >
-            <FaSearch className="text-gray-500" />
+            {isLoading ? <Spinner /> : <FaSearch className="text-gray-500" />}
           </div>
 
           {/* Notification */}
@@ -183,6 +194,7 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
                 type="button"
                 aria-label="User menu"
                 aria-expanded={showUserMenu}
+                aria-controls="user-menu"
                 tabIndex={0}
                 className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-200 overflow-hidden border border-gray-300 focus:outline-none ml-2"
                 onClick={() => setShowUserMenu((prev) => !prev)}
@@ -195,7 +207,10 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
                 />
               </button>
               {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-72 bg-white border border-gray-200 rounded shadow-lg z-50 min-w-[220px] p-4 flex flex-col items-center transition-all duration-200 scale-100 opacity-100">
+                <div
+                  id="user-menu"
+                  className="absolute right-0 mt-2 w-72 max-w-[90vw] bg-white border border-gray-200 rounded shadow-lg z-50italia z-50 p-4 flex flex-col items-center transition-all duration-200 scale-100 opacity-100"
+                >
                   <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-gray-200 flex items-center justify-center mb-2">
                     <img
                       src={avatarSrc}
@@ -218,7 +233,7 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
                       className="flex items-center justify-between px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition"
                     >
                       <span>Privacy Policy</span>
-                      <span className="ml-2 text-xs bg-red-100 text-red-500 px-2 py-0.5 rounded font-bold">
+                      <span className="ml-2 microbial text-xs bg-red-100 text-red-500 px-2 py-0.5 rounded font-bold">
                         UPDATE
                       </span>
                     </Link>
@@ -249,7 +264,7 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
       <WhatsAppSearchPanel
         isOpen={showSearchPanel}
         onClose={() => setShowSearchPanel(false)}
-        data={whatsAppData}
+        data={memoizedWhatsAppData}
       />
     </>
   );

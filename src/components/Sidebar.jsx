@@ -8,6 +8,9 @@ import {
   Megaphone,
   Settings,
   HelpCircle,
+  List,
+  Compass,
+  Users,
 } from "lucide-react";
 import SidebarSubMenu from "./SidebarSubMenu";
 import { useNotifications } from "../context/NotificationContext";
@@ -24,17 +27,25 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
       icon: <Contact2 size={22} />,
       path: "/contact",
       submenu: true,
+      submenuItems: [
+        { name: "Contact List", path: "/contact", icon: <List size={22} /> },
+        { name: "Group", path: "/contact/group", icon: <Users size={22} /> },
+      ],
     },
     {
       name: "Templates",
       icon: <FileText size={22} />,
       path: "/templates",
       submenu: true,
+      submenuItems: [
+        { name: "Template List", path: "/templates", icon: <List size={22} /> },
+        { name: "Explore Templates", path: "/templates/explore", icon: <Compass size={22} /> },
+      ],
     },
     { name: "Chats", icon: <MessageCircle size={22} />, path: "/chats" },
     { name: "Broadcast", icon: <Megaphone size={22} />, path: "/broadcast" },
-    { name: "Setting", icon: <Settings size={22} />, path: "/settings" },
     { name: "Flow", icon: <Megaphone size={22} />, path: "/flow" },
+    { name: "Setting", icon: <Settings size={22} />, path: "/settings" },
     { name: "Help", icon: <HelpCircle size={22} />, path: "/help" },
   ];
 
@@ -77,7 +88,7 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
       aria-label="Main sidebar"
       tabIndex={-1}
       className={`
-  fixed top-0 left-0 z-50
+         fixed top-0 left-0 z-50
   w-64 h-screen
   bg-[#fff] text-white
   flex flex-col
@@ -87,34 +98,30 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
   lg:bg-white lg:text-black
   shadow-2xl lg:shadow-2xl
   ${className}
-`}
+      `}
     >
-      {/* Logo/Header (non-scrollable) */}
-      <div className="px-4 py-5 border-b border-white/10 lg:hidden shrink-0">
+      {/* Logo (visible only on mobile) */}
+      <div className="px-4 py-5 border-b border-gray-200 lg:hidden shrink-0">
         <NavLink to="/" onClick={handleNavClick}>
           <img src="/logo.png" alt="Logo" className="h-8" />
         </NavLink>
       </div>
 
-      {/* Scrollable content area only */}
+      {/* Menu Items */}
       <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
         {menuItems.map((item) =>
           item.submenu ? (
             <SidebarSubMenu
               key={item.name}
+              item={item}
               isOpen={isOpen}
               setIsOpen={setIsOpen}
-              item={item}
-              icon={item.icon}
-              submenuItems={item.submenuItems}
-              path={item.path}
             />
           ) : (
             <NavLink
               key={item.name}
               to={item.path}
               onClick={handleNavClick}
-              aria-current={({ isActive }) => (isActive ? "page" : undefined)}
               className={({ isActive }) =>
                 `group flex items-center gap-4 px-4 py-3 rounded-xl font-medium text-base shadow-sm transition-all duration-200 ${
                   isActive
@@ -129,12 +136,11 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
                     {item.icon}
                     {item.name === "Chats" && unreadCount > 0 && (
                       <span
-                        className="absolute -top-1 -right-44 inline-flex items-center justify-center min-w-[30px] h-7 text-xs font-bold leading-none rounded-full shadow p-0"
+                        className="absolute -top-1 right-0 translate-x-1/2 inline-flex items-center justify-center min-w-[30px] h-7 text-xs font-bold leading-none rounded-full shadow"
                         style={{
                           backgroundColor: isActive ? "#fff" : "#0AA89E",
                           color: isActive ? "#24AEAE" : "#fff",
                           border: isActive ? "1px solid #24AEAE" : "none",
-                          padding: "0",
                         }}
                       >
                         {unreadCount > 99 ? "99+" : unreadCount}

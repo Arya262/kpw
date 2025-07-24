@@ -110,7 +110,7 @@ const Chat = () => {
   };
 
   return (
-    <div className="flex flex-col md:flex-row w-full flex-1 min-h-0 h-full border border-gray-300 rounded-2xl bg-white mx-auto max-w-screen-2xl overflow-hidden">
+    <div className="flex flex-col md:flex-row w-full flex-1 min-h-0 h-full border border-gray-300 rounded-2xl bg-white overflow-hidden">
       {/* Sidebar */}
       {loading ? (
         <div className="basis-full md:basis-1/4 flex items-center justify-center p-6 border-r border-gray-200">

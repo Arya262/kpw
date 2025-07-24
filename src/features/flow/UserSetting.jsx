@@ -200,43 +200,6 @@ const UserSetting = () => {
         : [...prev, permKey]
     );
   };
-
-  // Restore permissionGroups for feature-based permissions
-  // const permissionGroups = useMemo(() => [
-  //   {
-  //     label: "Basic Features",
-  //     permissions: [
-  //       { key: "view_dashboard", label: "View Dashboard" },
-  //       { key: "manage_contacts", label: "Manage Contacts" },
-  //       { key: "send_messages", label: "Send Messages" },
-  //       { key: "view_templates", label: "View Templates" },
-  //     ],
-  //   },
-  //   {
-  //     label: "Advanced Features",
-  //     permissions: [
-  //       { key: "manage_broadcasts", label: "Manage Broadcasts" },
-  //       { key: "export_data", label: "Export Data" },
-  //       { key: "advanced_analytics", label: "Advanced Analytics" },
-  //       { key: "priority_support", label: "Priority Support" },
-  //     ],
-  //   },
-  //   {
-  //     label: "Administrative",
-  //     permissions: [
-  //       { key: "manage_users", label: "Manage Users" },
-  //       { key: "view_reports", label: "View Reports" },
-  //       { key: "system_settings", label: "System Settings" },
-  //       { key: "manage_roles", label: "Manage Roles" },
-  //       { key: "system_configuration", label: "System Configuration" },
-  //       { key: "security_settings", label: "Security Settings" },
-  //       { key: "billing_management", label: "Billing Management" },
-  //     ],
-  //   },
-  // ], []);
-  // const allPermissions = useMemo(() => permissionGroups.flatMap(g => g.permissions), [permissionGroups]);
-
-  // Add state for feature-based permissions
   const [newUserFeatures, setNewUserFeatures] = useState([]);
   const [editUserFeatures, setEditUserFeatures] = useState([]);
 
@@ -515,7 +478,7 @@ const UserSetting = () => {
         {/* Add User Modal */}
         {showAddUser && (
           <div
-            className="fixed inset-0 bg-white/40 flex items-center justify-center z-50 transition-all duration-300"
+            className="fixed inset-0 bg-[#000]/50 flex items-center justify-center z-50 transition-all duration-300"
             onClick={(e) => {
               if (e.target === e.currentTarget) {
                 setShowAddUser(false);
@@ -525,7 +488,7 @@ const UserSetting = () => {
                 setNewUserFeatures([]);
                 setNewUserRole("user"); // Reset role
                 setNewUserPassword(""); // Reset password
-                setNewUserMobileNo(""); // Reset mobile no
+                setNewUserMobileNo(""); 
               }
             }}
           >
@@ -542,7 +505,7 @@ const UserSetting = () => {
                   setNewUserFeatures([]);
                   setNewUserRole("user");
                   setNewUserPassword("");
-                  setNewUserMobileNo(""); // Reset mobile no
+                  setNewUserMobileNo(""); 
                 }}
                 className="absolute top-2 right-4 text-gray-600 hover:text-black text-3xl font-bold w-8 h-8 flex items-center justify-center pb-2 rounded-full transition-colors bg-gray-100 cursor-pointer"
                 aria-label="Close modal"
@@ -713,7 +676,7 @@ const UserSetting = () => {
         {/* Edit User Modal */}
         {editUser && permissions.canManageUsers && (
           <div
-            className="fixed inset-0 bg-white/40 flex items-center justify-center z-50 transition-all duration-300"
+            className="fixed inset-0 bg-[#000]/50 flex items-center justify-center z-50 transition-all duration-300"
             onClick={(e) => {
               if (e.target === e.currentTarget) {
                 setEditUser(null);
@@ -886,8 +849,8 @@ const UserSetting = () => {
                       setEditUserRole("user");
                       setEditUserPerms([]);
                       setEditUserFeatures([]);
-                      setEditUserMobileNo(""); // Reset mobile no
-                      setEditUserPassword(""); // Reset password field
+                      setEditUserMobileNo(""); 
+                      setEditUserPassword(""); 
                     }}
                   >
                     Cancel

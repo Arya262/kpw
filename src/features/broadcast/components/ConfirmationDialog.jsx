@@ -21,7 +21,7 @@ const ConfirmationDialog = ({ showExitDialog, hasUnsavedChanges, cancelExit, con
 
   return (
     <div
-      className="fixed inset-0  bg-[#4a4a4a]/90 flex items-center justify-center z-50 transition-opacity duration-300"
+      className="fixed inset-0  bg-[#000]/50 flex items-center justify-center z-50 transition-opacity duration-300"
       onMouseDown={(e) => e.stopPropagation()}
     >
       <div
@@ -67,7 +67,7 @@ const ConfirmationDialog = ({ showExitDialog, hasUnsavedChanges, cancelExit, con
           </button>
           <button
             onClick={confirmExit}
-            className="px-3 py-2 w-[70px] bg-[#0AA89E] text-white rounded-md hover:bg-teal-500 transition-colors duration-200 cursor-pointer "
+            className="px-3 py-2 w-[70px] bg-[#0AA89E] text-white rounded-md hover:bg-[#0AA89E] transition-colors duration-200 cursor-pointer "
             aria-label="Confirm"
           >
             OK

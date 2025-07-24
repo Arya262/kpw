@@ -6,11 +6,11 @@ const QuickRepliesSection = ({
   setQuickReplies,
 }) => (
   <div className="border border-[#CACACA] rounded p-4 mb-4">
-    <div className="flex justify-between items-center mb-2 border-b border-[#CACACA] pb-2">
+    <div className="flex justify-between items-center mb-2  border-[#CACACA] pb-2">
       <div className="font-semibold">Quick Replies</div>
       <button
         type="button"
-        className="bg-teal-500 text-white px-3 py-1 rounded text-sm"
+        className="bg-[#0AA89E] text-white px-3 py-2 rounded text-sm cursor-pointer"
         onClick={() => setQuickReplies([...quickReplies, ""])}
       >
         + Add Quick Replies
@@ -20,7 +20,7 @@ const QuickRepliesSection = ({
       <div key={index} className="flex gap-2 mb-3">
         <input
           type="text"
-          className="border rounded p-2 w-full"
+          className="border border-[#CACACA] rounded p-2 w-full focus:outline-none focus:border-teal-500"
           placeholder="Enter Quick Replies"
           value={reply}
           onChange={(e) => {
@@ -31,7 +31,7 @@ const QuickRepliesSection = ({
         />
         <button
           type="button"
-          className="bg-red-500 text-white p-1 rounded hover:cursor-pointer"
+          className=" text-red-600 hover:bg-red-100 px-2 py-1 rounded hover:cursor-pointer "
           onClick={() => {
             const updated = quickReplies.filter((_, i) => i !== index);
             setQuickReplies(updated);
@@ -39,6 +39,7 @@ const QuickRepliesSection = ({
         >
           <Trash2 className="w-5 h-5" />
         </button>
+        
       </div>
     ))}
   </div>

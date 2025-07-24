@@ -65,7 +65,7 @@ const ConfirmationDialog = ({
 
   return (
     <div
-      className="fixed inset-0 bg-[#4a4a4a]/90 flex items-center justify-center z-50 "
+      className="fixed inset-0 bg-[#000]/50 flex items-center justify-center z-50 "
       onMouseDown={(e) => e.stopPropagation()}
     >
       <div
@@ -149,7 +149,7 @@ const DeleteConfirmationDialog = ({
 
   return (
     <div
-      className="fixed inset-0 bg-[#4a4a4a]/90  flex items-center justify-center z-50"
+      className="fixed inset-0 bg-[#000]/50  flex items-center justify-center z-50"
       onMouseDown={(e) => e.stopPropagation()}
     >
       <div
@@ -739,7 +739,7 @@ export default function ContactList() {
       </div>
       {isPopupOpen && permissions.canAdd && permissions.canAccessModals && (
         <div
-          className="fixed inset-0 bg-[#4a4a4a]/90  flex items-center justify-center z-50 transition-all duration-300"
+          className="fixed inset-0 bg-[#000]/50  flex items-center justify-center z-50 transition-all duration-300"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setIsCrossHighlighted(true);
@@ -794,7 +794,7 @@ export default function ContactList() {
         theme="light"
       />
       {editContact && permissions.canEdit && permissions.canAccessModals && (
-        <div className="fixed inset-0 bg-[#4a4a4a]/90 flex items-center justify-center z-50 transition-all duration-300">
+        <div className="fixed inset-0 bg-[#000]/50 flex items-center justify-center z-50 transition-all duration-300">
           <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto relative sm:animate-slideUp border border-gray-300 transition-all duration-300">
             <button
               onClick={() => setEditContact(null)}

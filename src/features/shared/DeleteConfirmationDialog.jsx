@@ -28,7 +28,7 @@ export default function DeleteConfirmationDialog({
 
   return (
     <div
-      className="fixed inset-0 bg-[#4a4a4a]/90 flex items-center justify-center z-[60]"
+      className="fixed inset-0 bg-[#000]/50 flex items-center justify-center z-[60]"
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
@@ -71,7 +71,7 @@ export default function DeleteConfirmationDialog({
               onCancel();
             }}
             disabled={isDeleting}
-            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50 font-medium cursor-pointer"
+            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors duration-200 disabled:opacity-50 font-medium cursor-pointer"
             aria-label="Cancel"
           >
             Cancel
@@ -82,7 +82,7 @@ export default function DeleteConfirmationDialog({
               onConfirm();
             }}
             disabled={isDeleting}
-            className="px-4 py-2 bg-[#FB2C36] text-white rounded-md hover:bg-[#FB2C36] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#FB2C36] disabled:opacity-50 font-medium flex items-center justify-center cursor-pointer"
+            className="px-4 py-2 bg-[#FB2C36] text-white rounded-md hover:bg-[#FB2C36] transition-colors duration-200 disabled:opacity-50 font-medium flex items-center justify-center cursor-pointer"
             aria-label="Confirm"
           >
             {isDeleting ? (

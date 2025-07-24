@@ -6,7 +6,6 @@ import Loader from "./components/Loader";
 import PrivateRoute from "./PrivateRoute";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-
 import PrivacyPolicy from "./PrivacyPolicy";
 
 const ContactList = lazy(() => import("./features/contacts/ContactList"));
@@ -18,7 +17,7 @@ const Broadcast = lazy(() => import("./features/broadcast/Broadcast"));
 const NotFound = lazy(() => import("./components/NotFound"));
 const NotAuthorized = lazy(() => import("./components/NotAuthorized"));
 const DashboardHome = lazy(() => import("./features/dashboard/DashboardHome"));
-const ExploreTemplates = lazy(() =>import("./features/templates/ExploreTemplates"));
+const ExploreTemplates = lazy(() => import("./features/templates/ExploreTemplates"));
 const LoginRedirectHandler = lazy(() => import("./LoginRedirectHandler"));
 const ForgotPassword = lazy(() => import("./ForgotPassword"));
 const RegisterPage = lazy(() => import("./RegisterPage"));
@@ -28,6 +27,20 @@ const UserSetting = lazy(() => import("./features/flow/UserSetting"));
 function App() {
   return (
     <>
+      {/* ✅ ToastContainer moved outside Suspense for persistent rendering */}
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
+
       <Suspense fallback={<Loader />}>
         <Routes>
           {/* Public Routes */}
@@ -72,7 +85,7 @@ function App() {
             }
           />
 
-          {/* Protected User Routes */}
+          {/* Protected Routes */}
           <Route element={<PrivateRoute />}>
             <Route path="/" element={<DashboardLayout />}>
               <Route
@@ -162,7 +175,7 @@ function App() {
             </Route>
           </Route>
 
-          {/* 404 - Not Found Route */}
+          {/* Fallback */}
           <Route
             path="*"
             element={
@@ -173,20 +186,6 @@ function App() {
           />
         </Routes>
       </Suspense>
-
-      {/* Toast Notification */}
-      <ToastContainer
-        position="top-right"
-        autoClose={5000}
-        hideProgressBar={false}
-        newestOnTop
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
-      />
     </>
   );
 }

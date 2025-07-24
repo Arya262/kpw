@@ -10,7 +10,7 @@ const ExitConfirmationDialog = ({
 
   return (
     <div
-      className="fixed inset-0 bg-[#4a4a4a]/90 flex items-center justify-center z-[60] transition-opacity duration-300"
+      className="fixed inset-0 bg-[#000]/50 flex items-center justify-center z-[60] transition-opacity duration-300"
       onClick={(e) => e.stopPropagation()}
     >
       <div
