@@ -22,6 +22,8 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
 
   const menuItems = [
     { name: "Dashboard", icon: <LayoutDashboard size={22} />, path: "/" },
+    { name: "Campaign", icon: <Megaphone size={22} />, path: "/broadcast" },
+    { name: "LiveChat", icon: <MessageCircle size={22} />, path: "/chats" },
     {
       name: "My Contact",
       icon: <Contact2 size={22} />,
@@ -46,8 +48,6 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
         },
       ],
     },
-    { name: "Chats", icon: <MessageCircle size={22} />, path: "/chats" },
-    { name: "Broadcast", icon: <Megaphone size={22} />, path: "/broadcast" },
     { name: "Flow", icon: <Megaphone size={22} />, path: "/flow" },
     { name: "Setting", icon: <Settings size={22} />, path: "/settings" },
     { name: "Help", icon: <HelpCircle size={22} />, path: "/help" },

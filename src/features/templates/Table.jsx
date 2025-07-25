@@ -37,8 +37,8 @@ const Table = ({
   onEdit,
   canEdit,
   canDelete,
-  onAddTemplate,      // <-- Add this prop
-  vendorIcon,         // <-- Add this prop
+  onAddTemplate, // <-- Add this prop
+  vendorIcon, // <-- Add this prop
 }) => {
   const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState("All");
@@ -129,7 +129,7 @@ const Table = ({
   // Permission-aware handlers
   const handleDeleteSelected = async () => {
     if (!canDelete) {
-      toast.error('You do not have permission to delete templates.', {
+      toast.error("You do not have permission to delete templates.", {
         position: "top-right",
         autoClose: 3000,
         hideProgressBar: false,
@@ -158,7 +158,7 @@ const Table = ({
 
   const handleDeleteClick = (template) => {
     if (!canDelete) {
-      toast.error('You do not have permission to delete templates.', {
+      toast.error("You do not have permission to delete templates.", {
         position: "top-right",
         autoClose: 3000,
         hideProgressBar: false,
@@ -175,7 +175,7 @@ const Table = ({
 
   const handleEditClick = (template) => {
     if (!canEdit) {
-      toast.error('You do not have permission to edit templates.', {
+      toast.error("You do not have permission to edit templates.", {
         position: "top-right",
         autoClose: 3000,
         hideProgressBar: false,
@@ -225,7 +225,10 @@ const Table = ({
       // Estimate dropdown height (or use actual if available)
       const dropdownHeight = dropdownEl ? dropdownEl.offsetHeight : 120;
       const spaceBelow = windowHeight - rect.bottom;
-      setShouldFlipUp((prev) => ({ ...prev, [index]: spaceBelow < dropdownHeight }));
+      setShouldFlipUp((prev) => ({
+        ...prev,
+        [index]: spaceBelow < dropdownHeight,
+      }));
     }
   };
 
@@ -233,7 +236,7 @@ const Table = ({
     const handleClickOutside = (event) => {
       // Check all dropdown refs
       const refs = Object.values(dropdownRefs.current);
-      if (refs.some(ref => ref && ref.contains(event.target))) return;
+      if (refs.some((ref) => ref && ref.contains(event.target))) return;
       setMenuOpen(null);
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -257,7 +260,11 @@ const Table = ({
                   <button
                     key={i}
                     className={`px-4 py-2 min-h-[40px] rounded-md text-sm font-medium transition 
-                      ${activeFilter === f.label ? "bg-[#0AA89E] text-white" : "text-gray-700 hover:text-[#0AA89E]"}`}
+                      ${
+                        activeFilter === f.label
+                          ? "bg-[#0AA89E] text-white"
+                          : "text-gray-700 hover:text-[#0AA89E]"
+                      }`}
                     onClick={() => setActiveFilter(f.label)}
                   >
                     {f.label} ({f.count})
@@ -279,7 +286,11 @@ const Table = ({
                 <button
                   key={i}
                   className={`px-4 py-2 min-h-[40px] rounded-md text-sm font-medium transition 
-                    ${activeFilter === f.label ? "bg-[#0AA89E] text-white" : "text-gray-700 hover:text-[#0AA89E]"}`}
+                    ${
+                      activeFilter === f.label
+                        ? "bg-[#0AA89E] text-white"
+                        : "text-gray-700 hover:text-[#0AA89E]"
+                    }`}
                   onClick={() => setActiveFilter(f.label)}
                 >
                   {f.label} ({f.count})
@@ -300,17 +311,25 @@ const Table = ({
             {onAddTemplate && (
               <button
                 className={`ml-2 flex items-center gap-2 px-4 py-2 rounded cursor-pointer 
-                  ${canEdit || canDelete || onAddTemplate ? "bg-[#0AA89E] text-white" : "bg-gray-300 text-gray-500 cursor-not-allowed"}`}
+                  ${
+                    canEdit || canDelete || onAddTemplate
+                      ? "bg-[#0AA89E] text-white"
+                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  }`}
                 onClick={() => {
                   if (onAddTemplate) {
                     onAddTemplate();
                   } else {
                     // Show error if no permission
-                    toast.error('You do not have permission to add templates.');
+                    toast.error("You do not have permission to add templates.");
                   }
                 }}
                 disabled={!onAddTemplate}
-                title={onAddTemplate ? "Add a new template" : "You do not have permission to add templates"}
+                title={
+                  onAddTemplate
+                    ? "Add a new template"
+                    : "You do not have permission to add templates"
+                }
               >
                 <img src={vendorIcon} alt="plus sign" className="w-5 h-5" />
                 Add New Templates
@@ -416,7 +435,10 @@ const Table = ({
                           : "-"}
                       </td>
                       <td className="relative py-4">
-                        <div ref={el => (dropdownRefs.current[idx] = el)} className="flex justify-center">
+                        <div
+                          ref={(el) => (dropdownRefs.current[idx] = el)}
+                          className="flex justify-center"
+                        >
                           <button
                             onClick={() =>
                               navigate("/broadcast", {
@@ -443,48 +465,18 @@ const Table = ({
                                 d="M5 12h14M12 5l7 7-7 7"
                               />
                             </svg>
-                            <span className="text-sm font-medium">Send Broadcast</span>
+                            <span className="text-sm font-medium">
+                              Send Broadcast
+                            </span>
                           </button>
-                          {/* Always show menu button */}
+                          {/* Delete icon button */}
                           <button
-                            onClick={() => toggleMenu(idx)}
-                            className="p-2 rounded-full hover:bg-gray-100 focus:outline-none cursor-pointer"
-                            aria-label="Template options"
+                            onClick={() => handleDeleteClick(template)}
+                            className="text-red-600 hover:bg-red-100 px-2 py-1 rounded hover:cursor-pointer"
+                            aria-label={`Delete ${template.element_name}`}
                           >
-                            <svg
-                              className="w-5 h-5 text-gray-600"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                              strokeWidth={2}
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M12 5v.01M12 12v.01M12 19v.01"
-                              />
-                            </svg>
+                            <Trash2 className="w-5 h-5" />
                           </button>
-                          {menuOpen === idx && (
-                            <div
-                              className={`absolute right-0 ${
-                                shouldFlipUp[idx] ? "bottom-12" : "top-12"
-                              } w-44 bg-white border border-gray-200 rounded-md shadow-lg z-20`}
-                            >
-                              <button
-                                onClick={() => handleEditClick(template)}
-                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-                              >
-                                <Edit2 className="w-4 h-4" /> Edit Template
-                              </button>
-                              <button
-                                onClick={() => handleDeleteClick(template)}
-                                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2"
-                              >
-                                <Trash2 className="w-4 h-4" /> Delete
-                              </button>
-                            </div>
-                          )}
                         </div>
                       </td>
                     </tr>

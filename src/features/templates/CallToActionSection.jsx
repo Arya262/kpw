@@ -39,10 +39,6 @@ const CallToActionSection = ({
                 setUrlCtas(updated);
               }}
             />
-            <select className="border border-[#CACACA] rounded p-2 w-full focus:outline-none focus:border-teal-500">
-              <option value={"Static"}>Static</option>
-              <option value={"Dynamic"}>Dynamic</option>
-            </select>
             <div className="flex gap-2">
               <input
                 type="text"

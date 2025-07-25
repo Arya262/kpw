@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { z } from "zod";
 import "react-toastify/dist/ReactToastify.css";
-import { Edit2, Trash2 } from "lucide-react";
 import SampleValuesSection from "./SampleValuesSection";
 import QuickRepliesSection from "./QuickRepliesSection";
 import CallToActionSection from "./CallToActionSection";
@@ -160,10 +159,6 @@ const TemplateModal = ({
     }
   }, [isOpen]);
 
-  // Debug effect for dialog state
-  React.useEffect(() => {
-    console.log("showExitDialog state changed to:", showExitDialog);
-  }, [showExitDialog]);
 
   // Add a useEffect to pre-fill fields if initialValues is provided (edit mode)
   useEffect(() => {
@@ -326,20 +321,11 @@ const TemplateModal = ({
     onClose();
   };
 
-  const cancelExit = () => {
-    console.log("Cancel exit clicked");
-    setShowExitDialog(false);
-  };
-
   const handleCancelClick = () => {
-    console.log("Cancel button clicked in dialog");
-    console.log("Current showExitDialog state:", showExitDialog);
     setShowExitDialog(false);
-    console.log("Setting showExitDialog to false");
   };
 
   const handleSubmit = (e) => {
-    console.log("handleSubmit called");
     e.preventDefault();
     if (!validateForm()) {
       return;
@@ -405,9 +391,6 @@ const TemplateModal = ({
       },
     };
 
-    // Debug logs
-    console.log("DEBUG:", { templateName, templateType });
-    console.log("Submitting newTemplate:", newTemplate);
 
     onSubmit(newTemplate);
   };
@@ -419,6 +402,7 @@ const TemplateModal = ({
       return samples[number] || match;
     });
   };
+  
   const livePreviewSampleText = generateSampleText(format, sampleValues);
 
   return (

@@ -4,10 +4,13 @@ import { ROLE_PERMISSIONS } from "../../context/permissions";
 import { User, Shield, Star, Crown, Pencil, Trash2 } from "lucide-react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-// Import DeleteConfirmationDialog
-import DeleteConfirmationDialog from "../shared/DeleteConfirmationDialog";
-import { API_ENDPOINTS } from "../../config/api";
 import ReactDOM from "react-dom";
+
+// Import new components and hooks
+import DeleteConfirmationDialog from "../shared/DeleteConfirmationDialog";
+import UserFormModal from "./components/UserFormModal";
+import { useUserManagement } from "./hooks/useUserManagement";
+import { useFormState } from "./hooks/useFormState";
 
 // PopoverPortal component for rendering popover in a portal
 function PopoverPortal({ anchorRect, children, onClose, position = "bottom" }) {
@@ -61,12 +64,19 @@ const UserSetting = () => {
     }
     return {};
   }, [user]);
-  const [name, setName] = useState(user?.name || "");
-  const [email, setEmail] = useState(user?.email || "");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
 
-  const isOwner = permissions.canManageUsers;
+  // Use custom hooks
+  const {
+    usersMatrix,
+    isLoading,
+    createUser,
+    updateUser,
+    deleteUser,
+    updateUserRole,
+  } = useUserManagement(user);
+
+  const addUserForm = useFormState();
+  const editUserForm = useFormState();
 
   // Define all possible routes for permissions
   const allRoutes = [
@@ -85,38 +95,7 @@ const UserSetting = () => {
     { key: "/help", label: "Help" },
   ];
 
-  // Local state for allowed routes (feature permissions)
-  const [allowedRoutes, setAllowedRoutes] = useState(
-    user?.allowed_routes || []
-  );
-
-  // State for add user form
-  const [showAddUser, setShowAddUser] = useState(false);
-  const [newUserName, setNewUserName] = useState("");
-  const [newUserEmail, setNewUserEmail] = useState("");
-  const [newUserPerms, setNewUserPerms] = useState([]);
-  // Add new state for role selection in Add User modal
-  const [newUserRole, setNewUserRole] = useState("user");
-  const [newUserPassword, setNewUserPassword] = useState("");
-  // Add state for first and last name for add/edit
-  const [newUserFirstName, setNewUserFirstName] = useState("");
-  const [newUserLastName, setNewUserLastName] = useState("");
-  const [editUserFirstName, setEditUserFirstName] = useState("");
-  const [editUserLastName, setEditUserLastName] = useState("");
-  // Add state for mobile_no for add/edit
-  const [newUserMobileNo, setNewUserMobileNo] = useState("");
-  const [editUserMobileNo, setEditUserMobileNo] = useState("");
-
-  // State for editing user
-  const [editUser, setEditUser] = useState(null);
-  const [editUserName, setEditUserName] = useState("");
-  const [editUserRole, setEditUserRole] = useState("user");
-  const [editUserPerms, setEditUserPerms] = useState([]);
-  // Add state for editUserPassword
-  const [editUserPassword, setEditUserPassword] = useState("");
-
   // Role options for editing
-  // 1. Update roleOptions to include all roles
   const roleOptions = [
     {
       value: "owner",
@@ -150,284 +129,94 @@ const UserSetting = () => {
     },
   ];
 
-  // Remove mockUsers and set initial usersMatrix to []
-  const [usersMatrix, setUsersMatrix] = useState([]);
-
-  // Fetch users from backend on mount
-  useEffect(() => {
-    if (!user?.customer_id) return;
-    fetch(API_ENDPOINTS.USERS.GET_SUBUSERS(user.customer_id), {
-      credentials: "include",
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        setUsersMatrix(data.users || []);
-      })
-      .catch((err) => {
-        console.error("Failed to fetch users:", err);
-        setUsersMatrix([]);
-      });
-  }, [user?.customer_id]);
-
-  const handlePermissionToggle = (permKey) => {
-    setAllowedRoutes((prev) =>
-      prev.includes(permKey)
-        ? prev.filter((p) => p !== permKey)
-        : [...prev, permKey]
-    );
-  };
-
-  // Toggle permission for a user in the matrix
-  const handleMatrixPermissionToggle = (userId, permKey) => {
-    setUsersMatrix((prev) =>
-      prev.map((u) =>
-        u.id === userId
-          ? {
-              ...u,
-              allowed_routes: u.allowed_routes.includes(permKey)
-                ? u.allowed_routes.filter((p) => p !== permKey)
-                : [...u.allowed_routes, permKey],
-            }
-          : u
-      )
-    );
-  };
-
-  const handleNewUserPermToggle = (permKey) => {
-    setNewUserPerms((prev) =>
-      prev.includes(permKey)
-        ? prev.filter((p) => p !== permKey)
-        : [...prev, permKey]
-    );
-  };
-  const [newUserFeatures, setNewUserFeatures] = useState([]);
-  const [editUserFeatures, setEditUserFeatures] = useState([]);
-
-  const handleAddUser = async (e) => {
-    if (!permissions.canManageUsers) return;
-    e.preventDefault();
-    if (
-      !newUserFirstName.trim() ||
-      !newUserEmail.trim() ||
-      !newUserPassword.trim()
-    ) {
-      toast.error("First Name, Email, and Password are required");
-      return;
-    }
-    try {
-      console.log({
-        name: `${newUserFirstName} ${newUserLastName}`.trim(),
-        email: newUserEmail,
-        mobile_no: newUserMobileNo || "",
-        password: newUserPassword,
-        allowed_routes: newUserPerms,
-      });
-      const res = await fetch(API_ENDPOINTS.USERS.CREATE_SUBUSER, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          customer_id: user.customer_id,
-          name: `${newUserFirstName} ${newUserLastName}`.trim(),
-          email: newUserEmail,
-          mobile_no: newUserMobileNo || "",
-          password: newUserPassword,
-          role: newUserRole, // <-- send role
-          allowed_routes: newUserPerms, // <-- send allowed routes
-        }),
-      });
-      if (!res.ok) {
-        const error = await res.json().catch(() => ({}));
-        console.error("Backend error:", error);
-        toast.error(error?.error || "Failed to add user");
-        throw new Error("Failed to add user");
-      }
-      // Fetch users again
-      const usersRes = await fetch(
-        API_ENDPOINTS.USERS.GET_SUBUSERS(user.customer_id),
-        { credentials: "include" }
-      );
-      const usersData = await usersRes.json();
-      setUsersMatrix(usersData.users || []);
-      setShowAddUser(false);
-      setNewUserFirstName("");
-      setNewUserLastName("");
-      setNewUserEmail("");
-      setNewUserMobileNo("");
-      setNewUserPerms([]);
-      setNewUserFeatures([]);
-      setNewUserRole("user");
-      setNewUserPassword("");
-      toast.success("User added successfully!");
-    } catch (err) {
-      // toast.error already shown above
-      console.error(err);
-    }
-  };
-
-  // Handle role change
-  const handleRoleChange = (userId, newRole) => {
-    setUsersMatrix((prev) =>
-      prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u))
-    );
-  };
-
-  // Open edit modal with user data
-  const handleEditUser = (user) => {
-    setEditUser(user);
-    // Split the name into first and last name
-    const [firstName, ...rest] = (user.name || "").split(" ");
-    setEditUserFirstName(firstName || "");
-    setEditUserLastName(rest.join(" ") || "");
-    setEditUserMobileNo(user.mobile_no || "");
-    setEditUserRole(user.role);
-    setEditUserPerms(user.allowed_routes);
-    setEditUserFeatures(user.allowed_features || []);
-    setEditUserPassword("");
-  };
-
-  // Save edited user
-  const handleSaveEditUser = async (e) => {
-    if (!permissions.canManageUsers) return;
-    e.preventDefault();
-    try {
-      const res = await fetch(
-        API_ENDPOINTS.USERS.UPDATE_SUBUSER(editUser.user_id),
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({
-            name: `${editUserFirstName} ${editUserLastName}`.trim(),
-            email: editUser.email,
-            mobile_no: editUserMobileNo || "",
-            password: editUserPassword,
-            role: editUserRole, // <-- send role
-            allowed_routes: editUserPerms, // <-- send allowed routes
-          }),
-        }
-      );
-      if (!res.ok) {
-        const error = await res.json().catch(() => ({}));
-        toast.error(error?.error || "Failed to update user");
-        throw new Error("Failed to update user");
-      }
-      // Fetch users again
-      const usersRes = await fetch(
-        API_ENDPOINTS.USERS.GET_SUBUSERS(user.customer_id),
-        { credentials: "include" }
-      );
-      const usersData = await usersRes.json();
-      setUsersMatrix(usersData.users || []);
-      setEditUser(null);
-      setEditUserFirstName("");
-      setEditUserLastName("");
-      setEditUserMobileNo("");
-      setEditUserRole("user");
-      setEditUserPerms([]);
-      setEditUserFeatures([]);
-      setEditUserPassword("");
-      toast.success("User updated successfully!");
-    } catch (err) {
-      // toast.error already shown above
-      console.error(err);
-    }
-  };
-
-  // Add this function to handle user deletion
-  const handleDeleteUser = async (user_id) => {
-    if (!permissions.canManageUsers) return;
-    setIsDeleting(true);
-    try {
-      const res = await fetch(API_ENDPOINTS.USERS.DELETE_SUBUSER(user_id), {
-        method: "DELETE",
-        credentials: "include",
-      });
-      if (!res.ok) {
-        const error = await res.json().catch(() => ({}));
-        toast.error(error?.error || "Failed to delete user");
-        throw new Error("Failed to delete user");
-      }
-      // Refresh user list
-      const usersRes = await fetch(
-        API_ENDPOINTS.USERS.GET_SUBUSERS(user.customer_id),
-        { credentials: "include" }
-      );
-      const usersData = await usersRes.json();
-      setUsersMatrix(usersData.users || []);
-      toast.success("User deleted successfully!");
-    } catch (err) {
-      // toast.error already shown above
-      console.error(err);
-    } finally {
-      setIsDeleting(false);
-      setShowDeleteDialog(false);
-      setUserToDelete(null);
-    }
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // Placeholder: Add update logic here
-    alert("Settings saved (not functional in demo)");
-  };
-
-  // Add these at the top level of the component, after other useState/useRef
-  const [openDropdownId, setOpenDropdownId] = useState(null);
-  const dropdownRefs = useRef({});
-
-  // Add this useEffect at the top level (not inside map)
-  React.useEffect(() => {
-    function handleClickOutside(event) {
-      if (
-        openDropdownId !== null &&
-        dropdownRefs.current[openDropdownId] &&
-        !dropdownRefs.current[openDropdownId].contains(event.target)
-      ) {
-        setOpenDropdownId(null);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [openDropdownId]);
-
-  // Add state for delete dialog
+  // Modal states
+  const [showAddUser, setShowAddUser] = useState(false);
+  const [editUser, setEditUser] = useState(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Add at the top level of the component, after other useState/useRef
-  const [openPopover, setOpenPopover] = useState({ userId: null, type: null }); // type: 'routes' | 'features'
+  // Popover states
+  const [openPopover, setOpenPopover] = useState({ userId: null, type: null });
   const popoverRefs = useRef({});
-  const [popoverPosition, setPopoverPosition] = useState("bottom"); // 'bottom' or 'top'
+  const [popoverPosition, setPopoverPosition] = useState("bottom");
   const [popoverAnchorRect, setPopoverAnchorRect] = useState(null);
 
-  // Add useEffect to handle click outside for popover
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (
-        openPopover.userId !== null &&
-        openPopover.type !== null &&
-        popoverRefs.current[`${openPopover.userId}_${openPopover.type}`] &&
-        !popoverRefs.current[
-          `${openPopover.userId}_${openPopover.type}`
-        ].contains(event.target)
-      ) {
-        setOpenPopover({ userId: null, type: null });
-      }
+  // Handle add user
+  const handleAddUser = async () => {
+    if (!permissions.canManageUsers) {
+      toast.error("You do not have permission to add users.");
+      return;
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [openPopover]);
 
-  // Smart popover positioning: when openPopover changes, check available space and set popoverPosition
+    if (!addUserForm.formData.firstName.trim() || !addUserForm.formData.email.trim() || !addUserForm.formData.password.trim()) {
+      toast.error("First Name, Email, and Password are required");
+      return;
+    }
+
+    const result = await createUser(addUserForm.getApiPayload());
+    if (result.success) {
+      toast.success(result.message);
+      addUserForm.resetForm();
+      setShowAddUser(false);
+    } else {
+      toast.error(result.message);
+    }
+  };
+
+  // Handle edit user
+  const handleEditUser = (userData) => {
+    setEditUser(userData);
+    editUserForm.loadUserData(userData);
+  };
+
+  const handleSaveEditUser = async () => {
+    if (!permissions.canManageUsers) {
+      toast.error("You do not have permission to edit users.");
+      return;
+    }
+
+    const result = await updateUser(editUser.user_id, editUserForm.getApiPayload());
+    if (result.success) {
+      toast.success(result.message);
+      editUserForm.resetForm();
+      setEditUser(null);
+    } else {
+      toast.error(result.message);
+    }
+  };
+
+  // Handle delete user
+  const handleDeleteUser = async (userId) => {
+    if (!permissions.canManageUsers) {
+      toast.error("You do not have permission to delete users.");
+      return;
+    }
+
+    setIsDeleting(true);
+    const result = await deleteUser(userId);
+    if (result.success) {
+      toast.success(result.message);
+      setShowDeleteDialog(false);
+      setUserToDelete(null);
+    } else {
+      toast.error(result.message);
+    }
+    setIsDeleting(false);
+  };
+
+  // Handle role change
+  const handleRoleChange = (userId, newRole) => {
+    updateUserRole(userId, newRole);
+  };
+
+  // Popover positioning effect
   useEffect(() => {
     if (openPopover.userId && openPopover.type) {
-      const badgeEl =
-        popoverRefs.current[`${openPopover.userId}_${openPopover.type}`];
+      const badgeEl = popoverRefs.current[`${openPopover.userId}_${openPopover.type}`];
       if (badgeEl) {
         const rect = badgeEl.getBoundingClientRect();
-        const popoverHeight = 200; // Estimate or set max height of popover
+        const popoverHeight = 200;
         const spaceBelow = window.innerHeight - rect.bottom;
         const spaceAbove = rect.top;
         if (spaceBelow < popoverHeight && spaceAbove > popoverHeight) {
@@ -461,7 +250,7 @@ const UserSetting = () => {
           </div>
           <div>
             <button
-              className="px-4 py-2 bg-[#24AEAE] text-white rounded hover:bg-#24AEAE[] transition cursor-pointer"
+              className="px-4 py-2 bg-[#0AA89E] text-white rounded hover:bg-[#0AA89E] transition cursor-pointer"
               onClick={() => {
                 if (permissions.canManageUsers) {
                   setShowAddUser(true);
@@ -476,390 +265,39 @@ const UserSetting = () => {
           </div>
         </div>
         {/* Add User Modal */}
-        {showAddUser && (
-          <div
-            className="fixed inset-0 bg-[#000]/50 flex items-center justify-center z-50 transition-all duration-300"
-            onClick={(e) => {
-              if (e.target === e.currentTarget) {
-                setShowAddUser(false);
-                setNewUserName("");
-                setNewUserEmail("");
-                setNewUserPerms([]);
-                setNewUserFeatures([]);
-                setNewUserRole("user"); // Reset role
-                setNewUserPassword(""); // Reset password
-                setNewUserMobileNo(""); 
-              }
-            }}
-          >
-            <div
-              className="max-w-4xl mx-auto bg-white shadow-lg rounded-xl text-gray-500 p-6 w-full relative border border-gray-300 animate-slideUp max-h-[80vh] overflow-y-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                onClick={() => {
-                  setShowAddUser(false);
-                  setNewUserName("");
-                  setNewUserEmail("");
-                  setNewUserPerms([]);
-                  setNewUserFeatures([]);
-                  setNewUserRole("user");
-                  setNewUserPassword("");
-                  setNewUserMobileNo(""); 
-                }}
-                className="absolute top-2 right-4 text-gray-600 hover:text-black text-3xl font-bold w-8 h-8 flex items-center justify-center pb-2 rounded-full transition-colors bg-gray-100 cursor-pointer"
-                aria-label="Close modal"
-              >
-                ×
-              </button>
-              <h2 className="text-xl font-semibold mb-4 text-black">
-                Add User
-              </h2>
-              <form
-                onSubmit={handleAddUser}
-                className="flex flex-col"
-                autoComplete="off"
-              >
-                <div className="flex flex-col md:flex-row gap-4 mb-4">
-                  <div className="w-full md:w-1/2">
-                    <label className="block text-sm font-medium mb-2 text-gray-700">
-                      First Name
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Enter first name"
-                      value={newUserFirstName}
-                      onChange={(e) => setNewUserFirstName(e.target.value)}
-                      className="w-full border border-gray-300 p-2 rounded-md text-gray-700 h-[38px] focus:border-[#05A3A3] focus:outline-none focus:ring-1 focus:ring-[#05A3A3] transition-all duration-150 ease-in-out"
-                      required
-                      name="newUserFirstName"
-                      autoComplete="off"
-                    />
-                  </div>
-                  <div className="w-full md:w-1/2">
-                    <label className="block text-sm font-medium mb-2 text-gray-700">
-                      Last Name
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Enter last name"
-                      value={newUserLastName}
-                      onChange={(e) => setNewUserLastName(e.target.value)}
-                      className="w-full border border-gray-300 p-2 rounded-md text-gray-700 h-[38px] focus:border-[#05A3A3] focus:outline-none focus:ring-1 focus:ring-[#05A3A3] transition-all duration-150 ease-in-out"
-                      name="newUserLastName"
-                      autoComplete="off"
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-col md:flex-row gap-4 mb-4">
-                  <div className="w-full md:w-1/2">
-                    <label className="block text-sm font-medium mb-2 text-gray-700">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      placeholder="Enter email"
-                      value={newUserEmail}
-                      onChange={(e) => setNewUserEmail(e.target.value)}
-                      className="w-full border border-gray-300 p-2 rounded-md text-gray-700 h-[38px] focus:border-[#05A3A3] focus:outline-none focus:ring-1 focus:ring-[#05A3A3] transition-all duration-150 ease-in-out"
-                      required
-                      name="newUserEmail"
-                      autoComplete="new-email"
-                    />
-                  </div>
-                  <div className="w-full md:w-1/2">
-                    <label className="block text-sm font-medium mb-2 text-gray-700">
-                      Password
-                    </label>
-                    <input
-                      type="password"
-                      placeholder="Enter password"
-                      value={newUserPassword}
-                      onChange={(e) => setNewUserPassword(e.target.value)}
-                      className="w-full border border-gray-300 p-2 rounded-md text-gray-700 h-[38px] focus:border-[#05A3A3] focus:outline-none focus:ring-1 focus:ring-[#05A3A3] transition-all duration-150 ease-in-out"
-                      required
-                      name="newUserPassword"
-                      autoComplete="new-password"
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-col md:flex-row gap-4 mb-4">
-                  <div className="w-full md:w-1/2">
-                    <label className="block text-sm font-medium mb-2 text-gray-700">
-                      Mobile No
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Enter mobile number"
-                      value={newUserMobileNo}
-                      onChange={(e) => setNewUserMobileNo(e.target.value)}
-                      className="w-full border border-gray-300 p-2 rounded-md text-gray-700 h-[38px] focus:border-[#05A3A3] focus:outline-none focus:ring-1 focus:ring-[#05A3A3] transition-all duration-150 ease-in-out"
-                      name="newUserMobileNo"
-                      autoComplete="off"
-                    />
-                  </div>
-                  <div className="w-full md:w-1/2">
-                    <label className="block text-sm font-medium mb-2 text-gray-700">
-                      Role
-                    </label>
-                    <select
-                      value={newUserRole}
-                      onChange={(e) => setNewUserRole(e.target.value)}
-                      className="w-full border border-gray-300 p-2 rounded-md text-gray-700 h-[38px] focus:border-[#05A3A3] focus:outline-none focus:ring-1 focus:ring-[#05A3A3] transition-all duration-150 ease-in-out bg-white"
-                      required
-                    >
-                      {roleOptions
-                        .filter((r) => r.value !== "owner")
-                        .map((opt) => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                    </select>
-                  </div>
-                </div>
-                {/* Restore Allowed Routes section */}
-                <div className="mb-2">
-                  <label className="block text-sm font-medium mb-2 text-gray-700">
-                    Allowed Routes
-                  </label>
-                  <div className="flex flex-wrap gap-4">
-                    {allRoutes.map((route) => (
-                      <label
-                        key={route.key}
-                        className="flex items-center gap-2 text-sm"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={newUserPerms.includes(route.key)}
-                          onChange={() => {
-                            setNewUserPerms((prev) =>
-                              prev.includes(route.key)
-                                ? prev.filter((r) => r !== route.key)
-                                : [...prev, route.key]
-                            );
-                          }}
-                        />
-                        {route.label}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex justify-end gap-2 mt-4">
-                  <button
-                    type="submit"
-                    className="px-6 py-2 bg-[#0AA89E] text-white rounded-md transition font-medium shadow-sm cursor-pointer"
-                  >
-                    Add User
-                  </button>
-                  <button
-                    type="button"
-                    className="px-6 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition font-medium shadow-sm"
-                    onClick={() => {
-                      setShowAddUser(false);
-                      setNewUserName("");
-                      setNewUserEmail("");
-                      setNewUserPerms([]);
-                      setNewUserFeatures([]);
-                      setNewUserRole("user");
-                      setNewUserPassword("");
-                      setNewUserMobileNo("");
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
+        <UserFormModal
+          isOpen={showAddUser}
+          onClose={() => {
+            setShowAddUser(false);
+            addUserForm.resetForm();
+          }}
+          onSubmit={handleAddUser}
+          formData={addUserForm.formData}
+          onUpdateField={addUserForm.updateField}
+          onToggleRoute={addUserForm.toggleRoute}
+          roleOptions={roleOptions}
+          allRoutes={allRoutes}
+          isEdit={false}
+          title="Add User"
+          isLoading={isLoading}
+        />
         {/* Edit User Modal */}
-        {editUser && permissions.canManageUsers && (
-          <div
-            className="fixed inset-0 bg-[#000]/50 flex items-center justify-center z-50 transition-all duration-300"
-            onClick={(e) => {
-              if (e.target === e.currentTarget) {
-                setEditUser(null);
-                setEditUserName("");
-                setEditUserRole("user");
-                setEditUserPerms([]);
-                setEditUserFeatures([]);
-                setEditUserMobileNo("");
-                setEditUserPassword("");
-              }
-            }}
-          >
-            <div
-              className="max-w-4xl mx-auto bg-white shadow-lg rounded-xl text-gray-500 p-6 w-full relative border border-gray-300 animate-slideUp max-h-[90vh] overflow-y-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                onClick={() => {
-                  setEditUser(null);
-                  setEditUserName("");
-                  setEditUserRole("user");
-                  setEditUserPerms([]);
-                  setEditUserFeatures([]);
-                  setEditUserMobileNo(""); // Reset mobile no
-                  setEditUserPassword(""); // Reset password field
-                }}
-                className="absolute top-2 right-4 text-gray-600 hover:text-black text-3xl font-bold w-8 h-8 flex items-center justify-center pb-2 rounded-full transition-colors bg-gray-100 cursor-pointer"
-                aria-label="Close modal"
-              >
-                ×
-              </button>
-              <h2 className="text-xl font-semibold mb-4 text-black">
-                Edit User
-              </h2>
-              <form onSubmit={handleSaveEditUser} className="flex flex-col">
-                <div className="flex flex-col md:flex-row gap-4 mb-4">
-                  <div className="w-full md:w-1/2">
-                    <label className="block text-sm font-medium mb-2 text-gray-700">
-                      First Name
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Enter first name"
-                      value={editUserFirstName}
-                      onChange={(e) => setEditUserFirstName(e.target.value)}
-                      className="w-full border border-gray-300 p-2 rounded-md text-gray-700 h-[38px] focus:border-[#05A3A3] focus:outline-none focus:ring-1 focus:ring-[#05A3A3] transition-all duration-150 ease-in-out"
-                      required
-                      name="editUserFirstName"
-                      autoComplete="off"
-                    />
-                  </div>
-                  <div className="w-full md:w-1/2">
-                    <label className="block text-sm font-medium mb-2 text-gray-700">
-                      Last Name
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Enter last name"
-                      value={editUserLastName}
-                      onChange={(e) => setEditUserLastName(e.target.value)}
-                      className="w-full border border-gray-300 p-2 rounded-md text-gray-700 h-[38px] focus:border-[#05A3A3] focus:outline-none focus:ring-1 focus:ring-[#05A3A3] transition-all duration-150 ease-in-out"
-                      name="editUserLastName"
-                      autoComplete="off"
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-col md:flex-row gap-4 mb-4">
-                  <div className="w-full md:w-1/2">
-                    <label className="block text-sm font-medium mb-2 text-gray-700">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      value={editUser.email}
-                      disabled
-                      className="w-full border border-gray-200 p-2 rounded-md text-gray-400 h-[38px] bg-gray-100 cursor-not-allowed"
-                    />
-                  </div>
-                  <div className="w-full md:w-1/2">
-                    <label className="block text-sm font-medium mb-2 text-gray-700">
-                      Password
-                    </label>
-                    <input
-                      type="password"
-                      placeholder="Enter new password (leave blank to keep unchanged)"
-                      value={editUserPassword}
-                      onChange={(e) => setEditUserPassword(e.target.value)}
-                      className="w-full border border-gray-300 p-2 rounded-md text-gray-700 h-[38px] focus:border-[#05A3A3] focus:outline-none focus:ring-1 focus:ring-[#05A3A3] transition-all duration-150 ease-in-out"
-                      name="editUserPassword"
-                      autoComplete="new-password"
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-col md:flex-row gap-4 mb-4">
-                  <div className="w-full md:w-1/2">
-                    <label className="block text-sm font-medium mb-2 text-gray-700">
-                      Mobile No
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Enter mobile number"
-                      value={editUserMobileNo}
-                      onChange={(e) => setEditUserMobileNo(e.target.value)}
-                      className="w-full border border-gray-300 p-2 rounded-md text-gray-700 h-[38px] focus:border-[#05A3A3] focus:outline-none focus:ring-1 focus:ring-[#05A3A3] transition-all duration-150 ease-in-out"
-                      name="editUserMobileNo"
-                      autoComplete="off"
-                    />
-                  </div>
-                  <div className="w-full md:w-1/2">
-                    <label className="block text-sm font-medium mb-2 text-gray-700">
-                      Role
-                    </label>
-                    <select
-                      value={editUserRole}
-                      onChange={(e) => setEditUserRole(e.target.value)}
-                      className="w-full border border-gray-300 p-2 rounded-md text-gray-700 h-[38px] focus:border-[#05A3A3] focus:outline-none focus:ring-1 focus:ring-[#05A3A3] transition-all duration-150 ease-in-out bg-white"
-                      required
-                      disabled={editUserRole === "owner"}
-                    >
-                      {roleOptions
-                        .filter((opt) => opt.value !== "owner")
-                        .map((opt) => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                    </select>
-                  </div>
-                </div>
-                {/* Restore Allowed Routes section */}
-                <div className="mb-2">
-                  <label className="block text-sm font-medium mb-2 text-gray-700">
-                    Allowed Routes
-                  </label>
-                  <div className="flex flex-wrap gap-4">
-                    {allRoutes.map((route) => (
-                      <label
-                        key={route.key}
-                        className="flex items-center gap-2 text-sm"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={editUserPerms.includes(route.key)}
-                          onChange={() => {
-                            setEditUserPerms((prev) =>
-                              prev.includes(route.key)
-                                ? prev.filter((r) => r !== route.key)
-                                : [...prev, route.key]
-                            );
-                          }}
-                        />
-                        {route.label}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex justify-end gap-2 mt-4">
-                  <button
-                    type="submit"
-                    className="px-6 py-2 bg-[#0AA89E] text-white rounded-md transition font-medium shadow-sm cursor-pointer"
-                  >
-                    Save
-                  </button>
-                  <button
-                    type="button"
-                    className="px-6 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition font-medium shadow-sm cursor-pointer"
-                    onClick={() => {
-                      setEditUser(null);
-                      setEditUserName("");
-                      setEditUserRole("user");
-                      setEditUserPerms([]);
-                      setEditUserFeatures([]);
-                      setEditUserMobileNo(""); 
-                      setEditUserPassword(""); 
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
+        <UserFormModal
+          isOpen={!!editUser && permissions.canManageUsers}
+          onClose={() => {
+            setEditUser(null);
+            editUserForm.resetForm();
+          }}
+          onSubmit={handleSaveEditUser}
+          formData={editUserForm.formData}
+          onUpdateField={editUserForm.updateField}
+          onToggleRoute={editUserForm.toggleRoute}
+          roleOptions={roleOptions}
+          allRoutes={allRoutes}
+          isEdit={true}
+          title="Edit User"
+          isLoading={isLoading}
+        />
         <div className="overflow-x-auto">
           <div className="min-w-[900px] bg-white rounded-2xl shadow-[0px_-0.91px_3.66px_0px_#00000042] overflow-hidden">
             <table className="w-full text-sm text-center overflow-hidden table-auto">

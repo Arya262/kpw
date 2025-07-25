@@ -83,7 +83,7 @@ const LivePreview = ({
     (phoneCta?.title && phoneCta?.number);
 
   return (
-    <div className="w-full lg:w-[401px] bg-green-100 border border-blue-300 rounded p-4 overflow-auto flex flex-col">
+    <div className="w-full lg:w-[401px] bg-green-100 border border-[#0AA89E] rounded p-4 overflow-auto flex flex-col">
       <h4 className="text-lg font-semibold mb-3 text-gray-500 flex-shrink-0">
         Live Preview
       </h4>

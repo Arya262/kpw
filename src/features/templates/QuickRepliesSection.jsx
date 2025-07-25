@@ -31,7 +31,7 @@ const QuickRepliesSection = ({
         />
         <button
           type="button"
-          className=" text-red-600 hover:bg-red-100 px-2 py-1 rounded hover:cursor-pointer "
+          className="text-red-600 hover:bg-red-100 px-2 py-1 rounded hover:cursor-pointer"
           onClick={() => {
             const updated = quickReplies.filter((_, i) => i !== index);
             setQuickReplies(updated);

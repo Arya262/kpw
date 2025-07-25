@@ -28,7 +28,7 @@ export const API_ENDPOINTS = {
     CREATE: `${API_BASE}/createtemplate`,
     UPDATE: (id) => `${API_BASE}/updatetemplate?templateId=${id}`,
     UPDATE_ALT: `${API_BASE}/updatetemplate`,
-    DELETE: (id) => `${API_BASE}/deletetemplate/${id}`,
+    DELETE: () => `${API_BASE}/deletetemplate`,
   },
   GROUPS: {
     GET_ALL: `${API_BASE}/returnGroups`,

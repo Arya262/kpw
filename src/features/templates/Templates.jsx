@@ -2,11 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import Table from "./Table";
 import ErrorBoundary from "../../components/ErrorBoundary";
-import approvedIcon from "../../assets/Approve.png";
-import pendingIcon from "../../assets/Pending.png";
-import rejectedIcon from "../../assets/Rejected.png";
 import { API_ENDPOINTS } from "../../config/api";
-import SuccessErrorMessage from "../contacts/SuccessErrorMessage";
 import Modal from "./Modal";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -14,6 +10,10 @@ import { getPermissions } from "../../utils/getPermissions";
 import NotAuthorized from "../../components/NotAuthorized";
 import Loader from "../../components/Loader";
 import vendor from "../../assets/Vector.png";
+import approvedIcon from "../../assets/Approve.png";
+import pendingIcon from "../../assets/Pending.png";
+import rejectedIcon from "../../assets/Rejected.png";
+import { toastConfig, createToastConfig } from "../../utils/toastConfig";
 
 const Templates = () => {
   const [templates, setTemplates] = useState([]);
@@ -21,9 +21,8 @@ const Templates = () => {
   const { user } = useAuth();
   const permissions = getPermissions(user);
   const [editingTemplate, setEditingTemplate] = useState(null);
-  const [editForm, setEditForm] = useState(null);
-  const [successMessage, setSuccessMessage] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchTemplates = async () => {
@@ -47,10 +46,10 @@ const Templates = () => {
         if (Array.isArray(data.templates)) {
           setTemplates(data.templates);
         } else {
-          setErrorMessage("Unexpected response format from server.");
+          console.error("Unexpected response format from server.");
         }
       } catch (err) {
-        setErrorMessage("Failed to load templates. Please try again.");
+        console.error("Failed to load templates. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -92,79 +91,104 @@ const Templates = () => {
 
   const handleEdit = (template) => {
     setEditingTemplate(template);
-    setEditForm({
-      id: template.id,
-      element_name: template.element_name,
-      category: template.category || '',
-      header: template.container_meta?.header || '',
-      footer: template.container_meta?.footer || '',
-      data: template.container_meta?.sampleText || '',
-      template_type: template.template_type || '',
-      status: template.status || '',
-    });
   };
 
-  // Add New Template handler
-  const handleAddTemplate = () => {
-    setEditingTemplate({
-      id: null,
-      element_name: '',
-      category: '',
-      header: '',
-      footer: '',
-      data: '',
-      template_type: '',
-      status: '',
-      container_meta: {},
-    });
-    setEditForm({
-      id: null,
-      element_name: '',
-      category: '',
-      header: '',
-      footer: '',
-      data: '',
-      template_type: '',
-      status: '',
-    });
-  };
 
-  const handleDelete = async (ids) => {
-    const idArray = Array.isArray(ids) ? ids : [ids];
+  const handleAddTemplate = async (newTemplate) => {
+    if (isSubmitting) return; // Prevent multiple submissions
+    
+    console.log("Received from Modal:", newTemplate);
+    setIsSubmitting(true);
+    
+    const requestBody = {
+      elementName: newTemplate.elementName,
+      content: newTemplate.content,
+      category: newTemplate.category,
+      templateType: newTemplate.templateType,
+      languageCode: newTemplate.languageCode,
+      header: newTemplate.header,
+      footer: newTemplate.footer,
+      buttons: newTemplate.buttons || [],
+      example: newTemplate.example,
+      exampleHeader: newTemplate.exampleHeader,
+      messageSendTTL: newTemplate.messageSendTTL,
+      customer_id: user?.customer_id,
+      container_meta: newTemplate.container_meta,
+    };
+
+    console.log("Sending to API:", requestBody);
+
     try {
-      for (const id of idArray) {
-        const response = await fetch(API_ENDPOINTS.TEMPLATES.DELETE(id), {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-        });
-        if (!response.ok) {
-          throw new Error(`Failed to delete template ${id}`);
-        }
+      const response = await fetch(API_ENDPOINTS.TEMPLATES.CREATE, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(requestBody),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setTemplates((prev) => [data.template || newTemplate, ...prev]);
+        toast.success("Template created successfully!", toastConfig);
+        setIsModalOpen(false);
+      } else {
+        throw new Error(
+          data.message || data.error || "Failed to create template"
+        );
       }
-      const newTemplates = templates.filter((template) => !idArray.includes(template.id));
-      setTemplates(newTemplates);
-      toast.success(idArray.length > 1 ? 'Templates deleted successfully!' : 'Template deleted successfully!', {
-        position: "top-right",
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-      });
     } catch (error) {
-      toast.error('Failed to delete template(s)', {
-        position: "top-right",
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-      });
+      toast.error(error.message || "Failed to create template", createToastConfig(5000));
+      throw error;
+    } finally {
+      setIsSubmitting(false);
     }
   };
+
+const handleDelete = async (ids) => {
+  const idArray = Array.isArray(ids) ? ids : [ids];
+
+  try {
+    for (const id of idArray) {
+    
+      const template = templates.find((t) => t.id === id);
+
+      if (!template || !template.element_name) {
+        throw new Error(`Template with ID ${id} not found or missing element_name`);
+      }
+
+      const response = await fetch(API_ENDPOINTS.TEMPLATES.DELETE(), {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ templateName: template.element_name }), 
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to delete template ${template.element_name}: ${errorText}`);
+      }
+    }
+
+    
+    const newTemplates = templates.filter((template) => !idArray.includes(template.id));
+    setTemplates(newTemplates);
+
+    toast.success(
+      idArray.length > 1
+        ? "Templates deleted successfully!"
+        : "Template deleted successfully!",
+      toastConfig
+    );
+  } catch (error) {
+    console.error("Delete error:", error.message);
+    toast.error("Failed to delete template(s)", toastConfig);
+  }
+};
+
 
   // If not allowed to view templates, show NotAuthorized
   if (!permissions.canViewTemplates) {
@@ -173,8 +197,18 @@ const Templates = () => {
 
   return (
     <div className="flex flex-col gap-4 pt-2">
-      <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover theme="light" />
-      <SuccessErrorMessage successMessage={successMessage} errorMessage={errorMessage} />
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
       <div className="hidden md:flex flex-col md:flex-row justify-start gap-4">
         {summaryCards.map((card, index) => (
           <div
@@ -207,7 +241,9 @@ const Templates = () => {
           isOpen={!!editingTemplate}
           mode={editingTemplate.id ? "edit" : "add"}
           initialValues={editingTemplate}
-          onClose={() => { setEditingTemplate(null); setEditForm(null); }}
+          onClose={() => {
+            setEditingTemplate(null);
+          }}
           onSubmit={async (updatedTemplate) => {
             try {
               const requestBody = {
@@ -223,15 +259,17 @@ const Templates = () => {
               const url = updatedTemplate.id
                 ? API_ENDPOINTS.TEMPLATES.UPDATE(updatedTemplate.id)
                 : API_ENDPOINTS.TEMPLATES.CREATE;
-              const method = updatedTemplate.id ? 'PUT' : 'POST';
+              const method = updatedTemplate.id ? "PUT" : "POST";
               const response = await fetch(url, {
                 method,
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
                 body: JSON.stringify(requestBody),
               });
               if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                throw new Error(
+                  `HTTP ${response.status}: ${response.statusText}`
+                );
               }
               const data = await response.json();
               if (data.success) {
@@ -250,33 +288,17 @@ const Templates = () => {
                         : t
                     )
                   );
-                  setSuccessMessage("Template updated successfully!");
+                  toast.success("Template updated successfully!", toastConfig);
                 } else {
                   setTemplates((prev) => [data.template, ...prev]);
-                  setSuccessMessage("Template added successfully!");
+                  toast.success("Template added successfully!", toastConfig);
                 }
-                setTimeout(() => setSuccessMessage(""), 2000);
                 setEditingTemplate(null);
-                setEditForm(null);
               } else {
-                toast.error(data.message || 'Failed to save template', {
-                  position: "top-right",
-                  autoClose: 3000,
-                  hideProgressBar: false,
-                  closeOnClick: true,
-                  pauseOnHover: true,
-                  draggable: true,
-                });
+                toast.error(data.message || "Failed to save template", toastConfig);
               }
             } catch (error) {
-              toast.error('Failed to save template. Please try again.', {
-                position: "top-right",
-                autoClose: 5000,
-                hideProgressBar: false,
-                closeOnClick: true,
-                pauseOnHover: true,
-                draggable: true,
-              });
+              toast.error("Failed to save template. Please try again.", createToastConfig(5000));
             }
           }}
         />
@@ -292,17 +314,55 @@ const Templates = () => {
             onDelete={permissions.canDeleteTemplate ? handleDelete : undefined}
             canEdit={permissions.canEditTemplate}
             canDelete={permissions.canDeleteTemplate}
-            onAddTemplate={permissions.canAddTemplate ? () => {
-              if (!permissions.canAddTemplate) {
-                toast.error('You do not have permission to add templates.');
-                return;
-              }
-              handleAddTemplate();
-            } : undefined}
+            onAddTemplate={
+              permissions.canAddTemplate
+                ? () => {
+                    setIsModalOpen(true); 
+                  }
+                : undefined
+            }
             vendorIcon={vendor}
           />
         )}
       </ErrorBoundary>
+
+      {isModalOpen && (
+        <Modal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setEditingTemplate(null);
+          }}
+          isSubmitting={isSubmitting}
+          onSubmit={async (templateData) => {
+            try {
+              await handleAddTemplate(templateData);
+            } catch (error) {
+              console.error("Error in form submission:", error);
+              if (!error.message.includes('Failed to create template')) {
+                toast.error(error.message || "Failed to create template", createToastConfig(5000));
+              }
+            }
+          }}
+          mode="add"
+          initialValues={{
+            elementName: "",
+            category: "",
+            templateType: "Text",
+            languageCode: "en",
+            content: "",
+            header: "",
+            footer: "",
+            buttons: [],
+            example: {
+              header: [],
+              body: [],
+              buttons: [],
+            },
+            exampleHeader: [],
+          }}
+        />
+      )}
     </div>
   );
 };
