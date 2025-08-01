@@ -9,8 +9,6 @@ export default function EditContact({ contact, closePopup, onSuccess }) {
   const [phone, setPhone] = useState("");
   const [optStatus, setOptStatus] = useState("Opted In");
   const [name, setName] = useState("");
-  const [countryCodes, setCountryCodes] = useState([]);
-  const [selectedCountry, setSelectedCountry] = useState(null);
   const [phoneError, setPhoneError] = useState("");
   const [isTouched, setIsTouched] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -26,44 +24,11 @@ export default function EditContact({ contact, closePopup, onSuccess }) {
     }
   }, [contact]);
 
-  useEffect(() => {
-    const fetchCountryCodes = async () => {
-      try {
-        const res = await fetch("https://countriesnow.space/api/v0.1/countries/codes");
-        const data = await res.json();
-        const sorted = data.data
-          ?.map((c) => ({
-            value: c.dial_code,
-            label: `${c.code} ${c.dial_code} ${c.name}`,
-          }))
-          .sort((a, b) => a.label.localeCompare(b.label));
-        setCountryCodes(sorted);
-
-        if (contact?.country_code) {
-          const matchingCountry = sorted.find((c) => c.value === contact.country_code);
-          if (matchingCountry) {
-            setSelectedCountry(matchingCountry);
-          }
-        }
-      } catch (err) {
-        setCountryCodes([
-          { value: "+1", label: "US +1 United States" },
-          { value: "+91", label: "IN +91 India" },
-        ]);
-      }
-    };
-    fetchCountryCodes();
-  }, [contact]);
 
   const validatePhoneNumber = () => {
-    const raw = phone.split(" ")[1] || "";
-    const cleaned = raw.replace(/\D/g, "");
-    const pattern = /^[0-9]{10}$/;
-    if (!cleaned) {
-      setPhoneError("Please enter a phone number.");
-      return false;
-    } else if (!pattern.test(cleaned)) {
-      setPhoneError("Phone number must be exactly 10 digits.");
+    // Basic validation - detailed validation is handled by PhoneInputField
+    if (!phone || phone.trim().length < 10) {
+      setPhoneError("Please enter a valid phone number.");
       return false;
     }
     setPhoneError("");
@@ -84,12 +49,17 @@ export default function EditContact({ contact, closePopup, onSuccess }) {
       return;
     }
 
+    // Extract country code and mobile number from the phone input
+    const phoneDigits = phone.replace(/\D/g, '');
+    const countryCode = phone.match(/^\+?\d{1,4}/)?.[0] || '';
+    const mobileNumber = phoneDigits.replace(countryCode.replace('+', ''), '');
+
     const requestBody = {
       contact_id: contact.contact_id,
       customer_id: user.customer_id,
-      country_code: selectedCountry.value,
+      country_code: countryCode,
       first_name: name.trim(),
-      mobile_no: phone.split(" ")[1],
+      mobile_no: mobileNumber,
     };
 
     console.log("📤 Sending update request:", requestBody);
@@ -138,11 +108,8 @@ export default function EditContact({ contact, closePopup, onSuccess }) {
       <SingleContactForm
         phone={phone}
         setPhone={setPhone}
-        selectedCountry={selectedCountry}
-        setSelectedCountry={setSelectedCountry}
-        countryCodes={countryCodes}
         phoneError={phoneError}
-        validatePhoneNumber={validatePhoneNumber}
+        setPhoneError={setPhoneError}
         isTouched={isTouched}
         setIsTouched={setIsTouched}
         optStatus={optStatus}

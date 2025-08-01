@@ -1,72 +1,75 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import { useAuth } from "../../../context/AuthContext";
+import { debounce } from "lodash";
 import { API_ENDPOINTS } from "../../../config/api";
 
 const SendTemplate = ({ onSelect, onClose, returnFullTemplate = false }) => {
   const [templates, setTemplates] = useState([]);
+  const [filteredTemplates, setFilteredTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [error, setError] = useState(null);
+  const [previewTemplate, setPreviewTemplate] = useState(null); // NEW
   const { user } = useAuth();
 
-  useEffect(() => {
-    let isMounted = true;
+useEffect(() => {
+  const fetchTemplates = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        `${API_ENDPOINTS.TEMPLATES.GET_ALL}?customer_id=${user?.customer_id}`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+        }
+      );
 
-    const fetchTemplates = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await fetch(
-          `${API_ENDPOINTS.TEMPLATES.GET_ALL}?customer_id=${user?.customer_id}`,
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-            credentials: "include",
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        if (Array.isArray(data.templates)) {
-          if (isMounted) {
-            setTemplates(data.templates);
-          }
-        } else {
-          console.error("Invalid template response:", data);
-          if (isMounted) {
-            setError("Unexpected response format from server.");
-          }
-        }
-      } catch (err) {
-        if (isMounted) {
-          setError(
-            `Failed to load templates. Please try again. Error: ${err.message}`
-          );
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
       }
-    };
 
-    fetchTemplates();
+      const data = await response.json();
+      if (Array.isArray(data.templates)) {
+        // ✅ Filter only approved templates
+        const approvedTemplates = data.templates.filter(
+          (t) => t.status?.toLowerCase() === "approved"
+        );
+        setTemplates(approvedTemplates);
+        setFilteredTemplates(approvedTemplates);
+      } else {
+        setError("Unexpected response format from server.");
+      }
+    } catch (err) {
+      setError(
+        `Failed to load templates. Please try again. Error: ${err.message}`
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    return () => {
-      isMounted = false;
-    };
-  }, [user?.customer_id]);
+  fetchTemplates();
+}, [user?.customer_id]);
 
-  const filteredTemplates = useMemo(() => {
-    const lowerTerm = searchTerm.trim().toLowerCase();
-    if (!lowerTerm) return templates;
-    return templates.filter((template) =>
-      template.element_name?.toLowerCase().includes(lowerTerm)
-    );
+  useEffect(() => {
+    const debouncedSearch = debounce(() => {
+      if (searchTerm.trim() === "") {
+        setFilteredTemplates(templates);
+      } else {
+        const lowerTerm = searchTerm.toLowerCase();
+        setFilteredTemplates(
+          templates.filter((template) =>
+            template.element_name?.toLowerCase().includes(lowerTerm)
+          )
+        );
+      }
+    }, 300);
+
+    debouncedSearch();
+    return () => debouncedSearch.cancel();
   }, [searchTerm, templates]);
 
   const handleTemplateClick = (template) => {
@@ -75,9 +78,14 @@ const SendTemplate = ({ onSelect, onClose, returnFullTemplate = false }) => {
     }
   };
 
+  const handlePreviewClick = (template, e) => {
+    e.stopPropagation();
+    setPreviewTemplate(template);
+  };
+
   return (
     <div
-      className="w-full max-w-3xl p-4 bg-white relative"
+      className="w-full max-w-3xl p-4 bg-white relative "
       role="dialog"
       aria-modal="true"
     >
@@ -102,17 +110,19 @@ const SendTemplate = ({ onSelect, onClose, returnFullTemplate = false }) => {
         className="mb-4 w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
-        aria-label="Search templates"
       />
 
       {loading ? (
         <div className="space-y-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="animate-pulse bg-gray-100 h-10 rounded"></div>
+            <div
+              key={i}
+              className="animate-pulse bg-gray-100 h-10 rounded"
+            ></div>
           ))}
         </div>
       ) : (
-        <div className="border border-gray-200 rounded-md overflow-hidden">
+        <div className="border border-gray-200 rounded-md overflow-hidden scroll-hiden">
           <div className="overflow-x-auto overflow-y-auto max-h-[400px] scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
             <table className="min-w-full text-sm text-left text-gray-700">
               <thead className="bg-white text-gray-700 sticky top-0 z-10 shadow">
@@ -134,7 +144,8 @@ const SendTemplate = ({ onSelect, onClose, returnFullTemplate = false }) => {
                   filteredTemplates.map((template, index) => (
                     <tr
                       key={index}
-                      className="border-t border-gray-200 hover:bg-gray-50 transition"
+                      className="border-t border-gray-200 hover:bg-gray-50 transition cursor-pointer"
+                      onClick={() => handleTemplateClick(template)}
                     >
                       <td className="px-4 py-4 whitespace-nowrap">
                         <span
@@ -148,13 +159,15 @@ const SendTemplate = ({ onSelect, onClose, returnFullTemplate = false }) => {
                         </span>
                         <div className="text-xs text-gray-500 mt-1">
                           {template.created_on
-                            ? new Date(Number(template.created_on)).toLocaleString(
-                                "en-IN",
-                                {
-                                  dateStyle: "medium",
-                                  timeStyle: "short",
-                                }
-                              )
+                            ? new Date(
+                                Number(template.created_on)
+                              ).toLocaleDateString("en-US", {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
                             : "Unknown"}
                         </div>
                       </td>
@@ -166,9 +179,8 @@ const SendTemplate = ({ onSelect, onClose, returnFullTemplate = false }) => {
                       </td>
                       <td className="px-4 py-4 text-center">
                         <button
-                          onClick={() => handleTemplateClick(template)}
-                          className="bg-teal-500 hover:bg-teal-600 text-white text-xs px-3 py-1 rounded"
-                          aria-label={`Select template ${template.element_name}`}
+                          onClick={(e) => handlePreviewClick(template, e)}
+                          className="bg-teal-500 hover:bg-teal-600 text-white text-xs px-3 py-2 rounded cursor-pointer"
                         >
                           Preview
                         </button>
@@ -178,6 +190,61 @@ const SendTemplate = ({ onSelect, onClose, returnFullTemplate = false }) => {
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Preview Modal */}
+      {previewTemplate && (
+        <div className="fixed inset-0 z-50 bg-[#000]/50 flex items-center justify-center px-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-lg w-full relative p-6">
+            {/* Close Button */}
+            <button
+              onClick={() => setPreviewTemplate(null)}
+              className="absolute top-3 right-4 text-gray-400 hover:text-black text-2xl font-bold"
+            >
+              ×
+            </button>
+
+            {/* Title */}
+            <h3 className="text-xl font-semibold mb-4 text-gray-800 text-center">
+              Template Preview
+            </h3>
+
+            {/* Preview Box */}
+            <div className="bg-blue-50 text-gray-800 rounded-xl p-5 text-sm whitespace-pre-wrap leading-relaxed">
+              {/* Header */}
+              {previewTemplate.container_meta?.header && (
+                <div className="font-medium mb-2">
+                  {previewTemplate.container_meta.header}
+                </div>
+              )}
+
+              {/* Image if available */}
+              {previewTemplate.container_meta?.mediaUrl && (
+                <div className="mb-4">
+                  <img
+                    src={previewTemplate.container_meta.mediaUrl}
+                    alt="Template visual"
+                    className="w-full rounded-lg border border-gray-200 shadow-sm"
+                  />
+                </div>
+              )}
+
+              {/* Message Body */}
+              {previewTemplate.container_meta?.data && (
+                <div className="mb-2">
+                  {previewTemplate.container_meta.data}
+                </div>
+              )}
+
+              {/* Footer */}
+              {previewTemplate.container_meta?.footer && (
+                <div className="mt-4 font-medium">
+                  {previewTemplate.container_meta.footer}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

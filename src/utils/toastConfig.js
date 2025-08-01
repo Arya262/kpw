@@ -1,4 +1,4 @@
-// Centralized toast configuration for the entire application
+
 export const toastConfig = {
   position: "top-right",
   autoClose: 3000,

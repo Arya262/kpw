@@ -8,7 +8,8 @@ const CallToActionSection = ({
   setPhoneCta,
   selectedAction,
 }) => {
-  if (selectedAction !== "Call To Actions" && selectedAction !== "All") return null;
+  if (selectedAction !== "Call To Actions" && selectedAction !== "All")
+    return null;
   return (
     <>
       {/* Call To Action 1 (URL) */}
@@ -39,11 +40,15 @@ const CallToActionSection = ({
                 setUrlCtas(updated);
               }}
             />
+            <select className="border rounded p-2 border-[#CACACA] focus:outline-none focus:border-teal-500">
+              <option value={"Static"}>Static</option>
+              <option value={"Dynamic"}>Dynamic</option>
+            </select>
             <div className="flex gap-2">
               <input
                 type="text"
                 placeholder="Enter Static URL"
-                className="border rounded p-2 w-full border-[#CACACA]"
+                className="border rounded p-2 w-full border-[#CACACA] focus:outline-none focus:border-teal-500"
                 value={cta.url}
                 onChange={(e) => {
                   const updated = [...urlCtas];
@@ -67,7 +72,9 @@ const CallToActionSection = ({
       </div>
       {/* Call To Action 2 (Phone Number) */}
       <div className="border border-[#CACACA] rounded p-4 mb-4">
-        <div className="font-semibold mb-1">Call To Action 2 (Phone Number)</div>
+        <div className="font-semibold mb-1">
+          Call To Action 2 (Phone Number)
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
           <input
             type="text"

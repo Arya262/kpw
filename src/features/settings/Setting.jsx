@@ -1,13 +1,36 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import ReactFlow, { Background, Controls, MiniMap, useNodesState, useEdgesState, addEdge, } from "reactflow";
+import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import ReactFlow, { 
+  Background, 
+  Controls, 
+  MiniMap, 
+  useNodesState, 
+  useEdgesState, 
+  addEdge,
+  useReactFlow,
+  ReactFlowProvider 
+} from "reactflow";
 import "reactflow/dist/style.css";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import FlowService from "../../services/flowService";
 import FlowStartNode from "./FlowStartNode";
 import TemplateNode from "./TemplateNode";
 import CustomEdge from "./CustomEdge";
 import { useAuth } from "../../context/AuthContext";
 import { API_ENDPOINTS } from "../../config/api";
+import FlowSidebar from "./FlowSidebar";
+import TextButtonNode from "./customNodeFormessage/TextButtonNode";
+import MediaButtonNode from "./customNodeFormessage/MediaButtonNode";
+import ListNode from "./customNodeFormessage/ListNode";
+import TemplateboxNode from "./customNodeFormessage/TemplateboxNode";
+import TextButtonPreview from "./customNodeFormessage/TextButtonPreview";
+import SingleProductNode from "./customNodeFormessage/SingleProductNode";
+import MultiProductNode from "./customNodeFormessage/MultiProductNode";
+import CatalogNode from "./customNodeFormessage/CatalogNode";
+import QuestionNode from "./customNodeFormessage/QuestionNode";
+import AddressNode from "./customNodeFormessage/AddressNode";
+import LocationNode from "./customNodeFormessage/LocationNode";
+import ContactCustomFieldNode from "./customNodeFormessage/ContactCustomFieldNode";
 
 const normalize = (str) =>
   str
@@ -15,7 +38,10 @@ const normalize = (str) =>
     .toLowerCase()
     .replace(/[^a-z0-9]/g, "");
 
-export default function FlowEditor() {
+const FlowEditor = () => {
+  const reactFlowWrapperRef = useRef(null);
+  const { project } = useReactFlow();
+  const [availableTemplates, setAvailableTemplates] = useState([]);
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const { user } = useAuth();
@@ -35,6 +61,18 @@ export default function FlowEditor() {
     () => ({
       flowStartNode: FlowStartNode,
       templateNode: TemplateNode,
+      "text-button": TextButtonNode,
+      "text-button-preview": TextButtonPreview,
+      "media-button": MediaButtonNode,
+      "list": ListNode,
+      "template": TemplateboxNode,
+      "single-product": SingleProductNode,
+      "multi-product": MultiProductNode,
+      "catalog": CatalogNode,
+      "ask-question": QuestionNode,
+      "ask-address": AddressNode,
+      "ask-location": LocationNode,
+      "set-custom-field": ContactCustomFieldNode
     }),
     []
   );
@@ -113,34 +151,64 @@ export default function FlowEditor() {
     [handleDelete, handleClone]
   );
 
+  // const createEdgesFromSelectedNodes = (selectedNodes) => {
+  //   if (selectedNodes.length === 0) return [];
+
+  //   const edges = [
+  //     {
+  //       id: `start-${selectedNodes[0].id}`,
+  //       source: "start",
+  //       target: selectedNodes[0].id,
+  //       type: "custom",
+  //       animated: true,
+  //       style: { stroke: "#0ea5e9", strokeWidth: 2 },
+  //       markerEnd: { type: "arrowclosed", color: "#0ea5e9" },
+  //     },
+  //   ];
+
+  //   for (let i = 1; i < selectedNodes.length; i++) {
+  //     edges.push({
+  //       id: `${selectedNodes[i - 1].id}-${selectedNodes[i].id}`,
+  //       source: selectedNodes[i - 1].id,
+  //       target: selectedNodes[i].id,
+  //       type: "custom",
+  //       animated: true,
+  //       style: { stroke: "#0ea5e9", strokeWidth: 2 },
+  //       markerEnd: { type: "arrowclosed", color: "#0ea5e9" },
+  //     });
+  //   }
+  //   return edges;
+  // };
+
   const createEdgesFromSelectedNodes = (selectedNodes) => {
-    if (selectedNodes.length === 0) return [];
+  if (selectedNodes.length === 0) return [];
 
-    const edges = [
-      {
-        id: `start-${selectedNodes[0].id}`,
-        source: "start",
-        target: selectedNodes[0].id,
-        type: "custom",
-        animated: true,
-        style: { stroke: "#0ea5e9", strokeWidth: 2 },
-        markerEnd: { type: "arrowclosed", color: "#0ea5e9" },
-      },
-    ];
+  const edges = [
+    {
+      id: `start-${selectedNodes[0].id}`,
+      source: "start",
+      target: selectedNodes[0].id,
+      type: "custom", // <- important: use CustomEdge.jsx
+      animated: true,
+      style: { stroke: "#0ea5e9", strokeWidth: 2 },
+      markerEnd: { type: "arrowclosed", color: "#0ea5e9" }, // ✅ perfect
+    },
+  ];
 
-    for (let i = 1; i < selectedNodes.length; i++) {
-      edges.push({
-        id: `${selectedNodes[i - 1].id}-${selectedNodes[i].id}`,
-        source: selectedNodes[i - 1].id,
-        target: selectedNodes[i].id,
-        type: "custom",
-        animated: true,
-        style: { stroke: "#0ea5e9", strokeWidth: 2 },
-        markerEnd: { type: "arrowclosed", color: "#0ea5e9" },
-      });
-    }
-    return edges;
-  };
+  for (let i = 1; i < selectedNodes.length; i++) {
+    edges.push({
+      id: `${selectedNodes[i - 1].id}-${selectedNodes[i].id}`,
+      source: selectedNodes[i - 1].id,
+      target: selectedNodes[i].id,
+      type: "custom",
+      animated: true,
+      style: { stroke: "#0ea5e9", strokeWidth: 2 },
+      markerEnd: { type: "arrowclosed", color: "#0ea5e9" }, // ✅ perfect
+    });
+  }
+
+  return edges;
+};
 
   useEffect(() => {
     let isMounted = true;
@@ -184,10 +252,9 @@ export default function FlowEditor() {
           toast.info("No matching templates found for active notifications.");
         }
 
-        const COLUMNS =4;
         const HORIZONTAL_GAP = 400; 
         const VERTICAL_GAP = 320;   
-        const START_NODE_WIDTH = 300; 
+        const START_NODE_WIDTH = 300;
 
         const startNode = {
           id: "start",
@@ -195,9 +262,14 @@ export default function FlowEditor() {
           position: { x: 0, y: 100 },
           data: {
             keywords: [],
+            substrings: [],
             caseSensitive: false,
-            regex: "",
-            onAddKeyword: (word) =>
+            regex: [],
+            onAddKeyword: (word) => {
+              // Ensure word is a string and trim whitespace
+              const keyword = String(word || '').trim();
+              if (!keyword) return;
+              
               setNodes((nds) =>
                 nds.map((node) =>
                   node.id === "start"
@@ -205,12 +277,13 @@ export default function FlowEditor() {
                         ...node,
                         data: {
                           ...node.data,
-                          keywords: [...node.data.keywords, word],
+                          keywords: [...node.data.keywords, keyword],
                         },
                       }
                     : node
                 )
-              ),
+              );
+            },
             onRemoveKeyword: (index) =>
               setNodes((nds) =>
                 nds.map((node) =>
@@ -220,6 +293,40 @@ export default function FlowEditor() {
                         data: {
                           ...node.data,
                           keywords: node.data.keywords.filter(
+                            (_, i) => i !== index
+                          ),
+                        },
+                      }
+                    : node
+                )
+              ),
+            onAddSubstring: (word) => {
+              const substring = String(word || '').trim();
+              if (!substring) return;
+              
+              setNodes((nds) =>
+                nds.map((node) =>
+                  node.id === "start"
+                    ? {
+                        ...node,
+                        data: {
+                          ...node.data,
+                          substrings: [...(node.data.substrings || []), substring],
+                        },
+                      }
+                    : node
+                )
+              );
+            },
+            onRemoveSubstring: (index) =>
+              setNodes((nds) =>
+                nds.map((node) =>
+                  node.id === "start"
+                    ? {
+                        ...node,
+                        data: {
+                          ...node.data,
+                          substrings: (node.data.substrings || []).filter(
                             (_, i) => i !== index
                           ),
                         },
@@ -250,6 +357,23 @@ export default function FlowEditor() {
                 )
               ),
             onChooseTemplate: () => alert("Choose Template Clicked"),
+            onFlowTriggered: (triggerData) => {
+              console.log('Flow triggered:', triggerData);
+              toast.success(`Flow triggered by message: "${triggerData.message}"`);
+              
+              // Execute the flow sequence when triggered
+              const connectedEdges = edges.filter(edge => edge.source === 'start');
+              if (connectedEdges.length > 0) {
+                // Start the flow by triggering connected nodes
+                connectedEdges.forEach((edge, index) => {
+                  setTimeout(() => {
+                    toast.info(`Step ${index + 1}: Executing ${edge.target}`);
+                  }, (index + 1) * 1000);
+                });
+              } else {
+                toast.warn('No flow connected to start node');
+              }
+            },
           },
         };
 
@@ -320,30 +444,51 @@ export default function FlowEditor() {
     [edges, nodes, setEdges]
   );
 
-  // Save current flow to localStorage
-  const handleSaveFlow = () => {
+  // Save current flow to backend
+  const handleSaveFlow = async () => {
     const name = prompt("Enter a name for this flow:");
     if (!name) return;
-    const newFlow = {
-      id: Date.now(),
-      name,
-      nodes,
-      edges,
-      date: new Date().toISOString(),
-    };
-    const updated = [newFlow, ...savedFlows];
-    setSavedFlows(updated);
-    localStorage.setItem("savedFlows", JSON.stringify(updated));
-    toast.success("Flow saved!");
-    setMode("table");
-    setNodes([]); // Clear the flow editor after saving
-    setEdges([]);
-    // --- Backend example (commented) ---
-    // fetch('/api/saveFlow', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ name, nodes, edges }),
-    // });
+    
+    const description = prompt("Enter a description (optional):") || "";
+    
+    setLoadingFlow(true);
+    
+    try {
+      const flowMetadata = {
+        name,
+        description,
+        customerId: user.customer_id,
+        isActive: false // Default to inactive when first created
+      };
+      
+      const result = await FlowService.saveFlow(nodes, edges, flowMetadata);
+      
+      if (result) {
+        // Update local state with saved flow
+        const savedFlow = {
+          id: result.id || Date.now(),
+          name: result.name,
+          description: result.description,
+          nodes: result.nodes,
+          edges: result.edges,
+          isActive: result.isActive,
+          date: result.createdAt || new Date().toISOString()
+        };
+        
+        setSavedFlows(prev => [savedFlow, ...prev]);
+        setMode("table");
+        setNodes([]); // Clear the flow editor after saving
+        setEdges([]);
+        
+        // Also save to localStorage as backup
+        const localFlows = JSON.parse(localStorage.getItem("savedFlows") || "[]");
+        localStorage.setItem("savedFlows", JSON.stringify([savedFlow, ...localFlows]));
+      }
+    } catch (error) {
+      console.error('Error saving flow:', error);
+    } finally {
+      setLoadingFlow(false);
+    }
   };
 
   // Load a flow from the table
@@ -364,18 +509,141 @@ export default function FlowEditor() {
     toast.success("Flow deleted");
   };
 
-  return (
-    <div style={{ height: "100vh", width: "100%" }}>
-      <ToastContainer position="top-right" autoClose={3000} />
+const onDragOver = (event) => {
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "move"; // Shows move cursor while dragging
+};
+
+const onDrop = useCallback((event) => {
+  try {
+    event.preventDefault();
+
+    if (!reactFlowWrapperRef.current) return;
+
+    // Required to get correct canvas offset
+    const reactFlowBounds = reactFlowWrapperRef.current.getBoundingClientRect();
+    if (!reactFlowBounds) return;
+
+    // Get node data
+    const nodeData = event.dataTransfer.getData("application/reactflow");
+    if (!nodeData) return;
+    
+    let parsedData;
+    try {
+      parsedData = JSON.parse(nodeData);
+    } catch (e) {
+      console.error('Failed to parse node data:', e);
+      return;
+    }
+
+    const position = project({
+      x: event.clientX - reactFlowBounds.left,
+      y: event.clientY - reactFlowBounds.top,
+    });
+
+    const newNode = {
+      id: `node-${Date.now()}`,
+      type: parsedData.type || 'default',
+      position,
+      data: {
+        label: parsedData.label || 'New Node',
+      },
+    };
+
+    setNodes((nds) => [...nds, newNode]);
+  } catch (error) {
+    console.error('Error in onDrop:', error);
+  }
+}, [project, setNodes, reactFlowWrapperRef]);
+
+// ...
+
+return (
+  <div style={{ height: "100vh", width: "100%", display: "flex" }}>
+    <ToastContainer position="top-right" autoClose={3000} />
+
+    {/* Sidebar (Left Panel) */}
+    <FlowSidebar templates={availableTemplates} />
+
+    {/* Flow Canvas (Right Side) */}
+    <div className="flex-1 relative" ref={reactFlowWrapperRef}>
       {mode === "table" && (
-        <div className="mb-6">
+        <div className="mb-6 p-4">
           <div className="flex justify-between items-center mb-2">
             <h2 className="text-xl font-bold">Saved Flows</h2>
             <button
               className="bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded font-medium"
               onClick={() => {
                 setMode("edit");
-                setNodes([]);
+                // Create a new Flow Start node
+                const newStartNode = {
+                  id: "start",
+                  type: "flowStartNode",
+                  position: { x: 0, y: 100 },
+                  data: {
+                    keywords: [],
+                    caseSensitive: false,
+                    regex: "",
+                    onAddKeyword: (word) => {
+                      const keyword = String(word || '').trim();
+                      if (!keyword) return;
+                      
+                      setNodes((nds) =>
+                        nds.map((node) =>
+                          node.id === "start"
+                            ? {
+                                ...node,
+                                data: {
+                                  ...node.data,
+                                  keywords: [...node.data.keywords, keyword],
+                                },
+                              }
+                            : node
+                        )
+                      );
+                    },
+                    onRemoveKeyword: (index) =>
+                      setNodes((nds) =>
+                        nds.map((node) =>
+                          node.id === "start"
+                            ? {
+                                ...node,
+                                data: {
+                                  ...node.data,
+                                  keywords: node.data.keywords.filter(
+                                    (_, i) => i !== index
+                                  ),
+                                },
+                              }
+                            : node
+                        )
+                      ),
+                    onChangeRegex: (value) =>
+                      setNodes((nds) =>
+                        nds.map((node) =>
+                          node.id === "start"
+                            ? { ...node, data: { ...node.data, regex: value } }
+                            : node
+                        )
+                      ),
+                    onToggleCaseSensitive: () =>
+                      setNodes((nds) =>
+                        nds.map((node) =>
+                          node.id === "start"
+                            ? {
+                                ...node,
+                                data: {
+                                  ...node.data,
+                                  caseSensitive: !node.data.caseSensitive,
+                                },
+                              }
+                            : node
+                        )
+                      ),
+                    onChooseTemplate: () => alert("Choose Template Clicked"),
+                  },
+                };
+                setNodes([newStartNode]);
                 setEdges([]);
               }}
             >
@@ -387,20 +655,25 @@ export default function FlowEditor() {
               <thead className="bg-[#F4F4F4] border-b-2 border-gray-300">
                 <tr>
                   <th className="px-2 py-3">Name</th>
-                  <th className="px-2 py-3">Saved Date</th>
+                  <th className="px-2 py-3">Status</th>
+                  <th className="px-2 py-3">Created Date</th>
                   <th className="px-2 py-3">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {savedFlows.length === 0 ? (
                   <tr>
-                    <td colSpan="3" className="text-gray-500 py-4">No saved flows.</td>
+                    <td colSpan="3" className="text-gray-500 py-4">
+                      No saved flows.
+                    </td>
                   </tr>
                 ) : (
                   savedFlows.map((flow) => (
                     <tr key={flow.id} className="border-b last:border-b-0">
                       <td className="px-2 py-2 font-medium">{flow.name}</td>
-                      <td className="px-2 py-2">{new Date(flow.date).toLocaleString()}</td>
+                      <td className="px-2 py-2">
+                        {new Date(flow.date).toLocaleString()}
+                      </td>
                       <td className="px-2 py-2 flex items-center justify-center gap-2">
                         <button
                           className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs"
@@ -425,22 +698,25 @@ export default function FlowEditor() {
           </div>
         </div>
       )}
+
       {mode === "edit" && (
         <>
           <button
-            className="mb-4 bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded font-medium"
+            className="absolute top-4 left-4 z-10 bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded font-medium"
             onClick={handleSaveFlow}
             disabled={loadingFlow}
           >
             Save Current Flow
           </button>
-          <div className="h-[calc(100vh-100px)] w-full">
+          <div className="h-full w-full">
             <ReactFlow
               nodes={nodes}
               edges={edges}
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
+              onDrop={onDrop}
+              onDragOver={onDragOver}
               nodeTypes={nodeTypes}
               edgeTypes={edgeTypes}
               fitView
@@ -454,5 +730,15 @@ export default function FlowEditor() {
         </>
       )}
     </div>
+  </div>
+  );
+};
+
+// Wrap the component with ReactFlowProvider
+export default function FlowEditorWrapper() {
+  return (
+    <ReactFlowProvider>
+      <FlowEditor />
+    </ReactFlowProvider>
   );
 }

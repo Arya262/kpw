@@ -32,7 +32,7 @@ export const useFormState = (initialState = {}) => {
       email: "",
       password: "",
       mobileNo: "",
-      role: "user",
+      role: "subuser",
       allowedRoutes: [],
     });
   };
@@ -45,7 +45,7 @@ export const useFormState = (initialState = {}) => {
       email: user.email || "",
       password: "",
       mobileNo: user.mobile_no || "",
-      role: user.role || "user",
+      role: user.role || "subuser",
       allowedRoutes: user.allowed_routes || [],
     });
   };

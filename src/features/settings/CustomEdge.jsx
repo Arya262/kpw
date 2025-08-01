@@ -1,5 +1,9 @@
 import React from "react";
-import { getBezierPath, useReactFlow } from "reactflow";
+import {
+  getBezierPath,
+  getMarkerEnd,
+  useReactFlow
+} from "reactflow";
 
 const CustomEdge = ({
   id,
@@ -8,7 +12,7 @@ const CustomEdge = ({
   targetX,
   targetY,
   style = {},
-  markerEnd,
+  markerEnd, // <-- object like { type: "arrow", color: "#5b5656" }
 }) => {
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX,
@@ -19,10 +23,10 @@ const CustomEdge = ({
 
   const { setEdges } = useReactFlow();
 
-  const onRemove = () => {
-    // Optional: Add confirmation
-    // if (!window.confirm("Delete this connection?")) return;
+  // ✅ Convert object to string url and register marker
+  const markerEndUrl = getMarkerEnd(markerEnd, id);
 
+  const onRemove = () => {
     setEdges((edges) => edges.filter((edge) => edge.id !== id));
   };
 
@@ -38,7 +42,7 @@ const CustomEdge = ({
           ...style,
         }}
         className="react-flow__edge-path"
-        markerEnd={markerEnd}
+        markerEnd={markerEndUrl} 
       />
       <foreignObject
         width={30}

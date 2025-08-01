@@ -210,13 +210,13 @@ const BroadcastTable = ({
                   Date
                 </th>
                 <th className="px-2 py-3 sm:px-6 text-[12px] sm:text-[16px] font-semibold text-gray-700">
-                  Broadcast Name
+                  Campaign Name
                 </th>
                 <th className="px-2 py-3 sm:px-6 text-[12px] sm:text-[16px] font-semibold text-gray-700">
-                  Message Type
+                  Message
                 </th>
                 <th className="px-2 py-3 sm:px-6 text-[12px] sm:text-[16px] font-semibold text-gray-700">
-                  Scheduled Broadcast
+                  Scheduled Campaign
                 </th>
                 <th className="px-2 py-3 sm:px-6 text-[12px] sm:text-[16px] font-semibold text-gray-700">
                   Status
@@ -231,7 +231,7 @@ const BroadcastTable = ({
         </div>
       </div>
 
-      {/* ✅ Modal for Viewing Full Message */}
+      
       {showMessageModal && (
         <MessageModal
           message={currentMessage}
@@ -243,11 +243,11 @@ const BroadcastTable = ({
   );
 };
 
-// ✅ Message Modal Component (inline)
+
 const MessageModal = ({ message, onClose, highlightCancel }) => {
   const modalRef = useRef();
 
-  // ESC key support
+
   useEffect(() => {
     const handleEsc = (e) => {
       if (e.key === "Escape") onClose();
@@ -256,7 +256,7 @@ const MessageModal = ({ message, onClose, highlightCancel }) => {
     return () => document.removeEventListener("keydown", handleEsc);
   }, [onClose]);
 
-  // Click outside to close
+
   const handleOutsideClick = (e) => {
     if (modalRef.current && !modalRef.current.contains(e.target)) {
       onClose();

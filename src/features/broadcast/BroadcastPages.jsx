@@ -9,6 +9,7 @@ import { API_ENDPOINTS } from "../../config/api";
 import { useAuth } from "../../context/AuthContext";
 
 const BroadcastPages = ({ onClose, showCustomAlert, onBroadcastCreated }) => {
+  const [step, setStep] = useState(1); // New state for managing steps
   const location = useLocation();
   const navigate = useNavigate();
   const modalRef = useRef(null);
@@ -92,9 +93,9 @@ const BroadcastPages = ({ onClose, showCustomAlert, onBroadcastCreated }) => {
         }
       } catch (err) {
         if (isMounted) {
-          setError("Failed to fetch customer lists");
-          setCustomerLists([]);
           console.error("Error fetching customer lists:", err);
+          setError("Unable to load customer lists. Please try again later.");
+          setCustomerLists([]);
         }
       } finally {
         if (isMounted) {
@@ -235,7 +236,7 @@ const BroadcastPages = ({ onClose, showCustomAlert, onBroadcastCreated }) => {
       }
     } catch (err) {
       console.error("Error saving broadcast:", err);
-      setError(err.message);
+      setError("Unable to save broadcast. Please try again later.");
       setAlertMessage("Failed to save broadcast. Please try again.");
       setShowAlert(true);
       setTimeout(() => {
@@ -307,12 +308,12 @@ const BroadcastPages = ({ onClose, showCustomAlert, onBroadcastCreated }) => {
             onClose={handleCloseAndNavigate}
             highlightClose={highlightRef.current.close}
           />
-
           <AlertDialog showAlert={showAlert} message={alertMessage} />
-
           <BroadcastForm
             formData={formData}
             handleInputChange={handleInputChange}
+            step={step} // Pass current step
+            setStep={setStep} // Pass function to update step
             handleRadioChange={handleRadioChange}
             handleMediaChange={handleMediaChange}
             selectedDate={selectedDate}

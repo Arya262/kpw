@@ -67,6 +67,7 @@ export const useChatLogic = ({
             id: c.customer_id,
             conversation_id: c.conversation_id,
             name: `${c.first_name} ${c.last_name || ""}`.trim(),
+            country_code: c.country_code,
             mobile_no: c.mobile_no,
             image: c.profile_image,
             updated_at: c.updated_at,
@@ -256,7 +257,6 @@ export const useChatLogic = ({
 
       if (!conversationId || !customerId) return;
 
-      if (window.confirm(`Delete chat with ${contact.name}?`)) {
         try {
           const response = await axios.delete(
             API_ENDPOINTS.CHAT.DELETE_CONVERSATION,
@@ -280,13 +280,13 @@ export const useChatLogic = ({
             setSelectedContact(null);
             setMessages([]);
           } else {
-            alert("Failed to delete chat: " + result.message);
+            toast.error("Failed to delete chat: " + result.message);
           }
         } catch (err) {
           console.error("❌ Error deleting chat:", err);
-          alert("Something went wrong while deleting the chat.");
+          toast.error("Something went wrong while deleting the chat.");
         }
-      }
+      
     },
     [user?.customer_id, setContacts, setMessages, setSelectedContact, permissions]
   );

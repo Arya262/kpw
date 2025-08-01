@@ -55,30 +55,40 @@ const ChatHeader = forwardRef(
       setShowDeleteDialog(false);
     };
 
-    const renderAvatar = (contact) => {
-      if (contact.image) {
-        return (
-          <img
-            src={contact.image}
-            alt="User Avatar"
-            className="w-10 h-10 rounded-full object-cover"
-          />
-        );
-      }
+const renderAvatar = (contact) => {
+  if (contact.image) {
+    return (
+      <img
+        src={contact.image}
+        alt="User Avatar"
+        className="w-10 h-10 rounded-full object-cover"
+      />
+    );
+  }
 
-      const name = contact.name || "User";
-      const firstLetter = name.charAt(0).toUpperCase();
-      const bgColor = getAvatarColor(name);
+  const name = contact.name || "User";
+  const parts = name.trim().split(/\s+/);
+  let initials = "U";
 
-      return (
-        <div
-          className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold"
-          style={{ backgroundColor: bgColor }}
-        >
-          {firstLetter}
-        </div>
-      );
-    };
+  if (parts.length === 1) {
+    initials = parts[0][0]?.toUpperCase() || "U";
+  } else if (parts.length > 1) {
+    const firstInitial = parts[0][0]?.toUpperCase() || "";
+    const lastInitial = parts[parts.length - 1][0]?.toUpperCase() || "";
+    initials = firstInitial + lastInitial;
+  }
+
+  const bgColor = getAvatarColor(name);
+
+  return (
+    <div
+      className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold"
+      style={{ backgroundColor: bgColor }}
+    >
+      {initials}
+    </div>
+  );
+};
 
     return (
       <div className="chat-header relative flex justify-between items-center px-4 py-2 border-b border-gray-200 bg-white">

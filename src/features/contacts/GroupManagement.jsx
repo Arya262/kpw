@@ -158,13 +158,55 @@ const GroupForm = ({ group, onSave, onCancel }) => {
         }
         const headers = headersLine
           .split(",")
-          .map((header) => header.trim())
+          .map((header) => header.trim().toLowerCase())
           .filter((header) => header.length > 0);
         if (headers.length === 0) {
           setFileError("No headers found in CSV.");
           resolve(false);
           return;
         }
+        
+        // Check for phone number column
+        const phoneColumns = [
+          'phone', 'mobile', 'phone_number', 'mobile_number', 
+          'phone number', 'mobile number', 'contact', 'contact_number',
+          'tel', 'telephone', 'cell', 'cellphone', 'number'
+        ];
+        
+        const phoneColumnIndex = headers.findIndex(header => 
+          phoneColumns.some(phoneCol => header.includes(phoneCol))
+        );
+        
+        if (phoneColumnIndex === -1) {
+          setFileError("CSV file must contain a phone number column. Accepted column names include: phone, mobile, phone_number, mobile_number, contact, telephone, etc.");
+          resolve(false);
+          return;
+        }
+        
+        // Check if phone column has actual phone numbers
+        const phoneColumnHasData = lines.slice(1) // Skip header row
+          .filter(line => line.trim()) // Skip empty lines
+          .some(line => {
+            const columns = line.split(',');
+            const phoneValue = columns[phoneColumnIndex]?.trim().replace(/["\']/g, ''); // Remove quotes
+            
+            // Check if the value looks like a phone number
+            if (!phoneValue) return false;
+            
+            // Remove common phone number formatting characters
+            const cleanPhone = phoneValue.replace(/[\s\-\(\)\+\.]/g, '');
+            
+            // Check if it contains at least 7 digits (minimum phone number length)
+            const digitCount = (cleanPhone.match(/\d/g) || []).length;
+            return digitCount >= 7;
+          });
+        
+        if (!phoneColumnHasData) {
+          setFileError("The phone number column exists but appears to be empty or contains invalid phone numbers. Please ensure the phone column has valid phone numbers.");
+          resolve(false);
+          return;
+        }
+        
         setCsvHeaders(headers);
         resolve(true);
       };
@@ -294,7 +336,11 @@ const GroupForm = ({ group, onSave, onCancel }) => {
               <span className="text-sm text-green-700">{file.name}</span>
               <button
                 type="button"
-                onClick={() => setFile(null)}
+                onClick={() => {
+                  setFile(null);
+                  setFileError(""); // Clear file error when removing file
+                  setCsvHeaders([]); // Clear CSV headers
+                }}
                 className="text-red-600 text-sm underline hover:text-red-800"
               >
                 Remove
@@ -311,7 +357,11 @@ const GroupForm = ({ group, onSave, onCancel }) => {
               </span>
               <button
                 type="button"
-                onClick={() => { setFileRemoved(true); }}
+                onClick={() => {
+                  setFileRemoved(true);
+                  setFileError(""); // Clear file error when removing existing file
+                  setCsvHeaders([]); // Clear CSV headers
+                }}
                 className="text-red-600 underline"
               >
                 Remove
@@ -319,7 +369,7 @@ const GroupForm = ({ group, onSave, onCancel }) => {
             </div>
           )}
           <div className="text-xs text-gray-500 mt-2">
-            <a href="/sample.csv" download className="text-[#0AA89E] underline">Download sample file</a>
+            <a href="/sample.csv" download className="text-[#0AA89E] underline">Download sample CSV file</a>
           </div>
         </div>
       </div>
@@ -327,16 +377,20 @@ const GroupForm = ({ group, onSave, onCancel }) => {
         <button
           type="button"
           onClick={onCancel}
-          className="px-4 py-2 text-gray-600 hover:text-gray-800"
+          className="px-4 py-2 bg-gray-300 text-gray-600 rounded-md  hover:text-gray-800 cursor-pointer"
         >
           Cancel
         </button>
         <button
           type="submit"
           disabled={isSubmitting || !name.trim()}
-          className="px-4 py-2 bg-teal-500 text-white rounded-md hover:bg-teal-600 disabled:opacity-50"
+          className="px-4 py-2 bg-teal-500 text-white rounded-md hover:bg-teal-600 disabled:opacity-50 cursor-pointer flex items-center justify-center"
         >
-          {isSubmitting ? "Submitting..." : "Submit"}
+          {isSubmitting ? (
+            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+          ) : (
+            "Submit"
+          )}
         </button>
       </div>
     </form>
@@ -361,7 +415,7 @@ const ConfirmationDialog = ({ showExitDialog, cancelExit, confirmExit }) => {
   if (!showExitDialog) return null;
   return (
     <div
-      className="fixed inset-0 bg-opacity-5 flex items-center justify-center z-50 transition-opacity duration-300"
+      className="fixed inset-0 bg-[#000]/50 flex items-center justify-center z-50 transition-opacity duration-300"
       onMouseDown={(e) => e.stopPropagation()}
     >
       <div
@@ -539,14 +593,13 @@ export default function GroupManagement() {
         formData.append('file', groupData.file);
       }
       if (groupData.fileRemoved) {
-        formData.append('remove_file', 'true'); // Indicate file removal
+        formData.append('remove_file', 'true'); 
       }
 
       const response = await fetch(`${API_ENDPOINTS.GROUPS.UPDATE}`, {
         method: "PUT",
         credentials: "include",
         body: formData,
-        // Do NOT set Content-Type header; browser will set it automatically
       });
 
       if (response.ok) {
@@ -565,7 +618,6 @@ export default function GroupManagement() {
 
   const handleDeleteGroup = async (group) => {
     if (!permissions.canManageGroups) return;
-    // No window.confirm here; confirmation handled by dialog
     try {
       setIsDeleting(true);
       const response = await fetch(`${API_ENDPOINTS.GROUPS.DELETE}`, {
@@ -607,14 +659,13 @@ export default function GroupManagement() {
     }
   };
 
-  // Filtered groups based on search term
+
   const displayedGroups = groups.filter(
     (g) =>
       g.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       g.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Handle Select All checkbox change
   const handleSelectAllChange = (event) => {
     const checked = event.target.checked;
     setSelectAll(checked);
@@ -627,7 +678,6 @@ export default function GroupManagement() {
     setSelectedRows(newSelected);
   };
 
-  // Handle individual checkbox change
   const handleCheckboxChange = (idx, event) => {
     setSelectedRows((prev) => ({
       ...prev,
@@ -641,7 +691,7 @@ export default function GroupManagement() {
     setSelectAll(selected === total && total > 0);
   }, [selectedRows, displayedGroups.length]);
 
-  // Bulk delete handler
+
   const handleDeleteSelected = async () => {
     const selectedIds = Object.entries(selectedRows)
       .filter(([_, isSelected]) => isSelected)
@@ -684,7 +734,7 @@ export default function GroupManagement() {
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search by group name or description..."
               aria-label="Search groups"
-              className="pl-3 pr-10 py-2 border border-gray-300 text-sm rounded-md w-full focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400"
+              className="pl-3 pr-10 py-2 border border-gray-300 text-sm rounded-md w-full focus:outline-none focus:ring-1 focus:ring-teal-400"
             />
             <svg
               className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none"
@@ -736,7 +786,7 @@ export default function GroupManagement() {
                       <button
                         onClick={() => setShowDeleteDialog(true)}
                         disabled={isDeleting}
-                        className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 disabled:opacity-50"
+                        className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 disabled:opacity-50 cursor-pointer"
                         aria-label={`Delete ${Object.values(selectedRows).filter(Boolean).length} selected groups`}
                       >
                         Delete Selected
@@ -746,11 +796,10 @@ export default function GroupManagement() {
                 )}
                 {!Object.values(selectedRows).some(Boolean) && (
                   <>
-                    <th className="px-2 py-3 sm:px-6 text-left font-semibold font-sans text-gray-700">LIST NAME</th>
-                    <th className="px-2 py-3 sm:px-6 text-left font-semibold font-sans text-gray-700">DESCRIPTION</th>
-                    <th className="px-2 py-3 sm:px-6 text-left font-semibold font-sans text-gray-700">CATEGORY</th>
+                    <th className="px-2 py-3 sm:px-6 text-center font-semibold font-sans text-gray-700">LIST NAME</th>
+                    <th className="px-2 py-3 sm:px-6 text-center font-semibold font-sans text-gray-700">DESCRIPTION</th>
+                    <th className="px-2 py-3 sm:px-6 text-center font-semibold font-sans text-gray-700">CATEGORY</th>
                     <th className="px-2 py-3 sm:px-6 text-center font-semibold font-sans text-gray-700">NO. OF CONTACTS</th>
-                    <th className="px-2 py-3 sm:px-6 text-center font-semibold font-sans text-gray-700">STORE MAPPED</th>
                     <th className="px-2 py-3 sm:px-6 text-center font-semibold font-sans text-gray-700">CREATED ON</th>
                     <th className="px-2 py-3 sm:px-6 text-center font-semibold font-sans text-gray-700">ACTIONS</th>
                   </>
@@ -788,7 +837,7 @@ export default function GroupManagement() {
       </div>
       {/* Bulk Delete Confirmation Dialog */}
       {showDeleteDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-[#000]/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-lg">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Delete Confirmation</h3>
             <p className="text-gray-600 mb-6">
@@ -798,14 +847,14 @@ export default function GroupManagement() {
               <button
                 onClick={() => setShowDeleteDialog(false)}
                 disabled={isDeleting}
-                className="px-3 py-2 w-[70px] bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50"
+                className="px-3 py-2 w-[70px] bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors duration-200 cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDeleteSelected}
                 disabled={isDeleting}
-                className="px-3 py-2 w-[70px] bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 flex items-center justify-center"
+                className="px-3 py-2 w-[70px] bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200  flex items-center justify-center cursor-pointer"
               >
                 {isDeleting ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -820,7 +869,7 @@ export default function GroupManagement() {
       {/* Group Form Modal */}
       {(showForm || editingGroup)  && (
         <div
-          className="fixed inset-0 bg-white/40 flex items-center justify-center z-50 transition-all duration-300"
+          className="fixed inset-0 bg-[#000]/40 flex items-center justify-center z-50 transition-all duration-300"
           onClick={e => {
             if (e.target === e.currentTarget) {
               setIsCrossHighlighted(true);
@@ -872,7 +921,7 @@ export default function GroupManagement() {
       )}
       {/* Group Delete Confirmation Dialog */}
       {deletingGroup && (
-        <div className="fixed inset-0  flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-[#000]/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-lg">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Delete Confirmation</h3>
             <p className="text-gray-600 mb-6">
@@ -882,7 +931,7 @@ export default function GroupManagement() {
               <button
                 onClick={() => setDeletingGroup(null)}
                 disabled={isDeleting}
-                className="px-3 py-2 w-[70px] bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50"
+                className="px-3 py-2 w-[70px] bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors duration-200 cursor-pointer"
               >
                 Cancel
               </button>
@@ -892,7 +941,7 @@ export default function GroupManagement() {
                   setDeletingGroup(null);
                 }}
                 disabled={isDeleting}
-                className="px-3 py-2 w-[70px] bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 flex items-center justify-center"
+                className="px-3 py-2 w-[70px] bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200  flex items-center justify-center cursor-pointer"
               >
                 {isDeleting ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>

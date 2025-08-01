@@ -39,7 +39,7 @@ const Broadcast = () => {
 
     if (location.state?.openForm) {
       if (!permissions.canAddBroadcast) {
-        toast.error("You do not have permission to add broadcasts.");
+        toast.error("You do not have permission to add Campaign.");
         window.history.replaceState({}, document.title);
         return;
       }
@@ -88,7 +88,7 @@ const Broadcast = () => {
 
   const handleBroadcastCreated = () => {
     broadcastDashboardRef.current?.fetchBroadcasts();
-    toast.success("Broadcast added successfully!");
+    toast.success("Campaign added successfully!");
     setShowPopup(false);
   };
 
@@ -98,7 +98,7 @@ const Broadcast = () => {
 
   const handleAddBroadcast = () => {
     if (!permissions.canAddBroadcast) {
-      toast.error("You do not have permission to add broadcasts.");
+      toast.error("You do not have permission to add Campaigns.");
       return;
     }
     setShowPopup(true);
@@ -120,13 +120,13 @@ const Broadcast = () => {
       />
 
       <div className="flex items-center justify-between">
-        <h2 className="text-xl pt-0 font-semibold">Broadcast WhatsApp Campaigns</h2>
+        <h2 className="text-xl pt-0 font-semibold">Campaigns</h2>
         <button
           className="bg-[#0AA89E] hover:bg-teal-600 text-white flex items-center gap-2 px-4 py-2 rounded"
           onClick={handleAddBroadcast}
         >
           <img src={vendor} alt="plus sign" className="w-5 h-5" />
-          Add Broadcast
+          Add Campaigns
         </button>
       </div>
 

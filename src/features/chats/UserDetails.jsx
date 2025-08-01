@@ -11,30 +11,40 @@ const UserDetails = ({ isExpanded, setIsExpanded, selectedContact }) => {
   console.log("Selected Contact:", selectedContact);
   if (!selectedContact) return null;
 
-  const renderAvatar = (contact) => {
-    const name = contact?.name || "User";
-    const firstLetter = name.charAt(0).toUpperCase();
-    const bgColor = getAvatarColor(name);
+const renderAvatar = (contact) => {
+  const name = contact?.name || "User";
+  const parts = name.trim().split(/\s+/);
+  let initials = "U";
 
-    if (contact.image) {
-      return (
-        <img
-          src={contact.image}
-          alt="User Avatar"
-          className="w-full h-full object-cover"
-        />
-      );
-    }
+  if (parts.length === 1) {
+    initials = parts[0][0]?.toUpperCase() || "U";
+  } else if (parts.length > 1) {
+    initials =
+      (parts[0][0]?.toUpperCase() || "") +
+      (parts[parts.length - 1][0]?.toUpperCase() || "");
+  }
 
+  const bgColor = getAvatarColor(name);
+
+  if (contact.image) {
     return (
-      <div
-        className="w-full h-full rounded-full flex items-center justify-center text-white font-semibold text-2xl"
-        style={{ backgroundColor: bgColor }}
-      >
-        {firstLetter}
-      </div>
+      <img
+        src={contact.image}
+        alt="User Avatar"
+        className="w-full h-full object-cover"
+      />
     );
-  };
+  }
+
+  return (
+    <div
+      className="w-full h-full rounded-full flex items-center justify-center text-white font-semibold text-2xl"
+      style={{ backgroundColor: bgColor }}
+    >
+      {initials}
+    </div>
+  );
+};
 
   return (
     <div className="w-full md:w-auto md:min-w-[300px] bg-white border-l border-gray-300 p-0">
@@ -44,13 +54,17 @@ const UserDetails = ({ isExpanded, setIsExpanded, selectedContact }) => {
           <div className="avatar mx-auto mb-2 w-16 h-16 rounded-full overflow-hidden">
             {renderAvatar(selectedContact)}
           </div>
-          <h3 className="font-semibold text-lg">{selectedContact.name || "Unnamed"}</h3>
-<p className="text-sm text-gray-600">
-  {selectedContact?.country_code
-    ? `${selectedContact.country_code.startsWith("+") ? "" : "+"}${selectedContact.country_code} `
-    : ""}
-  {selectedContact?.mobile_no || "No number"}
-</p>
+          <h3 className="font-semibold text-lg">
+            {selectedContact.name || "Unnamed"}
+          </h3>
+          <p className="text-sm text-gray-600">
+            {selectedContact?.country_code
+              ? `${selectedContact.country_code.startsWith("+") ? "" : "+"}${
+                  selectedContact.country_code
+                } `
+              : ""}
+            {selectedContact?.mobile_no || "No number"}
+          </p>
           <p className="opted-in text-green-600 text-sm">Opted-in</p>
         </div>
 
@@ -77,15 +91,24 @@ const UserDetails = ({ isExpanded, setIsExpanded, selectedContact }) => {
           className="details-toggle cursor-pointer flex items-center justify-between px-2 py-2 text-gray-600 hover:text-black"
           onClick={() => setIsExpanded(!isExpanded)}
         >
-          <span className="text-sm font-semibold tracking-wide">GENERAL DETAILS</span>
+          <span className="text-sm font-semibold tracking-wide">
+            GENERAL DETAILS
+          </span>
           <svg
-            className={`w-4 h-4 transform transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
+            className={`w-4 h-4 transform transition-transform duration-200 ${
+              isExpanded ? "rotate-180" : ""
+            }`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
             xmlns="http://www.w3.org/2000/svg"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M19 9l-7 7-7-7"
+            />
           </svg>
         </div>
 
@@ -93,7 +116,9 @@ const UserDetails = ({ isExpanded, setIsExpanded, selectedContact }) => {
         {isExpanded && (
           <div className="space-y-3 p-2">
             <div>
-              <label className="block text-sm font-medium text-black mb-1">Status</label>
+              <label className="block text-sm font-medium text-black mb-1">
+                Status
+              </label>
               <select className="w-full p-2 border border-gray-300 rounded-md bg-white text-sm">
                 <option>Open</option>
                 <option>Closed</option>
@@ -101,14 +126,18 @@ const UserDetails = ({ isExpanded, setIsExpanded, selectedContact }) => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-black mb-1">Tags</label>
+              <label className="block text-sm font-medium text-black mb-1">
+                Tags
+              </label>
               <select className="w-full p-2 border border-gray-300 rounded-md bg-white text-sm text-gray-500">
                 <option>+ Add Tags</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-black mb-1">Incoming Status</label>
+              <label className="block text-sm font-medium text-black mb-1">
+                Incoming Status
+              </label>
               <select className="w-full p-2 border border-gray-300 rounded-md bg-white text-sm">
                 <option>Allowed</option>
               </select>

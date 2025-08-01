@@ -191,15 +191,15 @@ const ExploreTemplates = () => {
       ) : templates.length === 0 ? (
         <p>No templates available.</p>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {templates.map((template) => (
             <div
               key={template.id || template.element_name}
               className="bg-white rounded-xl shadow-[0px_4px_20px_rgba(0,0,0,0.25)] overflow-hidden flex flex-col"
             >
-              {template.image_url && (
+              {template.container_meta.mediaUrl && (
                 <img
-                  src={template.image_url}
+                  src={template.container_meta.mediaUrl }
                   alt={template.element_name}
                   className="w-full h-48 object-cover p-2 rounded-2xl"
                   onError={(e) => {

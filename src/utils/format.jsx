@@ -12,4 +12,3 @@ export const formatFileSize = (bytes) => {
     const kbValue = Math.max(1, Math.round(kb));
     return `${kbValue} KB`;
   };
-  

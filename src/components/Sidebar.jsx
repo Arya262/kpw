@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -11,14 +11,22 @@ import {
   List,
   Compass,
   Users,
+  ChevronDown,
+  UserRound,
+  Contact,
+  FolderKanban,
+  Workflow,
 } from "lucide-react";
-import SidebarSubMenu from "./SidebarSubMenu";
 import { useNotifications } from "../context/NotificationContext";
+import FloatingSubmenu from "./FloatingSubmenu";
 
 const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
   const sidebarRef = useRef(null);
   const location = useLocation();
   const { unreadCount } = useNotifications();
+
+  const [submenuPosition, setSubmenuPosition] = useState(null);
+  const [activeSubmenu, setActiveSubmenu] = useState(null);
 
   const menuItems = [
     { name: "Dashboard", icon: <LayoutDashboard size={22} />, path: "/" },
@@ -26,29 +34,27 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
     { name: "LiveChat", icon: <MessageCircle size={22} />, path: "/chats" },
     {
       name: "My Contact",
-      icon: <Contact2 size={22} />,
-      path: "/contact",
+      icon: <UserRound size={22} />,
       submenu: true,
       submenuItems: [
-        { name: "Contact List", path: "/contact", icon: <List size={22} /> },
-        { name: "Group", path: "/contact/group", icon: <Users size={22} /> },
+        { name: "Contact List", path: "/contact", icon: <Contact size={20} /> },
+        { name: "Group", path: "/contact/group", icon: <Users size={20} /> },
       ],
     },
     {
       name: "Templates",
-      icon: <FileText size={22} />,
-      path: "/templates",
+      icon: <FolderKanban size={22} />,
       submenu: true,
       submenuItems: [
-        { name: "Template List", path: "/templates", icon: <List size={22} /> },
+        { name: "Template List", path: "/templates", icon: <List size={20} /> },
         {
           name: "Explore Templates",
           path: "/templates/explore",
-          icon: <Compass size={22} />,
+          icon: <Compass size={20} />,
         },
       ],
     },
-    { name: "Flow", icon: <Megaphone size={22} />, path: "/flow" },
+    { name: "Flow", icon: <Workflow size={22} />, path: "/flow" },
     { name: "Setting", icon: <Settings size={22} />, path: "/settings" },
     { name: "Help", icon: <HelpCircle size={22} />, path: "/help" },
   ];
@@ -59,7 +65,6 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
         isOpen &&
         sidebarRef.current &&
         !sidebarRef.current.contains(event.target) &&
-        !event.target?.closest("button") &&
         window.innerWidth < 1024
       ) {
         setIsOpen(false);
@@ -79,9 +84,37 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
     }
   }, [location.pathname]);
 
+  useEffect(() => {
+    setActiveSubmenu(null);
+  }, [location.pathname]);
+
   const handleNavClick = () => {
     if (window.innerWidth < 1024) {
       setIsOpen(false);
+    }
+  };
+
+  const handleMouseEnter = (e, itemName) => {
+    if (window.innerWidth >= 1024) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      setActiveSubmenu(itemName);
+      setSubmenuPosition({
+        top: rect.top,
+        left: rect.right + 8,
+      });
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (window.innerWidth >= 1024) {
+      setActiveSubmenu(null);
+      setSubmenuPosition(null);
+    }
+  };
+
+  const toggleMobileSubmenu = (itemName) => {
+    if (window.innerWidth < 1024) {
+      setActiveSubmenu(activeSubmenu === itemName ? null : itemName);
     }
   };
 
@@ -89,42 +122,116 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
     <div
       ref={sidebarRef}
       role="navigation"
-      aria-label="Main sidebar"
-      tabIndex={-1}
       className={`
-         fixed top-0 left-0 z-50
-  w-64 h-screen
-  bg-[#fff] text-white
-  flex flex-col
-  transition-transform duration-300 ease-in-out
-  ${isOpen ? "translate-x-0" : "-translate-x-full"}
-  lg:relative lg:translate-x-0 lg:top-0 lg:h-auto
-  lg:bg-white lg:text-black
-  shadow-2xl lg:shadow-2xl
-  ${className}
+        fixed top-0 left-0 z-auto h-screen
+        bg-white text-black flex flex-col
+        transition-all duration-300 ease-in-out
+        group
+        ${isOpen ? "translate-x-0" : "-translate-x-full"}
+        lg:relative lg:translate-x-0 lg:top-0 lg:h-auto
+        lg:w-20 lg:hover:w-64
+        shadow-2xl lg:shadow-2xl
+        ${className}
       `}
     >
-      {/* Logo (visible only on mobile) */}
       <div className="px-4 py-5 border-b border-gray-200 lg:hidden shrink-0">
         <NavLink to="/" onClick={handleNavClick}>
           <img src="/logo.png" alt="Logo" className="h-8" />
         </NavLink>
       </div>
 
-      {/* Menu Items */}
-      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
-        {menuItems.map((item) =>
-          item.submenu ? (
-            <SidebarSubMenu
+      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 relative">
+        {menuItems.map((item) => {
+          const isParentActive =
+            item.submenu &&
+            item.submenuItems?.some((sub) => location.pathname === sub.path);
+
+          return item.submenu ? (
+            <div
               key={item.name}
-              item={item}
-              isOpen={isOpen}
-              setIsOpen={setIsOpen}
-            />
+              className="relative"
+              onMouseEnter={(e) => handleMouseEnter(e, item.name)}
+              onMouseLeave={handleMouseLeave}
+            >
+              <div
+                className={`flex items-center gap-4 px-4 py-3 rounded-xl font-medium text-base shadow-sm cursor-pointer transition-all duration-200
+                  ${isParentActive ? "bg-teal-500 text-white" : "bg-white hover:bg-gray-100 text-black"}
+                `}
+                onClick={() => toggleMobileSubmenu(item.name)}
+              >
+                <span className="w-5 h-5 flex items-center justify-center">
+                  {item.icon}
+                </span>
+                <span
+                  className="whitespace-nowrap overflow-hidden opacity-0 group-hover:opacity-100 group-hover:ml-1 transition-all duration-300"
+                >
+                  {item.name}
+                </span>
+                <span className="lg:hidden">
+                  <ChevronDown
+                    size={18}
+                    className={`transition-transform duration-200 ${activeSubmenu === item.name ? "rotate-180" : ""}`}
+                  />
+                </span>
+              </div>
+
+              {activeSubmenu === item.name && (
+                <div className="lg:hidden mt-1 flex flex-col gap-2">
+                  {item.submenuItems.map((sub) => (
+                    <NavLink
+                      key={sub.name}
+                      to={sub.path}
+                      end
+                      onClick={handleNavClick}
+                      className={({ isActive }) =>
+                        `flex items-center gap-4 px-4 py-3 rounded-xl font-medium text-base shadow-sm transition-all duration-200 ${
+                          isActive
+                            ? "bg-teal-500 text-white"
+                            : "bg-white text-black hover:bg-gray-100"
+                        }`
+                      }
+                    >
+                      <span className="w-5 h-5 flex items-center justify-center">
+                        {sub.icon}
+                      </span>
+                      <span>{sub.name}</span>
+                    </NavLink>
+                  ))}
+                </div>
+              )}
+
+              {activeSubmenu === item.name && (
+                <div className="hidden lg:block">
+                  <FloatingSubmenu position={submenuPosition} visible={true}>
+                    {item.submenuItems.map((sub) => (
+                      <NavLink
+                        key={sub.name}
+                        to={sub.path}
+                        end
+                        onClick={handleNavClick}
+                        className={({ isActive }) =>
+                          `flex items-center gap-4 px-4 py-3 rounded-xl font-medium text-base shadow-sm transition-all duration-200 ${
+                            isActive
+                              ? "bg-teal-500 text-white"
+                              : "bg-white text-black hover:bg-gray-100"
+                          }`
+                        }
+                      >
+                        <span className="w-5 h-5 flex items-center justify-center">
+                          {sub.icon}
+                        </span>
+                        <span>{sub.name}</span>
+                      </NavLink>
+                    ))}
+                  </FloatingSubmenu>
+                </div>
+              )}
+            </div>
           ) : (
             <NavLink
               key={item.name}
               to={item.path}
+              end
               onClick={handleNavClick}
               className={({ isActive }) =>
                 `group flex items-center gap-4 px-4 py-3 rounded-xl font-medium text-base shadow-sm transition-all duration-200 ${
@@ -134,29 +241,23 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
                 }`
               }
             >
-              {({ isActive }) => (
-                <>
-                  <span className="w-5 h-5 flex items-center justify-center relative">
-                    {item.icon}
-                    {item.name === "Chats" && unreadCount > 0 && (
-                      <span
-                        className="absolute -top-1 -right-44 min-w-[20px] h-5 px-2 py-1 text-xs font-bold leading-none rounded-full shadow"
-                        style={{
-                          backgroundColor: isActive ? "#fff" : "#0AA89E",
-                          color: isActive ? "#24AEAE" : "#fff",
-                          border: isActive ? "1px solid #24AEAE" : "none",
-                        }}
-                      >
-                        {unreadCount > 99 ? "99+" : unreadCount}
-                      </span>
-                    )}
+              <span className="w-5 h-5 flex items-center justify-center relative">
+                {item.icon}
+                {item.name === "LiveChat" && unreadCount > 0 && (
+                  <span
+                    className="absolute -top-1 -right-3 inline-flex items-center justify-center min-w-[20px] h-5 px-2 text-xs font-bold leading-none text-white rounded-full shadow"
+                    style={{ backgroundColor: "#0AA89E" }}
+                  >
+                    {unreadCount > 99 ? "99+" : unreadCount}
                   </span>
-                  <span>{item.name}</span>
-                </>
-              )}
+                )}
+              </span>
+              <span className="whitespace-nowrap overflow-hidden opacity-0 group-hover:opacity-100 group-hover:ml-1 transition-all duration-300">
+                {item.name}
+              </span>
             </NavLink>
-          )
-        )}
+          );
+        })}
       </div>
     </div>
   );

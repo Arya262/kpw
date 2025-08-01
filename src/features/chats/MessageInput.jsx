@@ -135,20 +135,35 @@ const MessageInput = ({ onSendMessage, selectedContact, canSendMessage }) => {
           <div className="mb-2 p-3 bg-gray-50 border border-gray-200 rounded-md text-sm">
             <div className="flex justify-between items-center mb-2 text-gray-700">
               <div className="flex items-center gap-2">
-                <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <svg
+                  className="w-5 h-5 text-gray-500"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
-                <span className="font-medium">Session expired. Send a template to reopen.</span>
+                <span className="font-medium">
+                  Session has expired. To continue chat, you can send
+                  template-based messages. When the customer sends a message,
+                  <br />
+                  the session will automatically reopen.
+                </span>
               </div>
               <button
                 onClick={() => setShowTemplates(true)}
-                className="h-8 px-3 flex items-center justify-center text-white bg-teal-500 hover:bg-teal-600 rounded-full text-xs whitespace-nowrap"
+                className="h-8 px-3 flex items-center justify-center text-white bg-teal-500 hover:bg-teal-600 rounded-full text-xs whitespace-nowrap cursor-pointer"
               >
                 Select Template
               </button>
             </div>
             <div className="text-xs text-gray-500">
-              Session expires after 24 hours of inactivity.
+              A session automatically expires after 24 hours.
             </div>
           </div>
         )}
@@ -171,10 +186,34 @@ const MessageInput = ({ onSendMessage, selectedContact, canSendMessage }) => {
               😊
             </button>
 
-            <div className="flex gap-1 mr-2">
-              <button type="button" onClick={() => handleFormatting("bold")} className="font-bold text-sm hover:text-gray-700" title="Bold" disabled={!canSendMessage}>B</button>
-              <button type="button" onClick={() => handleFormatting("italic")} className="italic text-sm hover:text-gray-700" title="Italic" disabled={!canSendMessage}>I</button>
-              <button type="button" onClick={() => handleFormatting("strikeThrough")} className="line-through text-sm hover:text-gray-700" title="Strikethrough" disabled={!canSendMessage}>S</button>
+            <div className="flex gap-3 mr-2">
+              <button
+                type="button"
+                onClick={() => handleFormatting("bold")}
+                className="font-bold text-sm hover:text-gray-700"
+                title="Bold"
+                disabled={!canSendMessage}
+              >
+                B
+              </button>
+              <button
+                type="button"
+                onClick={() => handleFormatting("italic")}
+                className="italic text-sm hover:text-gray-700"
+                title="Italic"
+                disabled={!canSendMessage}
+              >
+                I
+              </button>
+              <button
+                type="button"
+                onClick={() => handleFormatting("strikeThrough")}
+                className="line-through text-sm hover:text-gray-700"
+                title="Strikethrough"
+                disabled={!canSendMessage}
+              >
+                S
+              </button>
             </div>
 
             <div
@@ -196,14 +235,16 @@ const MessageInput = ({ onSendMessage, selectedContact, canSendMessage }) => {
                 if (!isWithin24Hours || !canSendMessage) e.preventDefault();
               }}
               className={`flex-1 text-sm focus:outline-none max-h-36 overflow-y-auto ${
-                !isWithin24Hours || !canSendMessage ? "text-gray-400 cursor-not-allowed" : ""
+                !isWithin24Hours || !canSendMessage
+                  ? "text-gray-400 cursor-not-allowed"
+                  : ""
               }`}
               style={{ minHeight: "20px" }}
             ></div>
 
             <button
               type="submit"
-              className="ml-2 h-8 px-3 flex items-center justify-center text-white bg-teal-500 hover:bg-teal-600 rounded-full text-xs whitespace-nowrap"
+              className="ml-2 h-8 px-3 flex items-center justify-center text-white bg-teal-500 hover:bg-teal-600 rounded-full text-xs whitespace-nowrap cursor-pointer"
               disabled={!isWithin24Hours}
               onClick={() => {
                 if (!canSendMessage) {
@@ -212,9 +253,7 @@ const MessageInput = ({ onSendMessage, selectedContact, canSendMessage }) => {
               }}
             >
               <Send className="w-4 h-4 mr-1" />
-              {sanitizeHtml(message).trim()
-                ? "Send Message"
-                : "Send Template"}
+              {sanitizeHtml(message).trim() ? "Send Message" : "Send Template"}
             </button>
           </div>
         </form>
@@ -234,7 +273,10 @@ const MessageInput = ({ onSendMessage, selectedContact, canSendMessage }) => {
 
       {showTemplates && (
         <div className="fixed inset-0 bg-[#000]/50  z-50 flex justify-center items-center p-2">
-          <div ref={modalRef} className="relative bg-white rounded-xl shadow-lg w-full max-w-3xl p-4 sm:p-6">
+          <div
+            ref={modalRef}
+            className="relative bg-white rounded-xl shadow-lg w-full max-w-3xl p-4 sm:p-6"
+          >
             <SendTemplate
               onSelect={(templateName) => {
                 onSendMessage({ template_name: templateName });

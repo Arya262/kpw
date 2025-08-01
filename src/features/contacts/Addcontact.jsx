@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import ContactTabs from "./ContactTabs";
 import SuccessErrorMessage from "./SuccessErrorMessage";
 import SingleContactForm from "./SingleContactForm";
@@ -8,9 +8,8 @@ import { useAuth } from "../../context/AuthContext";
 
 const GroupNameErrorDialog = ({ isOpen, message, onClose }) => {
   if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-[#4a4a4a]/90   flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-[#4a4a4a]/90 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 w-full max-w-sm shadow-xl">
         <h3 className="text-lg font-semibold text-gray-800 mb-4">
           Duplicate Group Name
@@ -31,13 +30,11 @@ const GroupNameErrorDialog = ({ isOpen, message, onClose }) => {
 
 export default function AddContact({ closePopup, onSuccess }) {
   const [tab, setTab] = useState("single");
-  const [phone, setPhone] = useState("+1 ");
+  const [phone, setPhone] = useState("");
   const [optStatus, setOptStatus] = useState("Opted In");
   const [name, setName] = useState("");
   const [file, setFile] = useState(null);
   const [groupName, setGroupName] = useState("");
-  const [countryCodes, setCountryCodes] = useState([]);
-  const [selectedCountry, setSelectedCountry] = useState(null);
   const [phoneError, setPhoneError] = useState("");
   const [groupNameError, setGroupNameError] = useState("");
   const [isTouched, setIsTouched] = useState(false);
@@ -51,64 +48,16 @@ export default function AddContact({ closePopup, onSuccess }) {
     message: "",
   });
 
-  useEffect(() => {
-    const fetchCountryCodes = async () => {
-      try {
-        const res = await fetch(
-          "https://countriesnow.space/api/v0.1/countries/codes"
-        );
-        const data = await res.json();
-        const sorted = data.data
-          ?.map((c) => ({
-            value: c.dial_code,
-            label: `${c.code} ${c.dial_code} ${c.name}`,
-          }))
-          .sort((a, b) => a.label.localeCompare(b.label));
-        setCountryCodes(sorted);
-        // eslint-disable-next-line no-unused-vars
-      } catch (err) {
-        setCountryCodes([
-          { value: "+1", label: "US +1 United States" },
-          { value: "+91", label: "IN +91 India" },
-        ]);
-      }
-    };
-    fetchCountryCodes();
-  }, []);
-
-  useEffect(() => {
-    if (countryCodes.length && !selectedCountry) {
-      const india = countryCodes.find((c) => c.value === "+91");
-      setSelectedCountry(india || countryCodes[0]);
-      setPhone(`${(india || countryCodes[0]).value} `);
-    }
-  }, [countryCodes, selectedCountry]);
-
-  const validatePhoneNumber = () => {
-    const raw = phone.split(" ")[1] || "";
-    const cleaned = raw.replace(/\D/g, "");
-    const pattern = /^[0-9]{10}$/;
-    if (!cleaned) {
-      setPhoneError("Please enter a phone number.");
-      return false;
-    } else if (!pattern.test(cleaned)) {
-      setPhoneError("Phone number must be exactly 10 digits.");
-      return false;
-    }
-    setPhoneError("");
-    return true;
-  };
-
   const validateGroupName = () => {
     if (tab === "bulk" && !groupName.trim()) {
       setGroupNameError("Group name is required for bulk upload.");
       return false;
     }
-    if (tab === "bulk" && groupName.trim().length < 2) {
+    if (groupName.trim().length < 2) {
       setGroupNameError("Group name must be at least 2 characters long.");
       return false;
     }
-    if (tab === "bulk" && groupName.trim().length > 50) {
+    if (groupName.trim().length > 50) {
       setGroupNameError("Group name must be less than 50 characters.");
       return false;
     }
@@ -130,10 +79,8 @@ export default function AddContact({ closePopup, onSuccess }) {
   };
 
   const handleSubmit = async () => {
-    // Validate based on current tab
-    if (tab === "single") {
-      if (!validatePhoneNumber()) return;
-    } else if (tab === "bulk") {
+    if (tab === "single" && phoneError) return;
+    if (tab === "bulk") {
       if (!validateGroupName()) return;
       if (!file) {
         setErrorMessage("Please provide a CSV file.");
@@ -142,16 +89,20 @@ export default function AddContact({ closePopup, onSuccess }) {
       }
     }
 
-    setIsSubmitting(true);
-
     if (!user) {
       alert("You must be logged in.");
-      setIsSubmitting(false);
       return;
     }
 
+    setIsSubmitting(true);
+
     try {
       if (tab === "single") {
+        const digits = phone.replace(/\D/g, "");
+        const countryCodeMatch = phone.match(/^\+?\d{1,4}/);
+        const countryCode = countryCodeMatch ? countryCodeMatch[0] : "";
+        const nationalNumber = digits.replace(countryCode, "");
+
         const response = await fetch(API_ENDPOINTS.CONTACTS.ADD_SINGLE, {
           method: "POST",
           headers: {
@@ -159,9 +110,9 @@ export default function AddContact({ closePopup, onSuccess }) {
           },
           credentials: "include",
           body: JSON.stringify({
-            country_code: selectedCountry.value,
+            country_code: countryCode,
             first_name: name.trim(),
-            mobile_no: phone.split(" ")[1],
+            mobile_no: nationalNumber,
             customer_id: user.customer_id,
           }),
         });
@@ -170,7 +121,7 @@ export default function AddContact({ closePopup, onSuccess }) {
         if (data.success) {
           setSuccessMessage(data.message || "Contact added successfully!");
           setErrorMessage("");
-          if (onSuccess) onSuccess(data.message || "Contact added successfully!");
+          if (onSuccess) onSuccess(data.message);
         } else {
           setErrorMessage(data.message || "Failed to add contact.");
           setSuccessMessage("");
@@ -182,12 +133,6 @@ export default function AddContact({ closePopup, onSuccess }) {
         formData.append("group_name", groupName.trim());
         formData.append("field_mapping", JSON.stringify(fieldMapping));
 
-        // 🔍 Log FormData before sending
-        console.log("📤 Submitting FormData:");
-        for (let [key, value] of formData.entries()) {
-          console.log(`${key}:`, value);
-        }
-
         const response = await fetch(API_ENDPOINTS.CONTACTS.ADD_MULTIPLE, {
           method: "POST",
           credentials: "include",
@@ -196,22 +141,17 @@ export default function AddContact({ closePopup, onSuccess }) {
 
         const data = await response.json();
         if (data.success) {
-          setSuccessMessage(data.message || "Contacts imported from file!");
+          setSuccessMessage(data.message || "Contacts imported successfully!");
           setErrorMessage("");
-          if (onSuccess)
-            onSuccess(data.message || "Contacts imported successfully!");
+          if (onSuccess) onSuccess(data.message);
         } else {
-          console.log("Backend error response:", data);
           if (
-            data.message &&
-            data.message.toLowerCase().includes("group") &&
-            data.message.toLowerCase().includes("already exists")
+            data.message?.toLowerCase().includes("group") &&
+            data.message?.toLowerCase().includes("already exists")
           ) {
             setGroupNameErrorDialog({
               isOpen: true,
-              message:
-                data.message ||
-                "This group name already exists. Please choose a different name.",
+              message: data.message,
             });
           } else {
             setErrorMessage(data.message || "Failed to import from file.");
@@ -236,23 +176,15 @@ export default function AddContact({ closePopup, onSuccess }) {
           successMessage={successMessage}
           errorMessage={errorMessage}
         />
-        <p className="text-sm text-gray-600 mb-4">
-          Add one contact
-          {/* <a href="#" className="text-[#0AA89E] underline">
-            Learn more
-          </a> */}
-        </p>
+        <p className="text-sm text-gray-600 mb-4">Add one contact</p>
         <ContactTabs tab={tab} setTab={handleTabChange} />
+
         {tab === "single" ? (
           <SingleContactForm
             phone={phone}
             setPhone={setPhone}
-              setPhoneError={setPhoneError}
-            selectedCountry={selectedCountry}
-            setSelectedCountry={setSelectedCountry}
-            countryCodes={countryCodes}
             phoneError={phoneError}
-            validatePhoneNumber={validatePhoneNumber}
+            setPhoneError={setPhoneError}
             isTouched={isTouched}
             setIsTouched={setIsTouched}
             optStatus={optStatus}
@@ -272,10 +204,11 @@ export default function AddContact({ closePopup, onSuccess }) {
             setFieldMapping={setFieldMapping}
           />
         )}
+
         <button
           onClick={handleSubmit}
           disabled={isSubmitting}
-          className={`mt-4 px-4 py-2 rounded mx-auto block cursor-pointer ${
+          className={`mt-4 px-4 py-2 rounded mx-auto block ${
             isSubmitting
               ? "bg-gray-400 cursor-not-allowed text-white"
               : "bg-teal-600 text-white"
@@ -288,10 +221,13 @@ export default function AddContact({ closePopup, onSuccess }) {
             : "Import Contacts"}
         </button>
       </div>
+
       <GroupNameErrorDialog
         isOpen={groupNameErrorDialog.isOpen}
         message={groupNameErrorDialog.message}
-        onClose={() => setGroupNameErrorDialog({ isOpen: false, message: "" })}
+        onClose={() =>
+          setGroupNameErrorDialog({ isOpen: false, message: "" })
+        }
       />
     </>
   );

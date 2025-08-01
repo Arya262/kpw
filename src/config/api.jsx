@@ -63,4 +63,13 @@ export const API_ENDPOINTS = {
     UPDATE_SUBUSER: (userId) => `${API_BASE}/updatesubuser?user_id=${userId}`,
     DELETE_SUBUSER: (userId) => `${API_BASE}/deletesubuser?user_id=${userId}`,
   },
+  FLOWS: {
+    GET_ALL: (customerId) => `${API_BASE}/flows?customer_id=${customerId}`,
+    CREATE: `${API_BASE}/flows`,
+    UPDATE: (flowId) => `${API_BASE}/flows/${flowId}`,
+    DELETE: (flowId) => `${API_BASE}/flows/${flowId}`,
+    TOGGLE_STATUS: (flowId) => `${API_BASE}/flows/${flowId}/toggle`,
+    EXECUTE: (flowId) => `${API_BASE}/flows/${flowId}/execute`,
+    GET_EXECUTION_LOG: (flowId) => `${API_BASE}/flows/${flowId}/executions`,
+  },
 };

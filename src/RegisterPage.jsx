@@ -6,6 +6,7 @@ import { API_ENDPOINTS } from "./config/api";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { handleError, handleSuccess, USER_MESSAGES } from "./utils/errorHandling";
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import { useGoogleLogin } from '@react-oauth/google';
@@ -109,13 +110,13 @@ const RegisterPage = () => {
 
       const { success, message } = res.data;
       if (success) {
-        toast.success("Account created! You can now log in.");
+        handleSuccess("Account created! You can now log in.");
         setTimeout(() => navigate("/login"), 1000);
       } else {
-        toast.error(message || "Something went wrong.");
+        handleError(new Error(message || 'Problem creating account'), USER_MESSAGES.CONTACT_SAVE_FAILED);
       }
-    } catch {
-      toast.error("Failed to create account. Try again.");
+    } catch (error) {
+      handleError(error, USER_MESSAGES.CONTACT_SAVE_FAILED);
     } finally {
       setLoading(false);
     }

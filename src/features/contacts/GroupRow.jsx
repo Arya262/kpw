@@ -113,20 +113,17 @@ export default function GroupRow({
           />
         </div>
       </td>
-      <td className="px-2 py-4 sm:px-4 whitespace-nowrap text-[12px] sm:text-[16px] text-gray-700 font-semibold cursor-pointer" onClick={() => onEditClick(group)}>
+      <td className="px-2 py-4 sm:px-4 whitespace-nowrap text-[12px] sm:text-[16px] text-gray-700 font-semibold cursor-pointer text-center" onClick={() => onEditClick(group)}>
         {group.name}
       </td>
-      <td className="px-2 py-4 text-[12px] sm:text-[16px] text-gray-700">
+      <td className="px-2 py-4 text-[12px] sm:text-[16px] text-center text-gray-700">
         {group.description || "-"}
       </td>
-      <td className="px-2 py-4 text-[12px] sm:text-[16px] text-gray-700">
+      <td className="px-2 py-4 text-[12px] sm:text-[16px] text-center text-gray-700">
         {group.category || "Imported Data"}
       </td>
       <td className="px-2 py-4 text-[12px] sm:text-[16px] text-center text-gray-700">
         {group.total_contacts || 0}
-      </td>
-      <td className="px-2 py-4 text-[12px] sm:text-[16px] text-center text-gray-700">
-        {group.store_mapped || "All stores"}
       </td>
       <td className="px-2 py-4 text-[12px] sm:text-[16px] text-center text-gray-700">
         {group.created_at ? formatDate(group.created_at) : "-"}
@@ -164,7 +161,7 @@ export default function GroupRow({
                   }
                   onEditClick(group);
                 }}
-                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 cursor-pointer"
               >
                 <Edit2 className="w-4 h-4" /> Edit Group
               </button>
@@ -177,7 +174,7 @@ export default function GroupRow({
                   }
                   onDeleteClick(group);
                 }}
-                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2"
+                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2 cursor-pointer"
                 disabled={isDeleting}
               >
                 <Trash2 className="w-4 h-4" /> Delete

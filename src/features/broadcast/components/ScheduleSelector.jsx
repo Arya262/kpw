@@ -64,7 +64,7 @@ const ScheduleSelector = ({ formData, handleRadioChange, selectedDate, setSelect
   return (
     <div className="w-full">
       <label className="block text-sm mb-1 font-semibold text-black">
-        Schedule Broadcast
+        Schedule Campaign
       </label>
       <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
         <label className="flex items-center">

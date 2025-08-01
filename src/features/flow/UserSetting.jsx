@@ -54,16 +54,20 @@ function PopoverPortal({ anchorRect, children, onClose, position = "bottom" }) {
 
 const UserSetting = () => {
   const { user } = useAuth();
+
   const permissions = useMemo(() => {
     if (!user?.role) return {};
-    if (["owner", "admin", "main"].includes(user.role)) {
+
+    if (user.role === "main") {
       return ROLE_PERMISSIONS.main;
     }
-    if (["manager", "user", "viewer", "sub_user"].includes(user.role)) {
+
+    if (user.role === "subuser") {
       return ROLE_PERMISSIONS.sub_user;
     }
+
     return {};
-  }, [user]);
+  }, [user?.role]);
 
   // Use custom hooks
   const {
@@ -95,39 +99,14 @@ const UserSetting = () => {
     { key: "/help", label: "Help" },
   ];
 
-  // Role options for editing
-  const roleOptions = [
-    {
-      value: "owner",
-      label: "Owner",
-      color: "bg-blue-100 text-blue-700",
-      icon: <Crown size={14} className="inline mr-1" />,
-    },
-    {
-      value: "admin",
-      label: "Admin",
-      color: "bg-purple-100 text-purple-700",
-      icon: <Shield size={14} className="inline mr-1" />,
-    },
-    {
-      value: "manager",
-      label: "Manager",
-      color: "bg-green-100 text-green-700",
-      icon: <Star size={14} className="inline mr-1" />,
-    },
-    {
-      value: "user",
-      label: "User",
-      color: "bg-gray-100 text-gray-700",
-      icon: <User size={14} className="inline mr-1" />,
-    },
-    {
-      value: "viewer",
-      label: "Viewer",
-      color: "bg-yellow-100 text-yellow-700",
-      icon: <User size={14} className="inline mr-1" />,
-    },
-  ];
+const roleOptions = [
+  {
+    value: "subuser",
+    label: "Sub User",
+    color: "bg-yellow-100 text-yellow-700",
+    icon: <User size={14} className="inline mr-1" />,
+  },
+];
 
   // Modal states
   const [showAddUser, setShowAddUser] = useState(false);
@@ -149,7 +128,11 @@ const UserSetting = () => {
       return;
     }
 
-    if (!addUserForm.formData.firstName.trim() || !addUserForm.formData.email.trim() || !addUserForm.formData.password.trim()) {
+    if (
+      !addUserForm.formData.firstName.trim() ||
+      !addUserForm.formData.email.trim() ||
+      !addUserForm.formData.password.trim()
+    ) {
       toast.error("First Name, Email, and Password are required");
       return;
     }
@@ -176,7 +159,10 @@ const UserSetting = () => {
       return;
     }
 
-    const result = await updateUser(editUser.user_id, editUserForm.getApiPayload());
+    const result = await updateUser(
+      editUser.user_id,
+      editUserForm.getApiPayload()
+    );
     if (result.success) {
       toast.success(result.message);
       editUserForm.resetForm();
@@ -213,7 +199,8 @@ const UserSetting = () => {
   // Popover positioning effect
   useEffect(() => {
     if (openPopover.userId && openPopover.type) {
-      const badgeEl = popoverRefs.current[`${openPopover.userId}_${openPopover.type}`];
+      const badgeEl =
+        popoverRefs.current[`${openPopover.userId}_${openPopover.type}`];
       if (badgeEl) {
         const rect = badgeEl.getBoundingClientRect();
         const popoverHeight = 200;
@@ -331,7 +318,7 @@ const UserSetting = () => {
                       key={u.id || u.user_id || idx}
                       className="border-t border-b border-b-[#C3C3C3] hover:bg-gray-50 text-md"
                     >
-                      <td className="px-2 py-4 sm:px-4 sm:py-4 whitespace-nowrap text-[12px] sm:text-[16px] text-gray-700 text-left">
+                      <td className="px-2 py-4 sm:px-4 sm:py-4 whitespace-nowrap text-[12px] sm:text-[16px] text-gray-700 text-center">
                         <div className="flex flex-col gap-1">
                           <span className="font-medium text-[12px] sm:text-[16px] text-gray-700">
                             {u.first_name} {u.last_name}
@@ -349,7 +336,7 @@ const UserSetting = () => {
                         ) : (
                           <div className="inline-flex items-center text-center gap-2">
                             <select
-                              value={u.role || "user"}
+                              value={u.role || "subuser"}
                               onChange={(e) =>
                                 handleRoleChange(u.id, e.target.value)
                               }
@@ -357,18 +344,17 @@ const UserSetting = () => {
     focus:outline-none focus:ring-2 focus:ring-teal-400
     flex items-center justify-center text-center leading-tight
     ${
-      u.role === "admin"
-        ? "bg-purple-100 text-purple-700"
-        : u.role === "manager"
-        ? "bg-green-100 text-green-700"
-        : u.role === "viewer"
-        ? "bg-yellow-100 text-yellow-700"
+      u.role === "subuser"
+        ? "bg-yellow-100 text-yellow-700" 
         : "bg-gray-100 text-gray-700"
     }`}
                               style={{ minWidth: 120 }}
                             >
                               {roleOptions
-                                .filter((r) => r.value !== "owner")
+                                .filter(
+                                  (r) =>
+                                   r.value !== "main"
+                                )
                                 .map((opt) => (
                                   <option key={opt.value} value={opt.value}>
                                     {opt.label}
@@ -384,7 +370,7 @@ const UserSetting = () => {
                           </div>
                         )}
                       </td>
-                      <td className="px-2 py-4 sm:px-4 text-[12px] sm:text-[16px] text-gray-700 text-left relative">
+                      <td className="px-2 py-4 sm:px-4 text-[12px] sm:text-[16px] text-gray-700 text-center relative">
                         <div className="mb-1">
                           <span className="font-semibold text-xs text-gray-600 mr-2">
                             Routes:
@@ -465,7 +451,7 @@ const UserSetting = () => {
                         </div>
                         {/* Features section removed */}
                       </td>
-                      <td className="px-2 py-4 sm:px-4 text-[12px] sm:text-[16px] text-gray-700 text-left">
+                      <td className="px-2 py-4 sm:px-4 text-[12px] sm:text-[16px] text-gray-700 text-center">
                         {u.role !== "owner" && (
                           <>
                             <button

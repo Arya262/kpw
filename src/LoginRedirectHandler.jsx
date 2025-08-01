@@ -92,7 +92,7 @@ const LoginPage = () => {
     if (!validate()) return;
 
     try {
-      setLoading(true); // ✅ show loader
+      setLoading(true); 
       const response = await axios.post(
         API_ENDPOINTS.AUTH.LOGIN,
         {
@@ -110,7 +110,7 @@ const LoginPage = () => {
 
       if (success) {
         login(user);
-        // Clear any existing history and navigate to appropriate dashboard
+        
         if (user.role === "admin" || user.role === "super_admin") {
           navigate("/admin/dashboard", { replace: true });
         } else {
@@ -123,7 +123,7 @@ const LoginPage = () => {
       }
     } catch (err) {
       console.error("Login error:", err);
-      // Try to show backend error message if available
+     
       const backendMsg =
         err.response?.data?.error ||
         err.response?.data?.message ||
@@ -311,7 +311,7 @@ const LoginPage = () => {
             {/* Forgot Password */}
             <div className="flex justify-end text-xs sm:text-sm">
               <Link
-                to="/forgot-password"
+                to="#"
                 className="text-blue-600 hover:underline cursor-pointer"
               >
                 Forgot Password?
@@ -357,7 +357,7 @@ const LoginPage = () => {
               <span className="text-gray-600">Don't have an account?</span>{" "}
               <span
                 className="text-blue-600 hover:underline cursor-pointer"
-                onClick={() => navigate("/register")}
+                onClick={() => navigate("#")}
               >
                 Create one
               </span>

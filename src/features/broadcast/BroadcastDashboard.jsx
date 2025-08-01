@@ -55,7 +55,8 @@ const BroadcastDashboard = forwardRef(
 
         setError(null);
       } catch (err) {
-        setError(err.message);
+        console.error('Error fetching broadcasts:', err);
+        setError('Unable to load broadcasts. Please try again later.');
       } finally {
         setLoading(false);
       }

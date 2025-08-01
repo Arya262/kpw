@@ -1,4 +1,4 @@
-import PhoneInput from './PhoneInput';
+import PhoneInputField from './PhoneInputField';
 import OptStatusRadio from './OptStatusRadio';
 import NameInput from './NameInput';
 
@@ -7,7 +7,7 @@ export default function SingleContactForm(props) {
 
   return (
     <>
-      <PhoneInput {...props} />
+      <PhoneInputField {...props} />
       <OptStatusRadio {...props} />
       <NameInput name={name} setName={setName} />
     </>

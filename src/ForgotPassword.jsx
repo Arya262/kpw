@@ -3,7 +3,7 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axios from "axios";
 import { API_ENDPOINTS } from "./config/api";
-
+import { handleError, handleSuccess, handleApiError, USER_MESSAGES } from '../utils/errorHandling';
 const ForgotPassword = () => {
   const [identifier, setIdentifier] = useState("");
   const [error, setError] = useState("");
@@ -49,7 +49,7 @@ const ForgotPassword = () => {
       }
     } catch (err) {
       console.error("Forgot Password error:", err);
-      toast.error("Something went wrong. Please try again.");
+      handleError(err, USER_MESSAGES.LOGIN_FAILED);
     } finally {
       setLoading(false);
     }

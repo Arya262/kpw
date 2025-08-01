@@ -20,7 +20,7 @@ const TemplateMessage = ({ msg, sent }) => {
 
   return (
     <div className={`relative flex ${sent ? "justify-end" : "justify-start"} px-2 mb-2`}>
-      <div className="relative max-w-[80%]">
+      <div className="relative max-w-[90%] sm:max-w-[80%] md:max-w-[60%] lg:max-w-[50%]">
         {/* Tail */}
         <svg
           className={`absolute top-1 ${tailAlignment}`}
@@ -36,16 +36,14 @@ const TemplateMessage = ({ msg, sent }) => {
           className="rounded-2xl overflow-hidden shadow-md text-sm flex flex-col justify-between"
           style={{
             backgroundColor: bubbleBg,
-            minWidth: "260px",
-            minHeight: "140px",
           }}
         >
           {meta ? (
             <>
               {/* Banner */}
-              {meta.banner_url?.trim() && (
+              {meta.mediaUrl?.trim() && (
                 <img
-                  src={meta.banner_url}
+                  src={meta.mediaUrl}
                   alt="Banner"
                   className="w-full h-40 object-cover"
                 />
@@ -69,11 +67,11 @@ const TemplateMessage = ({ msg, sent }) => {
 
                 {/* Buttons (Compact) */}
                 {Array.isArray(meta.buttons) && meta.buttons.length > 0 && (
-                  <div className="space-y-1">
+                  <div className="flex flex-col space-y-1">
                     {meta.buttons.map((btn, i) => (
                       <button
                         key={i}
-                        className="w-full bg-[#0080ff] hover:bg-[#0066cc] text-white py-1.5 rounded text-sm font-medium transition"
+                        className="w-full  bg-[#0AA89E] text-white py-1.5 rounded text-sm font-medium transition cursor-pointer"
                       >
                         {btn.text}
                       </button>

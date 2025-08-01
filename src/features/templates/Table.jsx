@@ -466,7 +466,7 @@ const Table = ({
                               />
                             </svg>
                             <span className="text-sm font-medium">
-                              Send Broadcast
+                              Send Campaigns
                             </span>
                           </button>
                           {/* Delete icon button */}
