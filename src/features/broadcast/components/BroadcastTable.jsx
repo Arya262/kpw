@@ -1,96 +1,17 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
-import { HiDotsVertical } from "react-icons/hi";
 import { useNavigate } from "react-router-dom";
 import { MessageCircle } from "lucide-react";
+import { formatDate } from "../../../utils/formatters";
 
 const BroadcastTable = ({
   filteredData,
-  selectAll,
-  handleSelectAllChange,
-  selectedRows,
-  handleCheckboxChange,
-  menuOpen,
-  toggleMenu,
-  handleDelete,
   loading,
   error,
-  onDelete,
-  onEdit,
 }) => {
-  const [isDropdownOpen, setDropdownOpen] = useState(false);
-  const [shouldFlipUp, setShouldFlipUp] = useState(false);
-  const dropdownRef = useRef(null);
-  const rowRefs = useRef({});
   const navigate = useNavigate();
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [selectedBroadcast, setSelectedBroadcast] = useState(null);
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [currentMessage, setCurrentMessage] = useState("");
   const [highlightCancel, setHighlightCancel] = useState(false);
-
-  const toggleDropdown = (idx) => {
-    setDropdownOpen((prev) => {
-      const next = !prev;
-      if (next && rowRefs.current[idx]) {
-        const rect = rowRefs.current[idx].getBoundingClientRect();
-        const spaceBelow = window.innerHeight - rect.bottom;
-        setShouldFlipUp(spaceBelow < 160);
-      }
-      return next;
-    });
-    toggleMenu(idx);
-  };
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setDropdownOpen(false);
-        toggleMenu(null);
-      }
-    };
-
-    if (isDropdownOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isDropdownOpen, toggleMenu]);
-
-  const handleDeleteClick = (broadcast) => {
-    setSelectedBroadcast(broadcast);
-    setShowDeleteDialog(true);
-    menuOpen(null);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!selectedBroadcast) return;
-
-    try {
-      setIsDeleting(true);
-      await onDelete(selectedBroadcast.id);
-      setShowDeleteDialog(false);
-      setSelectedBroadcast(null);
-    } catch (error) {
-      console.error("Error deleting broadcast:", error);
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const handleDeleteCancel = () => {
-    setShowDeleteDialog(false);
-    setSelectedBroadcast(null);
-  };
-
-  const handleEditClick = (broadcast) => {
-    menuOpen(null);
-    if (onEdit) {
-      onEdit(broadcast);
-    }
-  };
 
   const parsedData = useMemo(() => {
     return filteredData.map((row) => {
@@ -100,10 +21,7 @@ const BroadcastTable = ({
           try {
             parsedMeta = JSON.parse(row.container_meta);
           } catch (err) {
-            console.error(
-              "Invalid JSON in container_meta:",
-              row.container_meta
-            );
+            console.error("Invalid JSON in container_meta:", row.container_meta);
           }
         } else if (typeof row.container_meta === "object") {
           parsedMeta = row.container_meta;
@@ -127,13 +45,7 @@ const BroadcastTable = ({
     }
 
     if (error) {
-      return (
-        <tr>
-          <td colSpan="6" className="text-center py-4 text-red-500">
-            Error: {error}
-          </td>
-        </tr>
-      );
+      console.error("Error loading broadcasts:", error);
     }
 
     if (parsedData.length === 0) {
@@ -151,7 +63,6 @@ const BroadcastTable = ({
       .map((row, idx) => (
         <tr
           key={idx}
-          ref={(el) => (rowRefs.current[idx] = el)}
           className="border-t border-b border-b-[#C3C3C3] hover:bg-gray-50 text-md"
         >
           <td className="px-2 py-4 sm:px-4 sm:py-4 whitespace-nowrap text-[12px] sm:text-[16px] text-gray-700">
@@ -163,10 +74,7 @@ const BroadcastTable = ({
           <td className="px-2 py-4 text-[12px] sm:text-[16px] text-gray-700">
             {row.container_meta?.sampleText ? (
               <div className="flex flex-col items-start">
-                <span>{`${row.container_meta.sampleText.slice(
-                  0,
-                  40
-                )}...`}</span>
+                <span>{`${row.container_meta.sampleText.slice(0, 40)}...`}</span>
                 <div className="w-full flex justify-center mt-1">
                   <button
                     onClick={() => {
@@ -206,24 +114,12 @@ const BroadcastTable = ({
           <table className="w-full text-sm text-center table-auto">
             <thead className="bg-[#F4F4F4] border-b-2 shadow-sm border-gray-300">
               <tr>
-                <th className="px-2 py-3 sm:px-6 text-[12px] sm:text-[16px] font-semibold text-gray-700">
-                  Date
-                </th>
-                <th className="px-2 py-3 sm:px-6 text-[12px] sm:text-[16px] font-semibold text-gray-700">
-                  Campaign Name
-                </th>
-                <th className="px-2 py-3 sm:px-6 text-[12px] sm:text-[16px] font-semibold text-gray-700">
-                  Message
-                </th>
-                <th className="px-2 py-3 sm:px-6 text-[12px] sm:text-[16px] font-semibold text-gray-700">
-                  Scheduled Campaign
-                </th>
-                <th className="px-2 py-3 sm:px-6 text-[12px] sm:text-[16px] font-semibold text-gray-700">
-                  Status
-                </th>
-                <th className="px-2 py-3 sm:px-6 text-[12px] sm:text-[16px] font-semibold text-gray-700">
-                  Message Funnel
-                </th>
+                <th className="px-2 py-3 sm:px-6 text-[12px] sm:text-[16px] font-semibold text-gray-700">Date</th>
+                <th className="px-2 py-3 sm:px-6 text-[12px] sm:text-[16px] font-semibold text-gray-700">Campaign Name</th>
+                <th className="px-2 py-3 sm:px-6 text-[12px] sm:text-[16px] font-semibold text-gray-700">Message</th>
+                <th className="px-2 py-3 sm:px-6 text-[12px] sm:text-[16px] font-semibold text-gray-700">Scheduled Campaign</th>
+                <th className="px-2 py-3 sm:px-6 text-[12px] sm:text-[16px] font-semibold text-gray-700">Status</th>
+                <th className="px-2 py-3 sm:px-6 text-[12px] sm:text-[16px] font-semibold text-gray-700">Message Funnel</th>
               </tr>
             </thead>
             <tbody>{renderTableBody()}</tbody>
@@ -231,7 +127,6 @@ const BroadcastTable = ({
         </div>
       </div>
 
-      
       {showMessageModal && (
         <MessageModal
           message={currentMessage}
@@ -243,10 +138,8 @@ const BroadcastTable = ({
   );
 };
 
-
 const MessageModal = ({ message, onClose, highlightCancel }) => {
   const modalRef = useRef();
-
 
   useEffect(() => {
     const handleEsc = (e) => {
@@ -256,7 +149,6 @@ const MessageModal = ({ message, onClose, highlightCancel }) => {
     return () => document.removeEventListener("keydown", handleEsc);
   }, [onClose]);
 
-
   const handleOutsideClick = (e) => {
     if (modalRef.current && !modalRef.current.contains(e.target)) {
       onClose();
@@ -265,33 +157,33 @@ const MessageModal = ({ message, onClose, highlightCancel }) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#000]/40"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
       onMouseDown={handleOutsideClick}
     >
       <div
         ref={modalRef}
-        className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md relative"
+        className="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-md relative transition-all"
         role="dialog"
         aria-modal="true"
       >
         <button
           onClick={onClose}
-          className={`absolute top-2 right-4 text-gray-600 hover:text-black text-3xl font-bold w-8 h-8 flex items-center justify-center pb-2 rounded-full transition-colors cursor-pointer ${
+          className={`absolute top-3 right-3 w-9 h-9 flex items-center justify-center rounded-full transition-all duration-200 ${
             highlightCancel
-              ? "bg-red-500 text-white hover:text-white"
-              : "bg-gray-100"
+              ? "bg-red-500 text-white hover:bg-red-600"
+              : "bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-black"
           }`}
           aria-label="Close"
         >
-          ×
+          <span className="text-2xl font-bold">×</span>
         </button>
-        <h2 className="text-lg font-semibold mb-4 text-gray-900">Message</h2>
-        <div className="text-gray-700 whitespace-pre-wrap max-h-96 overflow-y-auto text-[15px] leading-relaxed scrollbar-hide">
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">Message</h2>
+        <div className="text-gray-700 text-sm sm:text-base whitespace-pre-wrap max-h-80 overflow-y-auto leading-relaxed pr-1 custom-scroll">
           {message}
         </div>
         <button
           onClick={onClose}
-          className="mt-6 w-full py-2 bg-[#0AA89E] text-white font-medium rounded hover:bg-[#08847C] transition-colors duration-200 cursor-pointer"
+          className="mt-6 w-full py-2.5 bg-[#0AA89E] text-white font-medium rounded-lg hover:bg-[#08847C] transition duration-200"
         >
           Okay
         </button>
@@ -300,38 +192,10 @@ const MessageModal = ({ message, onClose, highlightCancel }) => {
   );
 };
 
-const formatDate = (dateString) => {
-  if (!dateString) return "N/A";
-
-  const date = new Date(dateString);
-  const formattedDate = date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-  });
-
-  const hasTime = date.getHours() !== 0 || date.getMinutes() !== 0;
-  if (hasTime) {
-    const formattedTime = date.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    });
-    return (
-      <div className="flex flex-col">
-        <span>{formattedDate}</span>
-        <span>{formattedTime}</span>
-      </div>
-    );
-  }
-  return <span>{formattedDate}</span>;
-};
 
 const renderMessageFunnel = (row) => {
   if (!row) return "N/A";
-
   const { sent = 0, delivered = 0, read = 0, clicked = 0 } = row;
-
   return (
     <div className="grid grid-cols-4 gap-4 justify-items-center">
       <div className="flex flex-col items-center text-center">

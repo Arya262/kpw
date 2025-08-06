@@ -1,4 +1,10 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  useMemo,
+} from "react";
 import { FaSearch, FaKey, FaPowerOff } from "react-icons/fa";
 import { Menu, X } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
@@ -20,11 +26,18 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
 
- const avatarSrc = user?.avatar || "/default-avatar.jpeg";
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newContact, setNewContact] = useState({
+    name: "",
+    whatsapp: "",
+    email: "",
+  });
+
+  const avatarSrc = user?.avatar || "/default-avatar.jpeg";
 
   const handleSearchChange = (e) => setSearchTerm(e.target.value);
   const handleClearSearch = () => setSearchTerm("");
-const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const notify = (type, message) => {
     toast[type](message, {
       position: "top-right",
@@ -37,38 +50,36 @@ const [isLoading, setIsLoading] = useState(false);
     });
   };
 
-const handleLogout = useCallback(async () => {
-  setIsLoggingOut(true);
-  try {
-    const response = await axios.post(
-      API_ENDPOINTS.AUTH.LOGOUT,
-      {},
-      { withCredentials: true }
-    );
+  const handleLogout = useCallback(async () => {
+    setIsLoggingOut(true);
+    try {
+      const response = await axios.post(
+        API_ENDPOINTS.AUTH.LOGOUT,
+        {},
+        { withCredentials: true }
+      );
 
-    if (response.data?.success) {
-      notify("success", "Successfully logged out!");
+      if (response.data?.success) {
+        notify("success", "Successfully logged out!");
 
-      // ✅ Delay logout + navigation so toast is visible
+        setTimeout(() => {
+          logout();
+          navigate("/login", { replace: true });
+        }, 1500);
+      } else {
+        notify("error", "Logout failed. Please try again.");
+        setIsLoggingOut(false);
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
+      notify("info", "Logged out locally. Please re-login to sync.");
+
       setTimeout(() => {
-        logout(); // Now logout happens *after* toast is shown
+        logout();
         navigate("/login", { replace: true });
-      }, 1500); // 1.5s delay
-    } else {
-      notify("error", "Logout failed. Please try again.");
-      setIsLoggingOut(false);
+      }, 1500);
     }
-  } catch (error) {
-    console.error("Logout error:", error);
-    notify("info", "Logged out locally. Please re-login to sync.");
-
-    // ✅ Delay logout + navigation here as well
-    setTimeout(() => {
-      logout();
-      navigate("/login", { replace: true });
-    }, 1500);
-  }
-}, [logout, navigate]);
+  }, [logout, navigate]);
 
   const fetchWhatsAppNumbers = useCallback(async () => {
     setIsLoading(true);
@@ -178,7 +189,12 @@ const handleLogout = useCallback(async () => {
           <div className="relative z-50">
             <NotificationBell />
           </div>
-
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="bg-[#0AA89E] text-white text-sm px-4 py-2 rounded hover:bg-[#089086] transition cursor-pointer"
+          >
+            WhatsApp Number
+          </button>
           {/* User Info & Dropdown */}
           <div className="flex items-center gap-2">
             <div className="hidden sm:flex flex-col items-end justify-center mr-1">
@@ -257,6 +273,91 @@ const handleLogout = useCallback(async () => {
               )}
             </div>
           </div>
+          {showAddModal && (
+            <div className="fixed inset-0 bg-[#000]/50 backdrop-blur-sm flex justify-center items-center z-50">
+              <div className="bg-white rounded-lg shadow-lg w-96 p-6 space-y-4">
+                <h2 className="text-lg font-semibold text-gray-700">
+                  Add WhatsApp Contact
+                </h2>
+
+                <input
+                  type="text"
+                  placeholder="Name"
+                  value={newContact.name}
+                  onChange={(e) =>
+                    setNewContact({ ...newContact, name: e.target.value })
+                  }
+                  className="w-full border px-3 py-2 rounded outline-none focus:ring-2 focus:ring-[#0AA89E]"
+                />
+
+                <input
+                  type="text"
+                  placeholder="Merchant ID"
+                  value={newContact.whatsapp}
+                  onChange={(e) =>
+                    setNewContact({ ...newContact, whatsapp: e.target.value })
+                  }
+                  className="w-full border px-3 py-2 rounded outline-none focus:ring-2 focus:ring-[#0AA89E]"
+                />
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    onClick={() => setShowAddModal(false)}
+                    className="px-4 py-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    onClick={async () => {
+                      if (!newContact.name || !newContact.whatsapp) {
+                        notify("error", "Please fill in both fields.");
+                        return;
+                      }
+
+                      try {
+                        const response = await axios.post(
+                          "http://localhost:3000/createGupshupApp",
+                          {
+                            name: newContact.name,
+                            user: newContact.whatsapp,
+                            customer_id: user?.customer_id,
+                          },
+                          { withCredentials: true }
+                        );
+
+                        const result = response.data;
+
+                        if (result.success && result.onboardingLink?.link) {
+                          notify("success", "Redirecting to onboarding...");
+
+                          // Open onboarding link in new tab
+                          setTimeout(() => {
+                            window.location.href = result.onboardingLink.link;
+                          }, 1000);
+                        } else {
+                          notify("error", "Failed to add contact.");
+                        }
+                      } catch (err) {
+                        console.error("API error:", err);
+                        notify(
+                          "error",
+                          err.response?.data?.error || "Something went wrong."
+                        );
+                      }
+
+                      // Close modal and reset form
+                      setShowAddModal(false);
+                      setNewContact({ name: "", whatsapp: "" });
+                    }}
+                    className="px-4 py-2 rounded bg-[#0AA89E] text-white hover:bg-[#089086] cursor-pointer"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </header>
 

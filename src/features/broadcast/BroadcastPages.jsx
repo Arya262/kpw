@@ -17,14 +17,14 @@ const BroadcastPages = ({ onClose, showCustomAlert, onBroadcastCreated }) => {
   const timeoutRef = useRef(null);
   const [forceUpdate, setForceUpdate] = useState(0);
 
-  const [formData, setFormData] = useState({
-    broadcastName: "",
-    group_id: "",
-    messageType: "Pre-approved template message",
-    schedule: "No",
-    scheduleDate: "",
-    selectedTemplate: location.state?.selectedTemplate || null,
-  });
+const [formData, setFormData] = useState({
+  broadcastName: "",
+  group_id: [], 
+  messageType: "Pre-approved template message",
+  schedule: "No",
+  scheduleDate: "",
+  selectedTemplate: location.state?.selectedTemplate || null,
+});
 
   const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState(null);
@@ -311,9 +311,10 @@ const BroadcastPages = ({ onClose, showCustomAlert, onBroadcastCreated }) => {
           <AlertDialog showAlert={showAlert} message={alertMessage} />
           <BroadcastForm
             formData={formData}
+            setFormData={setFormData}
             handleInputChange={handleInputChange}
-            step={step} // Pass current step
-            setStep={setStep} // Pass function to update step
+            step={step}
+            setStep={setStep}
             handleRadioChange={handleRadioChange}
             handleMediaChange={handleMediaChange}
             selectedDate={selectedDate}

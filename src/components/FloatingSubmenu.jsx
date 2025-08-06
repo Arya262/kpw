@@ -5,16 +5,15 @@ const FloatingSubmenu = ({
   children,
   position,
   visible,
-  setSubmenuHovered,
-  setActiveSubmenu,
-  setSubmenuPosition,
+  onMouseEnter,
+  onMouseLeave,
 }) => {
   const [safePosition, setSafePosition] = useState(position);
 
   useEffect(() => {
     if (!position) return;
 
-    const padding = 10; // Optional padding from edges
+    const padding = 10; 
     const maxLeft = window.innerWidth - 200 - padding;
     const maxTop = window.innerHeight - 200 - padding;
 
@@ -36,12 +35,8 @@ const FloatingSubmenu = ({
       }}
       role="menu"
       aria-hidden={!visible}
-      onMouseEnter={() => setSubmenuHovered(true)}
-      onMouseLeave={() => {
-        setSubmenuHovered(false);
-        setActiveSubmenu(null);
-        setSubmenuPosition(null);
-      }}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
     >
       {children}
     </div>,

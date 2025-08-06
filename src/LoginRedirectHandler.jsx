@@ -92,7 +92,7 @@ const LoginPage = () => {
     if (!validate()) return;
 
     try {
-      setLoading(true); 
+      setLoading(true);
       const response = await axios.post(
         API_ENDPOINTS.AUTH.LOGIN,
         {
@@ -110,7 +110,7 @@ const LoginPage = () => {
 
       if (success) {
         login(user);
-        
+
         if (user.role === "admin" || user.role === "super_admin") {
           navigate("/admin/dashboard", { replace: true });
         } else {
@@ -123,11 +123,9 @@ const LoginPage = () => {
       }
     } catch (err) {
       console.error("Login error:", err);
-     
+
       const backendMsg =
-        err.response?.data?.error ||
-        err.response?.data?.message ||
-        err.message;
+        err.response?.data?.error || err.response?.data?.message || err.message;
       if (backendMsg) {
         toast.error(backendMsg);
       } else {
@@ -138,31 +136,30 @@ const LoginPage = () => {
     }
   };
 
-
   if (loading) return <Loader />;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-t from-[#adede9] via-[#def7f6] via-[#d4f5f3] to-white p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-t from-[#adede9] via-[#def7f6] via-[#d4f5f3] to-white ">
       <ToastContainer />
-      <div className="w-full max-w-[648px] bg-white rounded-xl overflow-hidden shadow-lg flex flex-col">
+      <div className="w-full h-[620px] m-3  max-w-[548px]  md:max-w-[648px] sm:max-w-[500px] bg-white rounded-xl overflow-hidden shadow-lg flex flex-col ">
         {/* Header */}
-        <div className="relative h-[250px] sm:h-[300px] md:h-[352px] w-full bg-[#ceeeec] overflow-hidden">
+        <div className="relative h-[250px] sm:h-[352px] md:h-[352px] w-full bg-[#ceeeec] overflow-hidden">
           <div className="flex flex-col sm:flex-row items-center justify-between px-4 sm:px-10">
-            <div className="w-full sm:w-[360px] mb-4 sm:mb-[296px] mt-6 sm:mt-[50px]">
+            <div className="w-full sm:w-[360px] mb-4 sm:mb-[296px] mt-6 sm:mt-[40px]">
               <img
-                className="h-[45px] w-[128px]"
+                className="h-[40px] w-[110px]"
                 src="https://www.foodchow.com/Images/online-order/logo.png"
                 alt="Logo"
               />
-              <p className="font-poppins text-xl sm:text-2xl md:text-[30px] mb-[15px] font-semibold mt-4 sm:mt-[30px]">
+              <p className="font-poppins text-xl sm:text-xl md:text-[20px] mb-[15px] font-semibold mt-4 sm:mt-[30px]">
                 Foodchow WhatsApp Marketing
               </p>
             </div>
 
-            <div className="w-full sm:w-auto flex justify-center sm:justify-end">
+            <div className="w-full sm:w-auto flex hidden  sm:block justify-center sm:justify-end">
               <div className="relative w-[120px] h-[120px] sm:w-[169px] sm:h-[166px] flex justify-center items-center">
                 <img
-                  className="w-[60px] h-[60px] sm:w-[76px] sm:h-[76px] relative z-10 mb-[120px] sm:mb-[200px]"
+                  className="w-[50px] h-[60px] sm:w-[60px] sm:h-[76px] relative z-10 mb-[120px] sm:mb-[200px]"
                   src={whatsAppLogo}
                   alt="Social Icon"
                 />
@@ -242,21 +239,21 @@ const LoginPage = () => {
 
           {/* Bottom Wave */}
           <svg
-            className="absolute inset-x-0 bottom-0 w-full h-[80px] sm:h-[110px]"
+            className="absolute inset-x-0 bottom-0 w-full h-[70px] sm:h-[50px]"
             viewBox="0 0 1440 450"
             preserveAspectRatio="none"
           >
             <path
               fill="#ffffff"
-              d="M0,250 C700,-300,1080,700,1440,20 L1440,500 L0,500 Z"
+              d="M0,250 C500,-300,1080,1000,1440,20 L1440,500 L0,500 Z"
             />
           </svg>
         </div>
 
         {/* Login Form */}
-        <div className="px-6 pb-6 md:px-10 md:pb-10 font-semibold">
-          <form onSubmit={handleSubmit} className="flex flex-col space-y-5">
-            <p className="font-bold font-poppins text-2xl sm:text-[30px]">
+        <div className="px-5  pb-6 md:px-10 md:pb-10 font-semibold">
+          <form onSubmit={handleSubmit} className="flex flex-col space-y-3">
+            <p className="font-bold font-poppins text-2xl sm:text-[28px]">
               Login
             </p>
 
@@ -267,8 +264,9 @@ const LoginPage = () => {
               </label>
               <input
                 name="loginMethod"
-                className={`w-full h-[50px] rounded-md px-4 text-sm sm:text-[16px] ${errors.loginMethod ? "border-red-500" : "border-[#a2a2a2]"
-                  } border`}
+                className={`w-full h-[45px] rounded-md px-4 text-sm sm:text-[16px] ${
+                  errors.loginMethod ? "border-red-500" : "border-[#a2a2a2]"
+                } border`}
                 value={loginMethod}
                 onChange={handleChange}
                 onBlur={handleBlur}
@@ -287,8 +285,9 @@ const LoginPage = () => {
               <div className="relative">
                 <input
                   name="password"
-                  className={`w-full h-[50px] rounded-md px-4 border ${errors.password ? "border-red-500" : "border-[#a2a2a2]"
-                    }`}
+                  className={`w-full h-[45px] rounded-md px-4 border ${
+                    errors.password ? "border-red-500" : "border-[#a2a2a2]"
+                  }`}
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={handleChange}
@@ -322,7 +321,7 @@ const LoginPage = () => {
             <button
               type="submit"
               disabled={loading}
-              className="bg-[#0aa89e] h-[58px] w-full flex items-center justify-center border rounded-xl text-white text-base hover:opacity-90 transition"
+              className="bg-[#0aa89e] h-[50px] w-full flex items-center justify-center border rounded-xl text-white text-base hover:opacity-90 transition"
             >
               {loading ? (
                 <div className="flex items-center gap-2">
@@ -354,7 +353,7 @@ const LoginPage = () => {
             </button>
             {/* Create Account Link */}
             <div className="text-sm text-center">
-              <span className="text-gray-600">Don't have an account?</span>{" "}
+              <span className="text-gray-600">Don't have an account?</span>
               <span
                 className="text-blue-600 hover:underline cursor-pointer"
                 onClick={() => navigate("#")}

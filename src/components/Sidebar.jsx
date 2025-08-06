@@ -27,9 +27,11 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
 
   const [submenuPosition, setSubmenuPosition] = useState(null);
   const [activeSubmenu, setActiveSubmenu] = useState(null);
+  const [submenuHovered, setSubmenuHovered] = useState(false);
+  const closeTimeoutRef = useRef(null);
 
   const menuItems = [
-    { name: "Dashboard", icon: <LayoutDashboard size={22} />, path: "/" },
+    { name: "Dashboard", icon: <LayoutDashboard size={22} />, path: "/dashboard" },
     { name: "Campaign", icon: <Megaphone size={22} />, path: "/broadcast" },
     { name: "LiveChat", icon: <MessageCircle size={22} />, path: "/chats" },
     {
@@ -88,6 +90,15 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
     setActiveSubmenu(null);
   }, [location.pathname]);
 
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (closeTimeoutRef.current) {
+        clearTimeout(closeTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const handleNavClick = () => {
     if (window.innerWidth < 1024) {
       setIsOpen(false);
@@ -96,6 +107,12 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
 
   const handleMouseEnter = (e, itemName) => {
     if (window.innerWidth >= 1024) {
+      // Clear any pending close timeout
+      if (closeTimeoutRef.current) {
+        clearTimeout(closeTimeoutRef.current);
+        closeTimeoutRef.current = null;
+      }
+      
       const rect = e.currentTarget.getBoundingClientRect();
       setActiveSubmenu(itemName);
       setSubmenuPosition({
@@ -107,9 +124,30 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
 
   const handleMouseLeave = () => {
     if (window.innerWidth >= 1024) {
-      setActiveSubmenu(null);
-      setSubmenuPosition(null);
+      // Set a timeout to close the submenu
+      closeTimeoutRef.current = setTimeout(() => {
+        if (!submenuHovered) {
+          setActiveSubmenu(null);
+          setSubmenuPosition(null);
+        }
+        closeTimeoutRef.current = null;
+      }, 150);
     }
+  };
+
+  const handleSubmenuMouseEnter = () => {
+    // Clear the close timeout when entering submenu
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+    setSubmenuHovered(true);
+  };
+
+  const handleSubmenuMouseLeave = () => {
+    setSubmenuHovered(false);
+    setActiveSubmenu(null);
+    setSubmenuPosition(null);
   };
 
   const toggleMobileSubmenu = (itemName) => {
@@ -202,7 +240,12 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
 
               {activeSubmenu === item.name && (
                 <div className="hidden lg:block">
-                  <FloatingSubmenu position={submenuPosition} visible={true}>
+                  <FloatingSubmenu 
+                    position={submenuPosition} 
+                    visible={true}
+                    onMouseEnter={handleSubmenuMouseEnter}
+                    onMouseLeave={handleSubmenuMouseLeave}
+                  >
                     {item.submenuItems.map((sub) => (
                       <NavLink
                         key={sub.name}

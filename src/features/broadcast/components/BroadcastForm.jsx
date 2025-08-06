@@ -4,9 +4,25 @@ import ScheduleSelector from "./ScheduleSelector";
 import MessageTypeSelector from "./MessageTypeSelector";
 import { API_ENDPOINTS } from "../../../config/api";
 import { useAuth } from "../../../context/AuthContext";
-
+import {
+  Box,
+  Button,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  FormHelperText,
+  Typography,
+  CircularProgress,
+  TextField,
+  FormControlLabel,
+  Checkbox,
+} from "@mui/material";
+import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
+import FolderOffIcon from "@mui/icons-material/FolderOff";
 const BroadcastForm = ({
   formData,
+  setFormData,
   handleInputChange,
   handleRadioChange,
   handleMediaChange,
@@ -31,6 +47,11 @@ const BroadcastForm = ({
   const [errors, setErrors] = useState({});
   const location = useLocation();
   const { user } = useAuth();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showList, setShowList] = useState(false);
+  const [filteredCustomerLists, setFilteredCustomerLists] = useState(
+    customerLists || []
+  );
 
   useEffect(() => {
     if (location.state?.selectedTemplate) {
@@ -83,8 +104,8 @@ const BroadcastForm = ({
       newErrors.broadcastName = "Broadcast name is required";
     }
 
-    if (!formData.group_id || formData.group_id === "") {
-      newErrors.group_id = "Please select a group";
+    if (!Array.isArray(formData.group_id) || formData.group_id.length === 0) {
+      newErrors.group_id = "Please select at least one group";
     }
 
     if (!formData.selectedTemplate) {
@@ -117,8 +138,11 @@ const BroadcastForm = ({
         }
         break;
       case 2:
-        if (!formData.group_id || formData.group_id === "") {
-          newErrors.group_id = "Please select a group";
+        if (
+          !Array.isArray(formData.group_id) ||
+          formData.group_id.length === 0
+        ) {
+          newErrors.group_id = "Please select at least one group";
         }
         break;
       case 3:
@@ -162,6 +186,15 @@ const BroadcastForm = ({
     setStep(step - 1);
   };
 
+  useEffect(() => {
+    if (!customerLists) return;
+
+    const filtered = customerLists.filter((list) =>
+      list.group_name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setFilteredCustomerLists(filtered);
+  }, [searchTerm, customerLists]);
+
   return (
     <div className="space-y-6">
       {/* Step Indicator */}
@@ -189,24 +222,62 @@ const BroadcastForm = ({
       </div>
 
       {/* Step 1: Campaign Name */}
+
       {step === 1 && (
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-800">Campaign Name</h3>
-          <input
-            type="text"
+        <Box display="flex" flexDirection="column" gap={3}>
+          <Typography variant="h6" fontWeight="bold" color="text.primary">
+            Campaign Name
+          </Typography>
+
+          {/* Campaign Name Input */}
+          <TextField
             name="broadcastName"
+            label="Campaign Name"
             placeholder="Enter Campaign Name"
             value={formData.broadcastName}
             onChange={handleInputChange}
-            className={`w-full p-3 border ${
-              errors.broadcastName ? "border-red-500" : "border-gray-300"
-            } rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500`}
+            error={Boolean(errors.broadcastName)}
+            helperText={errors.broadcastName}
+            fullWidth
             disabled={isSubmitting}
+            inputProps={{ maxLength: 30 }}
           />
-          {errors.broadcastName && (
-            <p className="text-red-500 text-sm">{errors.broadcastName}</p>
-          )}
-          <div className="flex justify-end">
+
+          {/* Character Counter */}
+          <Box
+            display="flex"
+            justifyContent="flex-end"
+            fontSize="12px"
+            color="text.secondary"
+            mt={-2}
+          >
+            {formData.broadcastName.length}/30
+          </Box>
+
+          {/* Info Warning Box */}
+          <Box
+            border="1px dashed #D97706"
+            bgcolor="#FFF7ED"
+            p={2}
+            borderRadius="8px"
+            display="flex"
+            flexDirection="column"
+            gap={1}
+            color="#92400E"
+            fontSize="14px"
+          >
+            <Box fontWeight="bold" display="flex" alignItems="center" gap={1}>
+              <span style={{ color: "#B45309" }}>⚠️</span> IMPORTANT:
+            </Box>
+            <Box>
+              WhatsApp messages can only be sent to customers who have allowed
+              (given consent) to your business to receive messages.
+            </Box>
+            <Box>Messages can be informational ℹ️ or semi-promotional ℹ️</Box>
+          </Box>
+
+          {/* Next Button */}
+          <Box display="flex" justifyContent="flex-end">
             <button
               type="button"
               onClick={handleNext}
@@ -214,58 +285,195 @@ const BroadcastForm = ({
             >
               Next
             </button>
-          </div>
-        </div>
+          </Box>
+        </Box>
       )}
 
       {/* Step 2: Select Group */}
       {step === 2 && (
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-800">Select Group</h3>
-          <select
-            name="group_id"
-            value={formData.group_id}
-            onChange={handleInputChange}
-            className={`w-full p-3 border ${
-              errors.group_id ? "border-red-500" : "border-gray-300"
-            } rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500`}
-            disabled={isSubmitting}
-          >
-            <option value="">Select Group</option>
-            {loading ? (
-              <option>Loading...</option>
-            ) : error ? (
-              <option>{error}</option>
-            ) : (
-              customerLists.map((customer) => (
-                <option key={customer.group_id} value={customer.group_id}>
-                  {customer.group_name}
-                </option>
-              ))
-            )}
-          </select>
-          {errors.group_id && (
-            <p className="text-red-500 text-sm">{errors.group_id}</p>
-          )}
-          <div className="flex justify-between">
-            <button
-              type="button"
-              onClick={handlePrevious}
-              className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+        <Box display="flex" gap={6}>
+          {/* Left: Tier Info */}
+          <Box minWidth="250px" textAlign="center">
+            <Box
+              width={120}
+              height={120}
+              borderRadius="50%"
+              border="8px solid #E5E7EB"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              margin="0 auto"
+              fontWeight="bold"
+              fontSize="18px"
+              color="#10B981"
             >
-              Previous
-            </button>
-            <button
-              type="button"
-              onClick={handleNext}
-              className="px-6 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors"
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      )}
+              100000
+            </Box>
+            <Typography mt={2} variant="body2" color="textSecondary">
+              TIER #100000
+            </Typography>
+            <Typography variant="body2" mt={1} color="text.secondary">
+              You can only send up to <br />
+              100000 messages in 24 hrs
+            </Typography>
+          </Box>
 
+          {/* Right: List Selection */}
+          <Box flex={1} display="flex" flexDirection="column" gap={2}>
+            <Typography variant="h6" fontWeight="bold" color="text.primary">
+              Select List
+            </Typography>
+
+            {!showList ? (
+              <Box
+                onClick={() => setShowList(true)}
+                sx={{
+                  border: "1px solid #E5E7EB",
+                  backgroundColor: "#FAFAFA",
+                  borderRadius: "8px",
+                  padding: "12px 16px",
+                  minHeight: "56px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  width: "100%",
+                  "&:hover": {
+                    borderColor: "#CBD5E1",
+                  },
+                }}
+              >
+                <Typography color="text.secondary">
+                  Select list with &lt; 100000 customers
+                </Typography>
+                <ArrowDropDownIcon />
+              </Box>
+            ) : (
+              <>
+                {/* Search Input */}
+                <TextField
+                  placeholder="Search contact lists"
+                  variant="outlined"
+                  size="small"
+                  fullWidth
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+
+                {/* Contact List or No Results */}
+                <Box
+                  border="1px solid #E5E7EB"
+                  borderRadius="8px"
+                  height="300px"
+                  overflow="auto"
+                  p={2}
+                  display="flex"
+                  flexDirection="column"
+                  alignItems="center"
+                  justifyContent={
+                    filteredCustomerLists.length === 0 ? "center" : "flex-start"
+                  }
+                  // minHeight="150px"
+                >
+                  {filteredCustomerLists.length === 0 ? (
+                    <Box textAlign="center" color="text.secondary">
+                      <FolderOffIcon sx={{ fontSize: 48, opacity: 0.5 }} />
+                      <Typography>No results</Typography>
+                    </Box>
+                  ) : (
+                    filteredCustomerLists.map((customer) => (
+                      <Box
+                        key={customer.group_id}
+                        display="flex"
+                        alignItems="flex-start"
+                        justifyContent="space-between"
+                        py={1}
+                        borderBottom="1px solid #F3F4F6"
+                        width="100%"
+                      >
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={formData.group_id.includes(
+                                customer.group_id
+                              )}
+                              onChange={(e) => {
+                                const isChecked = e.target.checked;
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  group_id: isChecked
+                                    ? [...prev.group_id, customer.group_id]
+                                    : prev.group_id.filter(
+                                        (id) => id !== customer.group_id
+                                      ),
+                                }));
+                              }}
+                              disabled={isSubmitting || loading}
+                            />
+                          }
+                          label={
+                            <Box>
+                              <Typography fontWeight="medium">
+                                {customer.group_name} ({customer.contact_count}{" "}
+                                contacts)
+                              </Typography>
+                              {customer.initial_contacts && (
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                >
+                                  Initial contacts: {customer.initial_contacts}
+                                  {customer.unsubscribed_contacts
+                                    ? ` | Unsubscribed contacts: ${customer.unsubscribed_contacts}`
+                                    : ""}
+                                </Typography>
+                              )}
+                            </Box>
+                          }
+                        />
+
+                        <Box
+                          px={1}
+                          py={0.5}
+                          border="1px dashed #10B981"
+                          borderRadius="4px"
+                          fontSize="12px"
+                          color="#10B981"
+                          alignSelf="center"
+                        >
+                          Exported data
+                        </Box>
+                      </Box>
+                    ))
+                  )}
+                </Box>
+              </>
+            )}
+            {errors.group_id && (
+              <Typography color="error" variant="body2" mt={1}>
+                {errors.group_id}
+              </Typography>
+            )}
+            {/* Navigation Buttons */}
+            <Box display="flex" justifyContent="space-between">
+              <button
+                type="button"
+                onClick={handlePrevious}
+                className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                onClick={handleNext}
+                className="px-6 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors"
+              >
+                Next
+              </button>
+            </Box>
+          </Box>
+        </Box>
+      )}
       {/* Step 3: Select Template */}
       {step === 3 && (
         <div className="space-y-4">
@@ -286,7 +494,7 @@ const BroadcastForm = ({
             </p>
           ) : (
             /* Template Grid */
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto scrollbar-hide">
               {templates.map((template) => (
                 <div
                   key={template.id || template.element_name}
@@ -419,7 +627,8 @@ const BroadcastForm = ({
             📋 Campaign Preview
           </h3>
 
-          <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-200 space-y-6">
+          {/* Unified Card Layout */}
+          <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-200 space-y-6 max-w-4xl mx-auto">
             {/* Campaign Details */}
             <div className="space-y-3">
               <h4 className="text-lg font-semibold text-gray-700 flex items-center gap-2">
@@ -428,19 +637,21 @@ const BroadcastForm = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-gray-700">
                 <div>
                   <p>
-                    <span className="font-medium text-gray-600"> Name:</span>{" "}
+                    <span className="font-medium text-gray-600">Name:</span>{" "}
                     {formData.broadcastName}
                   </p>
                   <p>
-                    <span className="font-medium text-gray-600"> Group:</span>{" "}
-                    {customerLists.find((g) => g.group_id === formData.group_id)
-                      ?.group_name || "Unknown"}
+                    <span className="font-medium text-gray-600">Groups:</span>{" "}
+                    {formData.group_id
+                      .map(
+                        (id) =>
+                          customerLists.find((g) => g.group_id === id)
+                            ?.group_name || "Unknown"
+                      )
+                      .join(", ")}
                   </p>
                   <p>
-                    <span className="font-medium text-gray-600">
-                      {" "}
-                      Schedule:
-                    </span>{" "}
+                    <span className="font-medium text-gray-600">Schedule:</span>{" "}
                     {formData.schedule === "Yes"
                       ? selectedDate
                         ? new Date(selectedDate).toLocaleString()
@@ -458,19 +669,51 @@ const BroadcastForm = ({
               </h4>
 
               {formData.selectedTemplate ? (
-                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm space-y-2">
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm space-y-3">
+                  {/* Media Preview */}
+                  {formData.selectedTemplate.container_meta?.mediaUrl && (
+                    <div>
+                      {/\.(mp4|webm|ogg)$/i.test(
+                        formData.selectedTemplate.container_meta.mediaUrl
+                      ) ? (
+                        <video
+                          controls
+                          className="w-full h-48 rounded-md object-cover"
+                        >
+                          <source
+                            src={
+                              formData.selectedTemplate.container_meta.mediaUrl
+                            }
+                            type="video/mp4"
+                          />
+                          Your browser does not support the video tag.
+                        </video>
+                      ) : (
+                        <img
+                          src={
+                            formData.selectedTemplate.container_meta.mediaUrl
+                          }
+                          alt="Media Preview"
+                          className="w-full h-48 rounded-md object-cover"
+                          onError={(e) => (e.target.style.display = "none")}
+                        />
+                      )}
+                    </div>
+                  )}
+
+                  {/* Text Content */}
                   <p className="font-semibold text-gray-800">
                     {formData.selectedTemplate.element_name}
                   </p>
-                  {formData.selectedTemplate.container_meta?.header?.trim() && (
+
+                  {formData.selectedTemplate.container_meta?.header?.trim?.() && (
                     <p className="text-sm text-gray-600">
-                      <span className="font-medium"></span>{" "}
                       {formData.selectedTemplate.container_meta.header}
                     </p>
                   )}
-                  {formData.selectedTemplate.container_meta?.data?.trim() && (
+
+                  {formData.selectedTemplate.container_meta?.data?.trim?.() && (
                     <p className="text-sm text-gray-600">
-                      <span className="font-medium"></span>{" "}
                       {formData.selectedTemplate.container_meta.data}
                     </p>
                   )}
@@ -483,21 +726,21 @@ const BroadcastForm = ({
             </div>
           </div>
 
-          {/* Footer Actions */}
-          <div className="flex justify-between pt-4">
+          {/* Footer Buttons */}
+          <div className="flex justify-between">
             <button
               type="button"
               onClick={handlePrevious}
-              className="px-6 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition"
+              className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
             >
-              ← Back
+              Previous
             </button>
 
             <button
               type="button"
-              onClick={handleSubmit}
+              onClick={handleSubmit} // or handleNext for steps 1–4
               disabled={isSubmitting}
-              className={`px-6 py-2 rounded-lg flex items-center justify-center transition font-medium ${
+              className={`px-6 py-2 rounded-lg flex items-center justify-center transition-colors font-medium ${
                 isSubmitting
                   ? "bg-gray-400 text-white cursor-not-allowed"
                   : "bg-teal-500 hover:bg-teal-600 text-white"
@@ -528,7 +771,7 @@ const BroadcastForm = ({
                   Creating...
                 </>
               ) : (
-                "Create Campaign →"
+                "Next"
               )}
             </button>
           </div>
