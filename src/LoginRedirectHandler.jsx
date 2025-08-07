@@ -20,7 +20,7 @@ const LoginPage = () => {
       if (user.role === "admin" || user.role === "super_admin") {
         navigate("/admin/dashboard", { replace: true });
       } else {
-        navigate("/", { replace: true });
+        navigate("/dashboard", { replace: true });
       }
     }
   }, [user, navigate]);
@@ -114,7 +114,7 @@ const LoginPage = () => {
         if (user.role === "admin" || user.role === "super_admin") {
           navigate("/admin/dashboard", { replace: true });
         } else {
-          navigate("/", { replace: true });
+          navigate("/dashboard", { replace: true });
         }
       } else {
         toast.error(

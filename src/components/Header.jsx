@@ -22,22 +22,16 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
   const [whatsAppData, setWhatsAppData] = useState([]);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isOnboarding, setIsOnboarding] = useState(false);
   const userMenuRef = useRef(null);
   const navigate = useNavigate();
   const { logout, user } = useAuth();
 
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [newContact, setNewContact] = useState({
-    name: "",
-    whatsapp: "",
-    email: "",
-  });
-
+  const [onboardingData, setOnboardingData] = useState(null);
   const avatarSrc = user?.avatar || "/default-avatar.jpeg";
 
   const handleSearchChange = (e) => setSearchTerm(e.target.value);
   const handleClearSearch = () => setSearchTerm("");
-  const [isLoading, setIsLoading] = useState(false);
   const notify = (type, message) => {
     toast[type](message, {
       position: "top-right",
@@ -81,22 +75,6 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
     }
   }, [logout, navigate]);
 
-  const fetchWhatsAppNumbers = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const response = await axios.get(API_ENDPOINTS.WHATSAPP.NUMBERS, {
-        withCredentials: true,
-      });
-      setWhatsAppData(response.data?.numbers || []);
-      setShowSearchPanel(true);
-    } catch (error) {
-      console.error("Failed to fetch WhatsApp numbers:", error);
-      notify("error", "Unable to load WhatsApp numbers.");
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
   const handleClickOutside = useCallback((event) => {
     if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
       setShowUserMenu(false);
@@ -109,6 +87,54 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
   }, [handleClickOutside]);
 
   const memoizedWhatsAppData = useMemo(() => whatsAppData, [whatsAppData]);
+
+  const handleOnboard = async () => {
+    setIsOnboarding(true);
+    try {
+      // Log the payload being sent
+      const payload = {
+        name: user?.name,
+        customer_id: user?.customer_id,
+      };
+      console.log("Sending to backend:", payload);
+
+      // Send request
+      const response = await axios.post(
+        "http://localhost:3000/createGupshupApp",
+        payload,
+        {
+          withCredentials: true,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      // Log the response
+      console.log("Response from backend:", response.data);
+
+      const { name, whatsapp, onboardingLink, success } = response.data;
+
+      if (success && onboardingLink?.link) {
+        notify("success", "Redirecting to onboarding...");
+        console.log("Redirecting to:", onboardingLink.link);
+        setTimeout(() => {
+          window.location.href = onboardingLink.link;
+        }, 1500);
+      } else {
+        notify("error", "Failed to fetch onboarding link.");
+        console.warn("Backend did not return a valid onboarding link.");
+      }
+    } catch (err) {
+      console.error("Onboarding error:", err);
+      notify(
+        "error",
+        err.response?.data?.error || "Something went wrong during onboarding."
+      );
+    } finally {
+      setIsOnboarding(false);
+    }
+  };
 
   return (
     <>
@@ -141,17 +167,14 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
           {/* Full Search Bar */}
           <div
             className="hidden sm:flex items-center gap-2 bg-[#f0f2f5] rounded-full px-4 py-2 w-auto min-w-[220px] relative cursor-pointer"
-            onClick={() => {
-              if (!showSearchPanel && !isLoading) fetchWhatsAppNumbers();
-            }}
+            onClick={() => setShowSearchPanel(true)}
           >
             <button
               type="button"
               aria-label="Search"
               className="text-gray-500 hover:text-gray-700"
-              disabled={isLoading}
             >
-              {isLoading ? <Spinner /> : <FaSearch />}
+              <FaSearch />
             </button>
             <div className="text-sm text-gray-600 whitespace-nowrap hidden sm:block">
               WhatsApp Number:
@@ -178,28 +201,29 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
           {/* Mobile Search */}
           <div
             className="sm:hidden flex items-center justify-center bg-[#f0f2f5] rounded-full p-2 cursor-pointer"
-            onClick={() => {
-              if (!showSearchPanel && !isLoading) fetchWhatsAppNumbers();
-            }}
+            onClick={() => setShowSearchPanel(true)}
           >
-            {isLoading ? <Spinner /> : <FaSearch className="text-gray-500" />}
+            <FaSearch className="text-gray-500" />
           </div>
 
           {/* Notification */}
           <div className="relative z-50">
             <NotificationBell />
           </div>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="bg-[#0AA89E] text-white text-sm px-4 py-2 rounded hover:bg-[#089086] transition cursor-pointer"
-          >
-            WhatsApp Number
-          </button>
+          {user?.role === "main" && (
+            <button
+              onClick={handleOnboard}
+              className="bg-[#0AA89E] text-white text-sm px-4 py-2 rounded hover:bg-[#089086] transition cursor-pointer"
+              disabled={isOnboarding}
+            >
+              {isOnboarding ? "Redirecting..." : "Onboarding"}
+            </button>
+          )}
           {/* User Info & Dropdown */}
           <div className="flex items-center gap-2">
             <div className="hidden sm:flex flex-col items-end justify-center mr-1">
               <span className="font-semibold text-sm text-gray-900 truncate max-w-[160px]">
-                {user?.email ?? "Unknown Email"}
+                {user?.name ?? "Unknown Name"}
               </span>
               <span className="text-xs text-gray-500">
                 Merchant ID: {user?.customer_id ?? "-"}
@@ -273,91 +297,6 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
               )}
             </div>
           </div>
-          {showAddModal && (
-            <div className="fixed inset-0 bg-[#000]/50 backdrop-blur-sm flex justify-center items-center z-50">
-              <div className="bg-white rounded-lg shadow-lg w-96 p-6 space-y-4">
-                <h2 className="text-lg font-semibold text-gray-700">
-                  Add WhatsApp Contact
-                </h2>
-
-                <input
-                  type="text"
-                  placeholder="Name"
-                  value={newContact.name}
-                  onChange={(e) =>
-                    setNewContact({ ...newContact, name: e.target.value })
-                  }
-                  className="w-full border px-3 py-2 rounded outline-none focus:ring-2 focus:ring-[#0AA89E]"
-                />
-
-                <input
-                  type="text"
-                  placeholder="Merchant ID"
-                  value={newContact.whatsapp}
-                  onChange={(e) =>
-                    setNewContact({ ...newContact, whatsapp: e.target.value })
-                  }
-                  className="w-full border px-3 py-2 rounded outline-none focus:ring-2 focus:ring-[#0AA89E]"
-                />
-
-                <div className="flex justify-end gap-2 pt-2">
-                  <button
-                    onClick={() => setShowAddModal(false)}
-                    className="px-4 py-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300 cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-
-                  <button
-                    onClick={async () => {
-                      if (!newContact.name || !newContact.whatsapp) {
-                        notify("error", "Please fill in both fields.");
-                        return;
-                      }
-
-                      try {
-                        const response = await axios.post(
-                          "http://localhost:3000/createGupshupApp",
-                          {
-                            name: newContact.name,
-                            user: newContact.whatsapp,
-                            customer_id: user?.customer_id,
-                          },
-                          { withCredentials: true }
-                        );
-
-                        const result = response.data;
-
-                        if (result.success && result.onboardingLink?.link) {
-                          notify("success", "Redirecting to onboarding...");
-
-                          // Open onboarding link in new tab
-                          setTimeout(() => {
-                            window.location.href = result.onboardingLink.link;
-                          }, 1000);
-                        } else {
-                          notify("error", "Failed to add contact.");
-                        }
-                      } catch (err) {
-                        console.error("API error:", err);
-                        notify(
-                          "error",
-                          err.response?.data?.error || "Something went wrong."
-                        );
-                      }
-
-                      // Close modal and reset form
-                      setShowAddModal(false);
-                      setNewContact({ name: "", whatsapp: "" });
-                    }}
-                    className="px-4 py-2 rounded bg-[#0AA89E] text-white hover:bg-[#089086] cursor-pointer"
-                  >
-                    Save
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </header>
 
@@ -365,7 +304,7 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
       <WhatsAppSearchPanel
         isOpen={showSearchPanel}
         onClose={() => setShowSearchPanel(false)}
-        data={memoizedWhatsAppData}
+        data={[]}
       />
     </>
   );

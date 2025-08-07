@@ -86,10 +86,11 @@ function App() {
           />
 
           {/* Protected Routes */}
+{/* Protected Routes */}
           <Route element={<PrivateRoute />}>
-            <Route path="/" element={<DashboardLayout />}>
+            <Route element={<DashboardLayout />}>
               <Route
-                index
+                path="/dashboard"
                 element={
                   <ErrorBoundary>
                     <DashboardHome />
@@ -97,7 +98,7 @@ function App() {
                 }
               />
               <Route
-                path="contact"
+                path="/contact"
                 element={
                   <ErrorBoundary>
                     <ContactList />
@@ -105,7 +106,7 @@ function App() {
                 }
               />
               <Route
-                path="contact/group"
+                path="/contact/group"
                 element={
                   <ErrorBoundary>
                     <GroupManagement />
@@ -113,7 +114,7 @@ function App() {
                 }
               />
               <Route
-                path="templates"
+                path="/templates"
                 element={
                   <ErrorBoundary>
                     <Templates />
@@ -121,7 +122,7 @@ function App() {
                 }
               />
               <Route
-                path="templates/explore"
+                path="/templates/explore"
                 element={
                   <ErrorBoundary>
                     <ExploreTemplates />
@@ -129,7 +130,7 @@ function App() {
                 }
               />
               <Route
-                path="chats"
+                path="/chats"
                 element={
                   <ErrorBoundary>
                     <Chats />
@@ -137,7 +138,7 @@ function App() {
                 }
               />
               <Route
-                path="broadcast"
+                path="/broadcast"
                 element={
                   <ErrorBoundary>
                     <Broadcast />
@@ -145,7 +146,7 @@ function App() {
                 }
               />
               <Route
-                path="settings"
+                path="/settings"
                 element={
                   <ErrorBoundary>
                     <UserSetting />
@@ -153,7 +154,7 @@ function App() {
                 }
               />
               <Route
-                path="flow"
+                path="/flow"
                 element={
                   <ErrorBoundary>
                     <Setting />
@@ -161,7 +162,7 @@ function App() {
                 }
               />
               <Route
-                path="help"
+                path="/help"
                 element={
                   <ErrorBoundary>
                     <Help />
@@ -169,7 +170,7 @@ function App() {
                 }
               />
               <Route
-                path="contacts"
+                path="/contacts"
                 element={<Navigate to="/contact" replace />}
               />
             </Route>
