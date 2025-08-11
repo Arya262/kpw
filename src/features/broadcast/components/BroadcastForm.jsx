@@ -52,14 +52,13 @@ const BroadcastForm = ({
   const [filteredCustomerLists, setFilteredCustomerLists] = useState(
     customerLists || []
   );
-
+  const [warningMessage, setWarningMessage] = useState("");
   useEffect(() => {
     if (location.state?.selectedTemplate) {
       onTemplateSelect(location.state.selectedTemplate);
     }
   }, [location.state, onTemplateSelect]);
 
-  // Fetch templates when component mounts
   useEffect(() => {
     const fetchTemplates = async () => {
       setTemplatesLoading(true);
@@ -277,6 +276,7 @@ const BroadcastForm = ({
         {/* Step 2: Select Group */}
         {step === 2 && (
           <Box display="flex" gap={6} p={2}>
+            {/* Tier Info */}
             <Box minWidth="250px" textAlign="center">
               <Box
                 width={120}
@@ -301,130 +301,195 @@ const BroadcastForm = ({
                 1000 messages in 24 hrs
               </Typography>
             </Box>
+
+            {/* Customer List Selector */}
             <Box flex={1} display="flex" flexDirection="column" gap={2}>
               <Typography variant="h6" fontWeight="bold" color="text.primary">
                 Select List
               </Typography>
-              {!showList ? (
-                <Box
-                  onClick={() => setShowList(true)}
-                  sx={{
-                    border: "1px solid #E5E7EB",
-                    backgroundColor: "#FAFAFA",
-                    borderRadius: "8px",
-                    padding: "12px 16px",
-                    minHeight: "56px",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    width: "100%",
-                    "&:hover": { borderColor: "#CBD5E1" },
-                  }}
-                >
-                  <Typography color="text.secondary">
-                    Select list with &lt; 1000 customers
-                  </Typography>
-                  <ArrowDropDownIcon />
-                </Box>
-              ) : (
-                <>
-                  <TextField
-                    placeholder="Search contact lists"
-                    variant="outlined"
-                    size="small"
-                    fullWidth
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                  <Box
-                    border="1px solid #E5E7EB"
-                    borderRadius="8px"
-                    height="300px"
-                    overflow="auto"
-                    p={2}
-                    display="flex"
-                    flexDirection="column"
-                    alignItems="center"
-                    justifyContent={
-                      filteredCustomerLists.length === 0
-                        ? "center"
-                        : "flex-start"
-                    }
-                  >
-                    {filteredCustomerLists.length === 0 ? (
-                      <Box textAlign="center" color="text.secondary">
-                        <FolderOffIcon sx={{ fontSize: 48, opacity: 0.5 }} />
-                        <Typography>No results</Typography>
-                      </Box>
-                    ) : (
-                      filteredCustomerLists.map((customer) => (
-                        <Box
-                          key={customer.group_id}
-                          display="flex"
-                          alignItems="flex-start"
-                          justifyContent="space-between"
-                          py={1}
-                          borderBottom="1px solid #F3F4F6"
-                          width="100%"
-                        >
-                          <FormControlLabel
-                            control={
-                              <Checkbox
-                                checked={formData.group_id.includes(
-                                  customer.group_id
-                                )}
-                                onChange={(e) => {
-                                  const isChecked = e.target.checked;
-                                  setFormData((prev) => ({
-                                    ...prev,
-                                    group_id: isChecked
-                                      ? [...prev.group_id, customer.group_id]
-                                      : prev.group_id.filter(
-                                          (id) => id !== customer.group_id
-                                        ),
-                                  }));
-                                }}
-                                disabled={isSubmitting || loading}
-                              />
-                            }
-                            label={
-                              <Box>
-                                <Typography fontWeight="medium">
-                                  {`${customer.group_name} (${customer.total_contacts} contacts)`}
-                                </Typography>
-                                {customer.initial_contacts && (
-                                  <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                  >
-                                    Initial contacts:{" "}
-                                    {customer.initial_contacts}
-                                    {customer.unsubscribed_contacts
-                                      ? ` | Unsubscribed contacts: ${customer.unsubscribed_contacts}`
-                                      : ""}
-                                  </Typography>
-                                )}
-                              </Box>
-                            }
-                          />
-                          <Box
-                            px={1}
-                            py={0.5}
-                            border="1px dashed #10B981"
-                            borderRadius="4px"
-                            fontSize="12px"
-                            color="#10B981"
-                            alignSelf="center"
-                          >
-                            Exported data
-                          </Box>
-                        </Box>
-                      ))
-                    )}
-                  </Box>
-                </>
+
+              {/* Warning message */}
+              {warningMessage && (
+                <Typography color="error" variant="body2">
+                  {warningMessage}
+                </Typography>
               )}
+
+              {(() => {
+                const selectedGroups = customerLists.filter((c) =>
+                  formData.group_id.includes(c.group_id)
+                );
+                const selectedCount = selectedGroups.length;
+                const totalContacts = selectedGroups.reduce(
+                  (sum, group) => sum + (group.total_contacts || 0),
+                  0
+                );
+
+                return !showList ? (
+                  // Collapsed view
+                  <Box
+                    onClick={() => setShowList((prev) => !prev)}
+                    sx={{
+                      border: "1px solid #E5E7EB",
+                      backgroundColor: "#FAFAFA",
+                      borderRadius: "8px",
+                      padding: "12px 16px",
+                      minHeight: "56px",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      width: "100%",
+                      "&:hover": { borderColor: "#CBD5E1" },
+                    }}
+                  >
+                    <Typography
+                      color={
+                        selectedCount > 0 ? "text.primary" : "text.secondary"
+                      }
+                    >
+                      {selectedCount > 0
+                        ? `${selectedCount} list${
+                            selectedCount > 1 ? "s" : ""
+                          } with < ${totalContacts} customers selected`
+                        : "Select list with < 1000 customers"}
+                    </Typography>
+                    <ArrowDropDownIcon />
+                  </Box>
+                ) : (
+                  // Expanded view
+                  <>
+                    <TextField
+                      placeholder="Search contact lists"
+                      variant="outlined"
+                      size="small"
+                      fullWidth
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+
+                    <Box
+                      border="1px solid #E5E7EB"
+                      borderRadius="8px"
+                      height="300px"
+                      overflow="auto"
+                      p={2}
+                      display="flex"
+                      flexDirection="column"
+                      alignItems="center"
+                      justifyContent={
+                        filteredCustomerLists.length === 0
+                          ? "center"
+                          : "flex-start"
+                      }
+                    >
+                      {filteredCustomerLists.length === 0 ? (
+                        <Box textAlign="center" color="text.secondary">
+                          <FolderOffIcon sx={{ fontSize: 48, opacity: 0.5 }} />
+                          <Typography>No results</Typography>
+                        </Box>
+                      ) : (
+                        filteredCustomerLists.map((customer) => {
+                          return (
+                            <Box
+                              key={customer.group_id}
+                              display="flex"
+                              alignItems="flex-start"
+                              justifyContent="space-between"
+                              py={1}
+                              borderBottom="1px solid #F3F4F6"
+                              width="100%"
+                            >
+                              <FormControlLabel
+                                control={
+                                  <Checkbox
+                                    checked={formData.group_id.includes(
+                                      customer.group_id
+                                    )}
+                                    onChange={(e) => {
+                                      const isChecked = e.target.checked;
+                                      const selectedGroups =
+                                        customerLists.filter((c) =>
+                                          formData.group_id.includes(c.group_id)
+                                        );
+                                      const totalSelectedContacts =
+                                        selectedGroups.reduce(
+                                          (sum, group) =>
+                                            sum + (group.total_contacts || 0),
+                                          0
+                                        );
+                                      if (
+                                        isChecked &&
+                                        totalSelectedContacts +
+                                          customer.total_contacts >
+                                          1000
+                                      ) {
+                                        setWarningMessage(
+                                          `Selecting "${customer.group_name}" would exceed the 1000 contact limit.`
+                                        );
+                                        setTimeout(
+                                          () => setWarningMessage(""),
+                                          3000
+                                        );
+                                        return;
+                                      }
+                                      setWarningMessage("");
+                                      setFormData((prev) => ({
+                                        ...prev,
+                                        group_id: isChecked
+                                          ? [
+                                              ...prev.group_id,
+                                              customer.group_id,
+                                            ]
+                                          : prev.group_id.filter(
+                                              (id) => id !== customer.group_id
+                                            ),
+                                      }));
+                                      setShowList(false);
+                                    }}
+                                    disabled={isSubmitting || loading}
+                                  />
+                                }
+                                label={
+                                  <Box>
+                                    <Typography fontWeight="medium">
+                                      {`${customer.group_name} (${customer.total_contacts} contacts)`}
+                                    </Typography>
+                                    {customer.initial_contacts && (
+                                      <Typography
+                                        variant="caption"
+                                        color="text.secondary"
+                                      >
+                                        Initial contacts:{" "}
+                                        {customer.initial_contacts}
+                                        {customer.unsubscribed_contacts
+                                          ? ` | Unsubscribed contacts: ${customer.unsubscribed_contacts}`
+                                          : ""}
+                                      </Typography>
+                                    )}
+                                  </Box>
+                                }
+                              />
+                              <Box
+                                px={1}
+                                py={0.5}
+                                border="1px dashed #10B981"
+                                borderRadius="4px"
+                                fontSize="12px"
+                                color="#10B981"
+                                alignSelf="center"
+                              >
+                                Exported data
+                              </Box>
+                            </Box>
+                          );
+                        })
+                      )}
+                    </Box>
+                  </>
+                );
+              })()}
+
               {errors.group_id && (
                 <Typography color="error" variant="body2" mt={1}>
                   {errors.group_id}
@@ -552,7 +617,7 @@ const BroadcastForm = ({
             <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-200 space-y-6 max-w-xl mx-auto">
               <div className="space-y-3">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-gray-700">
-                  <div>
+                  <div className="text-base sm:text-lg md:text-xl lg:text-2xl">
                     <p>
                       <span className="font-medium text-gray-600">Name:</span>{" "}
                       {formData.broadcastName}
@@ -625,7 +690,7 @@ const BroadcastForm = ({
                       <p className="text-sm text-gray-600 whitespace-pre-wrap">
                         {(() => {
                           let content =
-                            formData.selectedTemplate.container_meta.data;
+                            formData.selectedTemplate.container_meta.sampleText;
                           if (
                             formData.selectedTemplate.container_meta
                               .dynamicFields
@@ -656,13 +721,13 @@ const BroadcastForm = ({
         )}
       </div>
       {/* Navigation Buttons - Fixed at bottom */}
-      <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4">
+      <div className="sticky bottom-0 bg-white p-4">
         <div className="flex justify-between">
           {step > 1 && (
             <button
               type="button"
               onClick={handlePrevious}
-              className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+              className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors cursor-pointer"
             >
               Previous
             </button>
@@ -673,7 +738,7 @@ const BroadcastForm = ({
               <button
                 type="button"
                 onClick={handleNext}
-                className="px-6 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors"
+                className="px-6 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors cursor-pointer"
               >
                 Next
               </button>
@@ -682,7 +747,7 @@ const BroadcastForm = ({
                 type="button"
                 onClick={handleSubmit}
                 disabled={isSubmitting}
-                className={`px-6 py-2 rounded-lg flex items-center justify-center transition-colors font-medium ${
+                className={`px-6 py-2 rounded-lg flex items-center justify-center transition-colors font-medium cursor-pointer ${
                   isSubmitting
                     ? "bg-gray-400 text-white cursor-not-allowed"
                     : "bg-teal-500 hover:bg-teal-600 text-white"

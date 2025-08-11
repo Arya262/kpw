@@ -122,7 +122,7 @@ const Broadcast = () => {
       <div className="flex items-center justify-between">
         <h2 className="text-xl pt-0 font-semibold">Campaigns</h2>
         <button
-          className="bg-[#0AA89E] hover:bg-teal-600 text-white flex items-center gap-2 px-4 py-2 rounded"
+          className="bg-[#0AA89E] hover:bg-teal-600 text-white flex items-center gap-2 px-4 py-2 rounded cursor-pointer"
           onClick={handleAddBroadcast}
         >
           <img src={vendor} alt="plus sign" className="w-5 h-5" />

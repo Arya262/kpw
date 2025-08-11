@@ -15,15 +15,22 @@ const LoginPage = () => {
   const navigate = useNavigate();
 
   // Redirect already authenticated users
-  React.useEffect(() => {
-    if (user) {
-      if (user.role === "admin" || user.role === "super_admin") {
-        navigate("/admin/dashboard", { replace: true });
-      } else {
-        navigate("/dashboard", { replace: true });
-      }
+React.useEffect(() => {
+  // Existing redirect if user is already logged in
+  if (user) {
+    if (user.role === "admin" || user.role === "super_admin") {
+      navigate("/admin/dashboard", { replace: true });
+    } else {
+      navigate("/dashboard", { replace: true });
     }
-  }, [user, navigate]);
+  }
+
+  // New: Show logout success toast if flag is set
+  if (localStorage.getItem("showLogoutSuccessToast") === "true") {
+    toast.success("Successfully logged out!");
+    localStorage.removeItem("showLogoutSuccessToast");
+  }
+}, [user, navigate]);
 
   const [loginMethod, setLoginMethod] = useState("");
   const [password, setPassword] = useState("");
@@ -151,7 +158,7 @@ const LoginPage = () => {
                 src="https://www.foodchow.com/Images/online-order/logo.png"
                 alt="Logo"
               />
-              <p className="font-poppins text-xl sm:text-xl md:text-[20px] mb-[15px] font-semibold mt-4 sm:mt-[30px]">
+              <p className="font-poppins text-xl sm:text-xl md:text-[25px] mb-[15px] font-semibold mt-4 sm:mt-[30px]">
                 Foodchow WhatsApp Marketing
               </p>
             </div>
@@ -159,7 +166,7 @@ const LoginPage = () => {
             <div className="w-full sm:w-auto flex hidden  sm:block justify-center sm:justify-end">
               <div className="relative w-[120px] h-[120px] sm:w-[169px] sm:h-[166px] flex justify-center items-center">
                 <img
-                  className="w-[50px] h-[60px] sm:w-[60px] sm:h-[76px] relative z-10 mb-[120px] sm:mb-[200px]"
+                  className="w-[50px] h-[60px] sm:w-[80px] sm:h-[76px] relative z-10 mb-[120px] sm:mb-[200px]"
                   src={whatsAppLogo}
                   alt="Social Icon"
                 />
@@ -321,7 +328,7 @@ const LoginPage = () => {
             <button
               type="submit"
               disabled={loading}
-              className="bg-[#0aa89e] h-[50px] w-full flex items-center justify-center border rounded-xl text-white text-base hover:opacity-90 transition"
+              className="bg-[#0aa89e] h-[50px] w-full flex items-center justify-center border rounded-xl text-white text-base hover:opacity-90 transition cursor-pointer"
             >
               {loading ? (
                 <div className="flex items-center gap-2">

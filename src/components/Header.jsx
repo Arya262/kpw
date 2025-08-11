@@ -12,7 +12,6 @@ import axios from "axios";
 import { API_ENDPOINTS } from "../config/api";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import WhatsAppSearchPanel from "../components/WhatsAppSearchPanel";
 import NotificationBell from "./NotificationBell";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -65,7 +64,10 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
       );
 
       if (response.data?.success) {
-        notify("success", "Successfully logged out!");
+        setIsLoggingOut(true);
+
+        // Set localStorage flag to show toast on login page
+        localStorage.setItem("showLogoutSuccessToast", "true");
 
         setTimeout(() => {
           logout();
@@ -236,14 +238,14 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
                 Merchant ID: {user?.customer_id ?? "-"}
               </span>
             </div>
-            <div className="relative" ref={userMenuRef}>
+            <div className="relative " ref={userMenuRef}>
               <button
                 type="button"
                 aria-label="User menu"
                 aria-expanded={showUserMenu}
                 aria-controls="user-menu"
                 tabIndex={0}
-                className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-200 overflow-hidden border border-gray-300 focus:outline-none ml-2"
+                className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-200 overflow-hidden border border-gray-300 focus:outline-none ml-2 cursor-pointer"
                 onClick={() => setShowUserMenu((prev) => !prev)}
               >
                 <img
@@ -258,11 +260,11 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
                   id="user-menu"
                   className="absolute right-0 mt-2 w-72 max-w-[90vw] bg-white border border-gray-200 rounded shadow-lg  z-50 p-4 flex flex-col items-center transition-all duration-200 scale-100 opacity-100"
                 >
-                  <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-gray-200 flex items-center justify-center mb-2">
+                  <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-gray-200 flex items-center justify-center mb-2 cursor-pointer">
                     <img
                       src={avatarSrc}
                       alt="User Avatar"
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover "
                       loading="lazy"
                     />
                   </div>
@@ -277,7 +279,7 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
                   <div className="w-full flex flex-col gap-1">
                     <Link
                       to="/privacy-policy"
-                      className="flex items-center justify-between px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition"
+                      className="flex items-center justify-between px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition cursor-pointer"
                     >
                       <span>Privacy Policy</span>
                       <span className="ml-2 microbial text-xs bg-red-100 text-red-500 px-2 py-0.5 rounded font-bold">
@@ -286,14 +288,14 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
                     </Link>
                     <Link
                       to="/ForgotPassword"
-                      className="flex items-center justify-between px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition"
+                      className="flex items-center justify-between px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition cursor-pointer"
                     >
                       <span>Change Password</span>
                       <FaKey className="ml-2 text-lg text-gray-400" />
                     </Link>
                     <button
                       onClick={handleLogout}
-                      className="flex items-center justify-between w-full px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition"
+                      className="flex items-center justify-between w-full px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition cursor-pointer"
                       disabled={isLoggingOut}
                     >
                       <span>{isLoggingOut ? "Logging out..." : "Logout"}</span>
@@ -364,7 +366,7 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
                       height: 40,
                       px: 3,
                       fontSize: "0.875rem",
-                      backgroundColor: "#e0e0e0", 
+                      backgroundColor: "#e0e0e0",
                       color: "#333",
                       "&:hover": {
                         backgroundColor: "#d5d5d5",
@@ -415,7 +417,7 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
                       height: 40,
                       px: 3,
                       fontSize: "0.875rem",
-                      backgroundColor: "#0AA89E", 
+                      backgroundColor: "#0AA89E",
                       color: "#fff",
                       "&:hover": {
                         backgroundColor: "#089086",

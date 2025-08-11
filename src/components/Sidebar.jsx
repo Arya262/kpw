@@ -29,7 +29,7 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
   const [activeSubmenu, setActiveSubmenu] = useState(null);
   const [submenuHovered, setSubmenuHovered] = useState(false);
   const closeTimeoutRef = useRef(null);
-
+const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
   const menuItems = [
     {
       name: "Dashboard",
@@ -165,6 +165,15 @@ const handleNavClick = () => {
       setActiveSubmenu(activeSubmenu === itemName ? null : itemName);
     }
   };
+
+useEffect(() => {
+  if (submenuHovered || activeSubmenu) {
+    const timeout = setTimeout(() => setIsSidebarExpanded(true), 300);
+    return () => clearTimeout(timeout);
+  } else {
+    setIsSidebarExpanded(false);
+  }
+}, [submenuHovered, activeSubmenu]);
 
   return (
     <div

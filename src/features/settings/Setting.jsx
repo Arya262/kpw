@@ -151,34 +151,6 @@ const FlowEditor = () => {
     [handleDelete, handleClone]
   );
 
-  // const createEdgesFromSelectedNodes = (selectedNodes) => {
-  //   if (selectedNodes.length === 0) return [];
-
-  //   const edges = [
-  //     {
-  //       id: `start-${selectedNodes[0].id}`,
-  //       source: "start",
-  //       target: selectedNodes[0].id,
-  //       type: "custom",
-  //       animated: true,
-  //       style: { stroke: "#0ea5e9", strokeWidth: 2 },
-  //       markerEnd: { type: "arrowclosed", color: "#0ea5e9" },
-  //     },
-  //   ];
-
-  //   for (let i = 1; i < selectedNodes.length; i++) {
-  //     edges.push({
-  //       id: `${selectedNodes[i - 1].id}-${selectedNodes[i].id}`,
-  //       source: selectedNodes[i - 1].id,
-  //       target: selectedNodes[i].id,
-  //       type: "custom",
-  //       animated: true,
-  //       style: { stroke: "#0ea5e9", strokeWidth: 2 },
-  //       markerEnd: { type: "arrowclosed", color: "#0ea5e9" },
-  //     });
-  //   }
-  //   return edges;
-  // };
 
   const createEdgesFromSelectedNodes = (selectedNodes) => {
   if (selectedNodes.length === 0) return [];
