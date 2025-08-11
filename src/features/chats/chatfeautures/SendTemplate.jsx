@@ -9,50 +9,52 @@ const SendTemplate = ({ onSelect, onClose, returnFullTemplate = false }) => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [error, setError] = useState(null);
-  const [previewTemplate, setPreviewTemplate] = useState(null); // NEW
+  const [previewTemplate, setPreviewTemplate] = useState(null);
+  const [dynamicFields, setDynamicFields] = useState({});
   const { user } = useAuth();
 
-useEffect(() => {
-  const fetchTemplates = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(
-        `${API_ENDPOINTS.TEMPLATES.GET_ALL}?customer_id=${user?.customer_id}`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      if (Array.isArray(data.templates)) {
-        // ✅ Filter only approved templates
-        const approvedTemplates = data.templates.filter(
-          (t) => t.status?.toLowerCase() === "approved"
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch(
+          `${API_ENDPOINTS.TEMPLATES.GET_ALL}?customer_id=${user?.customer_id}`,
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+          }
         );
-        setTemplates(approvedTemplates);
-        setFilteredTemplates(approvedTemplates);
-      } else {
-        setError("Unexpected response format from server.");
-      }
-    } catch (err) {
-      setError(
-        `Failed to load templates. Please try again. Error: ${err.message}`
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  fetchTemplates();
-}, [user?.customer_id]);
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (Array.isArray(data.templates)) {
+          // const approvedTemplates = data.templates.filter(
+          //   (t) => t.status?.toLowerCase() === "approved"
+          // );
+          // setTemplates(approvedTemplates);
+          // setFilteredTemplates(approvedTemplates);
+          setTemplates(data.templates);
+          setFilteredTemplates(data.templates);
+        } else {
+          setError("Unexpected response format from server.");
+        }
+      } catch (err) {
+        setError(
+          `Failed to load templates. Please try again. Error: ${err.message}`
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTemplates();
+  }, [user?.customer_id]);
 
   useEffect(() => {
     const debouncedSearch = debounce(() => {
@@ -72,15 +74,59 @@ useEffect(() => {
     return () => debouncedSearch.cancel();
   }, [searchTerm, templates]);
 
+  // Extract dynamic fields from template content (e.g., {{1}}, {{2}})
+  const extractDynamicFields = (template) => {
+    const content = template.container_meta?.data || "";
+    const fieldRegex = /\{\{(\d+)\}\}/g;
+    const fields = new Set();
+    let match;
+
+    while ((match = fieldRegex.exec(content)) !== null) {
+      fields.add(match[1]); // Add the number inside {{}}
+    }
+
+    return Array.from(fields).map((num) => ({
+      placeholder: `{{${num}}}`,
+      name: num,
+      label: `Field ${num}`,
+    }));
+  };
+
   const handleTemplateClick = (template) => {
     if (onSelect) {
-      onSelect(returnFullTemplate ? template : template.element_name);
+      const dynamicFields = extractDynamicFields(template);
+      if (dynamicFields.length > 0) {
+        const fields = {};
+        dynamicFields.forEach((field) => {
+          fields[field.placeholder] = "";
+        });
+        setDynamicFields(fields);
+        setPreviewTemplate({
+          ...template,
+          dynamicFields: dynamicFields,
+        });
+      } else {
+        onSelect(returnFullTemplate ? template : template.element_name);
+      }
     }
   };
 
   const handlePreviewClick = (template, e) => {
     e.stopPropagation();
-    setPreviewTemplate(template);
+    const dynamicFields = extractDynamicFields(template);
+    if (dynamicFields.length > 0) {
+      const fields = {};
+      dynamicFields.forEach((field) => {
+        fields[field.placeholder] = "";
+      });
+      setDynamicFields(fields);
+      setPreviewTemplate({
+        ...template,
+        dynamicFields: dynamicFields,
+      });
+    } else {
+      setPreviewTemplate(template);
+    }
   };
 
   return (
@@ -195,59 +241,126 @@ useEffect(() => {
       )}
 
       {/* Preview Modal */}
-      {previewTemplate && (
-        <div className="fixed inset-0 z-50 bg-[#000]/50 flex items-center justify-center px-4">
-          <div className="bg-white rounded-xl shadow-lg max-w-lg w-full relative p-6">
-            {/* Close Button */}
-            <button
-              onClick={() => setPreviewTemplate(null)}
-              className="absolute top-3 right-4 text-gray-400 hover:text-black text-2xl font-bold"
-            >
-              ×
-            </button>
-
-            {/* Title */}
-            <h3 className="text-xl font-semibold mb-4 text-gray-800 text-center">
-              Template Preview
-            </h3>
-
-            {/* Preview Box */}
-            <div className="bg-blue-50 text-gray-800 rounded-xl p-5 text-sm whitespace-pre-wrap leading-relaxed">
-              {/* Header */}
-              {previewTemplate.container_meta?.header && (
-                <div className="font-medium mb-2">
-                  {previewTemplate.container_meta.header}
-                </div>
-              )}
-
-              {/* Image if available */}
-              {previewTemplate.container_meta?.mediaUrl && (
-                <div className="mb-4">
-                  <img
-                    src={previewTemplate.container_meta.mediaUrl}
-                    alt="Template visual"
-                    className="w-full rounded-lg border border-gray-200 shadow-sm"
+{previewTemplate && (
+  <div className="fixed inset-0 z-50 bg-[#000]/50 flex items-center justify-center px-4">
+    <div className="bg-white rounded-xl shadow-lg w-full max-w-lg sm:max-w-2xl relative p-6">
+      <button
+        onClick={() => setPreviewTemplate(null)}
+        className="absolute top-3 right-4 text-gray-400 hover:text-black text-2xl font-bold"
+        aria-label="Close preview modal"
+      >
+        <span aria-hidden="true">×</span>
+      </button>
+      <h3 className="text-xl font-semibold mb-4 text-gray-800 text-center">
+        Template Preview
+      </h3>
+      <div className="bg-blue-50 text-gray-800 rounded-xl p-5 text-sm whitespace-pre-wrap leading-relaxed">
+        {previewTemplate.container_meta?.header && (
+          <div className="font-medium mb-2">
+            {previewTemplate.container_meta.header}
+          </div>
+        )}
+        {previewTemplate.container_meta?.mediaUrl && (
+          <div className="mb-4">
+            <img
+              src={previewTemplate.container_meta.mediaUrl}
+              alt="Template visual"
+              className="w-full rounded-lg border border-gray-200 shadow-sm"
+              onError={() => console.log("Failed to load media:", previewTemplate.container_meta.mediaUrl)}
+            />
+          </div>
+        )}
+        <div className="mb-2 space-y-3">
+          {previewTemplate.dynamicFields?.length > 0 ? (
+            <div className="space-y-3">
+              {previewTemplate.dynamicFields.map((field, index) => (
+                <div key={index} className="flex flex-col">
+                  <label className="text-sm font-medium text-gray-700 mb-1">
+                    {field.label || field.name}:
+                  </label>
+                  <input
+                    type="text"
+                    value={dynamicFields[field.placeholder] || ""}
+                    onChange={(e) => {
+                      console.log("Updating field:", field.placeholder, e.target.value);
+                      setDynamicFields((prev) => ({
+                        ...prev,
+                        [field.placeholder]: e.target.value,
+                      }));
+                    }}
+                    placeholder={field.label}
+                    className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
                   />
                 </div>
-              )}
-
-              {/* Message Body */}
-              {previewTemplate.container_meta?.data && (
-                <div className="mb-2">
-                  {previewTemplate.container_meta.data}
-                </div>
-              )}
-
-              {/* Footer */}
-              {previewTemplate.container_meta?.footer && (
-                <div className="mt-4 font-medium">
-                  {previewTemplate.container_meta.footer}
-                </div>
-              )}
+              ))}
+              <div className="mt-4">
+                <h4 className="text-sm font-semibold text-gray-600 mb-1">
+                  Final Message Preview:
+                </h4>
+                <pre className="bg-gray-100 text-gray-800 rounded p-3 whitespace-pre-wrap text-sm border border-gray-200 min-h-[50px]">
+                  {(() => {
+                    let message = previewTemplate.container_meta?.data || "No template content available";
+                    console.log("Rendering preview with:", { message, dynamicFields });
+                    Object.entries(dynamicFields).forEach(([placeholder, value]) => {
+                      message = message.replace(
+                        new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"),
+                        value || placeholder // Fallback to placeholder if value is empty
+                      );
+                    });
+                    return message;
+                  })()}
+                </pre>
+              </div>
+              <button
+                disabled={Object.values(dynamicFields).some((value) => !value.trim())}
+                onClick={() => {
+                  let finalTemplate = { ...previewTemplate };
+                  let message = previewTemplate.container_meta?.data || "";
+                  Object.entries(dynamicFields).forEach(([placeholder, value]) => {
+                    message = message.replace(
+                      new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"),
+                      value
+                    );
+                  });
+                  const dynamicFieldsWithValues = previewTemplate.dynamicFields.map((field) => ({
+                    ...field,
+                    value: dynamicFields[field.placeholder] || "",
+                  }));
+                  finalTemplate = {
+                    ...finalTemplate,
+                    container_meta: {
+                      ...finalTemplate.container_meta,
+                      data: message,
+                    },
+                    dynamicFields: dynamicFieldsWithValues,
+                  };
+                  onSelect(finalTemplate);
+                  setPreviewTemplate(null);
+                }}
+                className={`w-full mt-4 bg-teal-500 hover:bg-teal-600 text-white font-medium py-2 px-4 rounded-md transition-colors ${
+                  Object.values(dynamicFields).some((value) => !value.trim())
+                    ? "opacity-50 cursor-not-allowed"
+                    : ""
+                }`}
+              >
+                Send with Customized Text
+              </button>
             </div>
-          </div>
+          ) : (
+            <pre className="bg-gray-100 text-gray-800 rounded p-3 whitespace-pre-wrap text-sm border border-gray-200 min-h-[50px]">
+              {previewTemplate.container_meta?.data || "No template content available"}
+            </pre>
+          )}
         </div>
-      )}
+        {previewTemplate.container_meta?.footer && (
+          <div className="mt-4 font-medium">
+            {previewTemplate.container_meta.footer}
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 };

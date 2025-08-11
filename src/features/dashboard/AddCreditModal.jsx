@@ -180,7 +180,7 @@ const AddCreditModal = ({
         ) : (
           <>
             <div className="flex justify-between gap-2 mb-4">
-              {[500, 1000, 2000, 5000].map((amount) => (
+              {[5000, 10000, 20000, 50000].map((amount) => (
                 <button
                   key={amount}
                   type="button"

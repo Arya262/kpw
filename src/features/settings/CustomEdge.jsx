@@ -12,7 +12,7 @@ const CustomEdge = ({
   targetX,
   targetY,
   style = {},
-  markerEnd, // <-- object like { type: "arrow", color: "#5b5656" }
+  markerEnd, 
 }) => {
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX,

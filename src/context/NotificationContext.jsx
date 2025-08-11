@@ -151,7 +151,7 @@ export const NotificationProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    if (!user?.customer_id) return; // Wait for user to be loaded
+    if (!user?.customer_id) return; 
 
     const fetchUnreadCount = async () => {
       try {
@@ -167,7 +167,7 @@ export const NotificationProvider = ({ children }) => {
           0
         );
         setUnreadCount(totalUnread);
-        // Initialize unreadConversations map for correct badge behavior after reload
+
         const unreadMap = {};
         response.data.forEach(c => {
           if (c.unread_count > 0 && c.conversation_id) unreadMap[c.conversation_id] = c.unread_count;

@@ -416,7 +416,7 @@ const TemplateModal = ({
       >
         <div className="flex justify-between items-center p-4 flex-shrink-0 relative">
           <h2 className="text-lg font-semibold">
-            {mode === "edit" ? "Edit Template" : "Add New Template"}
+            {mode === "edit" ? "Edit Template" : "Create New Template"}
           </h2>
           <button
             onClick={handleClose}

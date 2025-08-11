@@ -171,7 +171,7 @@ const handleNavClick = () => {
       ref={sidebarRef}
       role="navigation"
       className={`
-        fixed top-0 left-0 z-50 h-screen
+        fixed top-0 left-0 z-50 lg:z-auto h-screen
         bg-white text-black flex flex-col
         transition-all duration-300 ease-in-out
         group

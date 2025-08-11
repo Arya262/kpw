@@ -270,7 +270,6 @@ const MessageInput = ({ onSendMessage, selectedContact, canSendMessage }) => {
           theme="light"
         />
       </div>
-
       {showTemplates && (
         <div className="fixed inset-0 bg-[#000]/50  z-50 flex justify-center items-center p-2">
           <div
@@ -278,12 +277,20 @@ const MessageInput = ({ onSendMessage, selectedContact, canSendMessage }) => {
             className="relative bg-white rounded-xl shadow-lg w-full max-w-3xl p-4 sm:p-6"
           >
             <SendTemplate
-              onSelect={(templateName) => {
-                onSendMessage({ template_name: templateName });
+              onSelect={(filledTemplate) => {
+                const parameters =
+                  filledTemplate.dynamicFields?.map(
+                    (field) => field.value || ""
+                  ) || [];
+                onSendMessage({
+                  template_name: filledTemplate.element_name,
+                  parameters,
+                });
+
                 setShowTemplates(false);
               }}
               onClose={() => setShowTemplates(false)}
-              returnFullTemplate={false}
+              returnFullTemplate={true}
             />
           </div>
         </div>

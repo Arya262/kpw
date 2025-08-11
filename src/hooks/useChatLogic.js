@@ -207,6 +207,9 @@ export const useChatLogic = ({
       } else if (input.template_name) {
         newMessage.element_name = input.template_name;
         messageType = "template";
+        if (Array.isArray(input.parameters)) {
+          newMessage.parameters = input.parameters;
+        }
       } else {
         console.warn("Invalid message input");
         return;
@@ -217,6 +220,7 @@ export const useChatLogic = ({
           ...newMessage,
           message_type: messageType,
         });
+
 
         fetchMessagesForContact(selectedContact.conversation_id);
 

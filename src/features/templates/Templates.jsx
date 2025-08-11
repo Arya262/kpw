@@ -95,7 +95,7 @@ const Templates = () => {
 
 
   const handleAddTemplate = async (newTemplate) => {
-    if (isSubmitting) return; // Prevent multiple submissions
+    if (isSubmitting) return; 
     
     console.log("Received from Modal:", newTemplate);
     setIsSubmitting(true);

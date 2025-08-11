@@ -19,7 +19,6 @@ const ExploreTemplates = () => {
   const [error, setError] = useState(null);
   const { user } = useAuth();
   const permissions = getPermissions(user);
-
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -48,10 +47,10 @@ const ExploreTemplates = () => {
           }));
           setTemplates(normalizedTemplates);
         } else {
-          setError("Invalid response format");
+          console.error("Invalid response format", err);
         }
       } catch (err) {
-        setError("Failed to fetch templates");
+        console.error("Failed to fetch templates", err);
       } finally {
         setLoading(false);
       }
@@ -199,7 +198,7 @@ const ExploreTemplates = () => {
             >
               {template.container_meta.mediaUrl && (
                 <img
-                  src={template.container_meta.mediaUrl }
+                  src={template.container_meta.mediaUrl}
                   alt={template.element_name}
                   className="w-full h-48 object-cover p-2 rounded-2xl"
                   onError={(e) => {
@@ -234,16 +233,23 @@ const ExploreTemplates = () => {
               </div>
               <button
                 type="button"
-                onClick={() =>
-                  navigate("/broadcast", {
-                    state: {
-                      selectedTemplate: template,
-                      openForm: true,
-                    },
-                  })
-                }
-                className="bg-teal-500 text-black px-6 py-3 font-medium rounded 
-                  border border-teal-500 hover:bg-teal-400 hover:text-white hover:border-teal-400 transition duration-300 ease-in-out cursor-pointer"
+                disabled={template?.status?.toLowerCase() !== "approved"}
+                onClick={() => {
+                  if (template?.status?.toLowerCase() === "approved") {
+                    navigate("/broadcast", {
+                      state: {
+                        selectedTemplate: template,
+                        openForm: true,
+                      },
+                    });
+                  }
+                }}
+                className={`px-6 py-3 font-medium rounded border transition duration-300 ease-in-out cursor-pointer
+    ${
+      template?.status?.toLowerCase() === "approved"
+        ? "bg-teal-500 text-black border-teal-500 hover:bg-teal-400 hover:text-white hover:border-teal-400"
+        : "bg-gray-300 text-gray-600 border-gray-300 cursor-not-allowed"
+    }`}
               >
                 Send Template
               </button>

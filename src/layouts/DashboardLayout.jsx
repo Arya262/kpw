@@ -44,17 +44,15 @@ const DashboardLayout = () => {
           className="overflow-y-auto"
         />
 
+  
+
         <main
-          className={`flex-1 p-2.5 bg-white ${
-            isChatRoute ? "overflow-hidden" : "overflow-y-auto"
-          }`}
-        >
-          {!isRouteAllowed() ? (
-            <NotAuthorized />
-          ) : (
-            <Outlet />
-          )}
-        </main>
+  className={`flex-1 p-2.5 bg-white ${
+    isChatRoute ? "overflow-hidden" : "overflow-y-auto custom-scroll"
+  }`}
+>
+  {!isRouteAllowed() ? <NotAuthorized /> : <Outlet />}
+</main>
       </div>
     </div>
   );

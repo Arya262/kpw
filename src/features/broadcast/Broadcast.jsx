@@ -152,7 +152,7 @@ const Broadcast = () => {
           }}
         >
           <div
-            className={`bg-white rounded-lg w-full max-w-4xl max-h-[90vh]  relative sm:animate-slideUp border ${
+            className={`bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-hidden relative sm:animate-slideUp border ${
               highlightCancel ? "border-teal-500" : "border-gray-300"
             } transition-all duration-300`}
             onClick={(e) => e.stopPropagation()}

@@ -15,7 +15,14 @@ import "react-toastify/dist/ReactToastify.css";
 import WhatsAppSearchPanel from "../components/WhatsAppSearchPanel";
 import NotificationBell from "./NotificationBell";
 import { useAuth } from "../context/AuthContext";
-
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Button,
+} from "@mui/material";
 export default function Header({ isMenuOpen, onToggleSidebar }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [showSearchPanel, setShowSearchPanel] = useState(false);
@@ -29,6 +36,10 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
 
   const [onboardingData, setOnboardingData] = useState(null);
   const avatarSrc = user?.avatar || "/default-avatar.jpeg";
+
+  const [showOnboardModal, setShowOnboardModal] = useState(false);
+  const [appName, setAppName] = useState("");
+  const [validationError, setValidationError] = useState("");
 
   const handleSearchChange = (e) => setSearchTerm(e.target.value);
   const handleClearSearch = () => setSearchTerm("");
@@ -88,17 +99,16 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
 
   const memoizedWhatsAppData = useMemo(() => whatsAppData, [whatsAppData]);
 
-  const handleOnboard = async () => {
+  const handleOnboard = async (name) => {
     setIsOnboarding(true);
     try {
-      // Log the payload being sent
       const payload = {
-        name: user?.name,
+        name,
         customer_id: user?.customer_id,
       };
+
       console.log("Sending to backend:", payload);
 
-      // Send request
       const response = await axios.post(
         "http://localhost:3000/createGupshupApp",
         payload,
@@ -110,20 +120,17 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
         }
       );
 
-      // Log the response
       console.log("Response from backend:", response.data);
 
-      const { name, whatsapp, onboardingLink, success } = response.data;
+      const { onboardingLink, success } = response.data;
 
       if (success && onboardingLink?.link) {
         notify("success", "Redirecting to onboarding...");
-        console.log("Redirecting to:", onboardingLink.link);
         setTimeout(() => {
-          window.location.href = onboardingLink.link;
-        }, 1500);
+          window.open(onboardingLink.link, "_blank");
+        }, 1000);
       } else {
         notify("error", "Failed to fetch onboarding link.");
-        console.warn("Backend did not return a valid onboarding link.");
       }
     } catch (err) {
       console.error("Onboarding error:", err);
@@ -212,7 +219,7 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
           </div>
           {user?.role === "main" && (
             <button
-              onClick={handleOnboard}
+              onClick={() => setShowOnboardModal(true)}
               className="bg-[#0AA89E] text-white text-sm px-4 py-2 rounded hover:bg-[#089086] transition cursor-pointer"
               disabled={isOnboarding}
             >
@@ -297,15 +304,132 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
               )}
             </div>
           </div>
+          {showOnboardModal && (
+            <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
+              <Dialog
+                open={true}
+                onClose={() => setShowOnboardModal(false)}
+                PaperProps={{
+                  sx: {
+                    width: 500,
+                    height: 250,
+                    display: "flex",
+                    flexDirection: "column",
+                  },
+                }}
+              >
+                <DialogTitle>Enter Brand Name</DialogTitle>
+
+                <DialogContent sx={{ flex: 1 }}>
+                  <TextField
+                    fullWidth
+                    variant="outlined"
+                    label="Brand Name"
+                    value={appName}
+                    onChange={(e) => {
+                      setAppName(e.target.value);
+                      setValidationError("");
+                    }}
+                    helperText={
+                      validationError
+                        ? validationError
+                        : "Brand Name must be at least 6 characters. No spaces or underscores."
+                    }
+                    error={Boolean(validationError)}
+                    margin="normal"
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        "&.Mui-focused fieldset": {
+                          borderColor: "#0AA89E",
+                        },
+                      },
+                      "& label.Mui-focused": {
+                        color: "#0AA89E",
+                      },
+                    }}
+                  />
+                </DialogContent>
+
+                <DialogActions>
+                  <Button
+                    onClick={() => {
+                      setShowOnboardModal(false);
+                      setValidationError("");
+                      setAppName("");
+                    }}
+                    variant="contained"
+                    color="inherit"
+                    sx={{
+                      minWidth: 100,
+                      height: 40,
+                      px: 3,
+                      fontSize: "0.875rem",
+                      backgroundColor: "#e0e0e0", 
+                      color: "#333",
+                      "&:hover": {
+                        backgroundColor: "#d5d5d5",
+                      },
+                    }}
+                  >
+                    Cancel
+                  </Button>
+
+                  <Button
+                    variant="contained"
+                    onClick={async () => {
+                      const rawName = appName.trim();
+
+                      if (rawName.length < 6) {
+                        setValidationError(
+                          "Brand name must be at least 6 characters."
+                        );
+                        return;
+                      }
+
+                      if (rawName.includes(" ")) {
+                        setValidationError("Brand name cannot contain spaces.");
+                        return;
+                      }
+
+                      if (rawName.includes("_")) {
+                        setValidationError(
+                          "Brand name cannot contain underscores."
+                        );
+                        return;
+                      }
+
+                      if (!/^[a-z0-9]+$/i.test(rawName)) {
+                        setValidationError(
+                          "Brand name can only contain letters and numbers."
+                        );
+                        return;
+                      }
+
+                      await handleOnboard(rawName);
+                      setShowOnboardModal(false);
+                      setAppName("");
+                      setValidationError("");
+                    }}
+                    sx={{
+                      minWidth: 100,
+                      height: 40,
+                      px: 3,
+                      fontSize: "0.875rem",
+                      backgroundColor: "#0AA89E", 
+                      color: "#fff",
+                      "&:hover": {
+                        backgroundColor: "#089086",
+                      },
+                    }}
+                  >
+                    Save
+                  </Button>
+                </DialogActions>
+              </Dialog>
+            </div>
+          )}
         </div>
       </header>
-
-      {/* WhatsApp Search Panel */}
-      <WhatsAppSearchPanel
-        isOpen={showSearchPanel}
-        onClose={() => setShowSearchPanel(false)}
-        data={[]}
-      />
     </>
   );
 }

@@ -17,13 +17,19 @@ const Broadcast = lazy(() => import("./features/broadcast/Broadcast"));
 const NotFound = lazy(() => import("./components/NotFound"));
 const NotAuthorized = lazy(() => import("./components/NotAuthorized"));
 const DashboardHome = lazy(() => import("./features/dashboard/DashboardHome"));
-const ExploreTemplates = lazy(() => import("./features/templates/ExploreTemplates"));
+const ExploreTemplates = lazy(() =>
+  import("./features/templates/ExploreTemplates")
+);
 const LoginRedirectHandler = lazy(() => import("./LoginRedirectHandler"));
 const ForgotPassword = lazy(() => import("./ForgotPassword"));
 const RegisterPage = lazy(() => import("./RegisterPage"));
-const GroupManagement = lazy(() => import("./features/contacts/GroupManagement"));
+const GroupManagement = lazy(() =>
+  import("./features/contacts/GroupManagement")
+);
 const UserSetting = lazy(() => import("./features/flow/UserSetting"));
-
+const OnboardingGuide = lazy(() =>
+  import("./features/onboard/OnboardingGuide")
+);
 function App() {
   return (
     <>
@@ -84,9 +90,15 @@ function App() {
               </ErrorBoundary>
             }
           />
-
+          <Route
+            path="/onboarding-guide"
+            element={
+              <ErrorBoundary>
+                <OnboardingGuide />
+              </ErrorBoundary>
+            }
+          />
           {/* Protected Routes */}
-{/* Protected Routes */}
           <Route element={<PrivateRoute />}>
             <Route element={<DashboardLayout />}>
               <Route

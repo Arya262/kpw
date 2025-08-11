@@ -37,8 +37,8 @@ const Table = ({
   onEdit,
   canEdit,
   canDelete,
-  onAddTemplate, // <-- Add this prop
-  vendorIcon, // <-- Add this prop
+  onAddTemplate,
+  vendorIcon,
 }) => {
   const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState("All");
@@ -243,6 +243,26 @@ const Table = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const handleSendCampaign = (template) => {
+    if (template.status?.toLowerCase() !== "approved") {
+      toast.error("Only approved templates can be used to send campaigns.", {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
+      return;
+    }
+    navigate("/broadcast", {
+      state: {
+        selectedTemplate: template,
+        openForm: true,
+      },
+    });
+  };
+
   return (
     <div className="overflow-x-auto">
       <div className="w-full font-sans rounded-[16px] scrollbar-hide scroll-smooth bg-white shadow-[0px_0.91px_3.66px_0px_#00000042] overflow-hidden">
@@ -440,16 +460,21 @@ const Table = ({
                           className="flex justify-center"
                         >
                           <button
-                            onClick={() =>
-                              navigate("/broadcast", {
-                                state: {
-                                  selectedTemplate: template,
-                                  openForm: true,
-                                },
-                              })
+                            onClick={() => handleSendCampaign(template)}
+                            disabled={
+                              template.status?.toLowerCase() !== "approved"
                             }
-                            className="flex items-center gap-2 bg-[#0AA89E] text-white px-3 py-2 rounded-full whitespace-nowrap mr-2 cursor-pointer"
+                            className={`flex items-center gap-2 bg-[#0AA89E] text-white px-3 py-2 rounded-full whitespace-nowrap mr-2 cursor-pointer ${
+                              template.status?.toLowerCase() !== "approved"
+                                ? "opacity-50 cursor-not-allowed"
+                                : "hover:bg-[#088f87]"
+                            }`}
                             aria-label={`Send message to ${template.element_name}`}
+                            title={
+                              template.status?.toLowerCase() !== "approved"
+                                ? "Only approved templates can be sent"
+                                : "Send a campaign using this template"
+                            }
                           >
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
@@ -458,6 +483,7 @@ const Table = ({
                               viewBox="0 0 24 24"
                               stroke="currentColor"
                               strokeWidth="2"
+                              aria-hidden="true"
                             >
                               <path
                                 strokeLinecap="round"
