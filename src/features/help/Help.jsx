@@ -67,7 +67,7 @@ export default function Help() {
             <li>
               Have suggestions for new features or encountered a bug? Share your
               feedback and track its progress on our{" "}
-              <a href="#" className="text-blue-600 underline">
+              <a href="/onboarding-guide" className="text-blue-600 underline">
                 Roadmap.
               </a>
             </li>
