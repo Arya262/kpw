@@ -219,15 +219,26 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
           <div className="relative z-50">
             <NotificationBell />
           </div>
-{user?.status === "inactive" && (
-  <button
-    onClick={() => setShowOnboardModal(true)}
-    className="bg-[#0AA89E] text-white text-sm px-4 py-2 rounded hover:bg-[#089086] transition cursor-pointer"
-    disabled={isOnboarding}
-  >
-    {isOnboarding ? "Redirecting..." : "Onboarding"}
-  </button>
-)}
+          {(user?.status === "inactive" || user?.status === "suspend") && (
+            <button
+              onClick={() => {
+                if (user.status === "inactive") {
+                  // Generate brand name dynamically from user info
+                  const brandName = user?.name
+                    ? user.name.toLowerCase().replace(/\s+/g, "")
+                    : `user${user?.customer_id}`;
+                  handleOnboard(brandName);
+                } else if (user.status === "suspend") {
+                  // Show modal for suspended users
+                  setShowOnboardModal(true);
+                }
+              }}
+              className="bg-[#0AA89E] text-white text-sm px-4 py-2 rounded hover:bg-[#089086] transition cursor-pointer"
+              disabled={isOnboarding}
+            >
+              {isOnboarding ? "Redirecting..." : "Onboarding"}
+            </button>
+          )}
           {/* User Info & Dropdown */}
           <div className="flex items-center gap-2">
             <div className="hidden sm:flex flex-col items-end justify-center mr-1">
