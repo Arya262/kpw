@@ -23,7 +23,6 @@ import TextButtonNode from "./customNodeFormessage/TextButtonNode";
 import MediaButtonNode from "./customNodeFormessage/MediaButtonNode";
 import ListNode from "./customNodeFormessage/ListNode";
 import TemplateboxNode from "./customNodeFormessage/TemplateboxNode";
-import TextButtonPreview from "./customNodeFormessage/TextButtonPreview";
 import SingleProductNode from "./customNodeFormessage/SingleProductNode";
 import MultiProductNode from "./customNodeFormessage/MultiProductNode";
 import CatalogNode from "./customNodeFormessage/CatalogNode";
@@ -62,7 +61,6 @@ const FlowEditor = () => {
       flowStartNode: FlowStartNode,
       templateNode: TemplateNode,
       "text-button": TextButtonNode,
-      "text-button-preview": TextButtonPreview,
       "media-button": MediaButtonNode,
       "list": ListNode,
       "template": TemplateboxNode,
