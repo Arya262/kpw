@@ -29,7 +29,7 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
   const [activeSubmenu, setActiveSubmenu] = useState(null);
   const [submenuHovered, setSubmenuHovered] = useState(false);
   const closeTimeoutRef = useRef(null);
-const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
   const menuItems = [
     {
       name: "Dashboard",
@@ -103,18 +103,18 @@ const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
     };
   }, []);
 
-const handleNavClick = () => {
-  const isDesktop = window.innerWidth >= 1024;
-  const shouldCloseOnDesktop = submenuHovered || activeSubmenu;
+  const handleNavClick = () => {
+    const isDesktop = window.innerWidth >= 1024;
+    const shouldCloseOnDesktop = submenuHovered || activeSubmenu;
 
-  if (!isDesktop || shouldCloseOnDesktop) {
-    setIsOpen(false);
-  }
+    if (!isDesktop || shouldCloseOnDesktop) {
+      setIsOpen(false);
+    }
 
-  setSubmenuHovered(false);
-  setActiveSubmenu(null);
-  setSubmenuPosition(null);
-};
+    setSubmenuHovered(false);
+    setActiveSubmenu(null);
+    setSubmenuPosition(null);
+  };
 
   const handleMouseEnter = (e, itemName) => {
     if (window.innerWidth >= 1024) {
@@ -128,7 +128,7 @@ const handleNavClick = () => {
       setActiveSubmenu(itemName);
       setSubmenuPosition({
         top: rect.top,
-        left: rect.right + 8,
+        left: 260,
       });
     }
   };
@@ -155,9 +155,9 @@ const handleNavClick = () => {
   };
 
   const handleSubmenuMouseLeave = () => {
-      setSubmenuHovered(false);
-      setActiveSubmenu(null);
-      setSubmenuPosition(null);
+    setSubmenuHovered(false);
+    setActiveSubmenu(null);
+    setSubmenuPosition(null);
   };
 
   const toggleMobileSubmenu = (itemName) => {
@@ -166,14 +166,14 @@ const handleNavClick = () => {
     }
   };
 
-useEffect(() => {
-  if (submenuHovered || activeSubmenu) {
-    const timeout = setTimeout(() => setIsSidebarExpanded(true), 300);
-    return () => clearTimeout(timeout);
-  } else {
-    setIsSidebarExpanded(false);
-  }
-}, [submenuHovered, activeSubmenu]);
+  useEffect(() => {
+    if (submenuHovered || activeSubmenu) {
+      const timeout = setTimeout(() => setIsSidebarExpanded(true), 300);
+      return () => clearTimeout(timeout);
+    } else {
+      setIsSidebarExpanded(false);
+    }
+  }, [submenuHovered, activeSubmenu]);
 
   return (
     <div
@@ -286,7 +286,7 @@ useEffect(() => {
                         end
                         onClick={handleNavClick}
                         className={({ isActive }) =>
-                          `flex items-center gap-4 px-4 py-3 rounded-xl font-medium text-base shadow-sm transition-all duration-200 ${
+                          `flex items-center gap-4 px-3 py-3 my-2 rounded-xl font-large text-base shadow-sm transition-all duration-200 ${
                             isActive
                               ? "bg-teal-500 text-white"
                               : "bg-white text-black hover:bg-gray-100"

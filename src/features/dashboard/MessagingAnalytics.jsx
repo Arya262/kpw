@@ -374,7 +374,7 @@ export default function MessagingAnalytics({ usageHistory }) {
       theme="light"
     />
       {/* Download PDF Button */}
-      {filteredData.length > 0 && (
+      {/* {filteredData.length > 0 && (
         <div className="flex justify-end mb-4">
           <button
             className="bg-[#24AEAE] hover:bg-[#24AEAE] text-white px-4 py-2 rounded shadow cursor-pointer"
@@ -389,7 +389,7 @@ export default function MessagingAnalytics({ usageHistory }) {
             Download PDF
           </button>
         </div>
-      )}
+      )} */}
       {/* ✅ Filter Controls */}
       <div id="analytics-section">
         <div className="flex flex-col md:flex-row items-center gap-4 mb-6">

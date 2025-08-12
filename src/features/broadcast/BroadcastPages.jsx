@@ -175,77 +175,77 @@ const [formData, setFormData] = useState({
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setError(null);
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setIsSubmitting(true);
+  setError(null);
 
-    try {
-      const updatedFormData = {
-        customer_id: user?.customer_id,
-        ...formData,
-        scheduleDate: selectedDate ? selectedDate.toString() : "",
-        date:
-          formData.schedule === "Yes" && selectedDate
-            ? selectedDate
-            : new Date(),
-        status: formData.schedule === "No" ? "Live" : "Scheduled",
-        type: "Manual Broadcast",
-      };
+  try {
+    const updatedFormData = {
+      customer_id: user?.customer_id,
+      ...formData,
+      // Convert group_id array to single value if needed
+      group_id: Array.isArray(formData.group_id) ? formData.group_id[0] : formData.group_id,
+      // Convert selectedDate to ISO string, or empty string
+      scheduleDate: selectedDate ? selectedDate.toISOString() : "",
+      // Convert date to ISO string for backend consistency
+      date:
+        formData.schedule === "Yes" && selectedDate
+          ? selectedDate.toISOString()
+          : new Date().toISOString(),
+      status: formData.schedule === "No" ? "Live" : "Scheduled",
+      type: "Manual Broadcast",
+    };
 
-      console.log("Submitting form data with template:", updatedFormData);
+    console.log("Submitting form data with template:", updatedFormData);
+    console.log("Using API endpoint:", API_ENDPOINTS.BROADCASTS.GET_CUSTOMERS);
 
-      console.log(
-        "Using API endpoint:",
-        API_ENDPOINTS.BROADCASTS.GET_CUSTOMERS
-      );
+    const response = await fetch(API_ENDPOINTS.BROADCASTS.GET_CUSTOMERS, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify(updatedFormData),
+    });
 
-      const response = await fetch(API_ENDPOINTS.BROADCASTS.GET_CUSTOMERS, {
-        method: "POST",
-         headers: {
-              "Content-Type": "application/json",
-            },
-            credentials: "include",
-        body: JSON.stringify(updatedFormData),
-      });
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
+    const result = await response.json();
 
-      const result = await response.json();
-
-      if (result.success) {
-        setAlertMessage("Broadcast saved successfully!");
-        setShowAlert(true);
-
-        if (onBroadcastCreated) {
-          onBroadcastCreated();
-        }
-
-        setTimeout(() => {
-          setShowAlert(false);
-          onClose();
-          navigate("/broadcast", {
-            state: { formData: updatedFormData },
-            replace: true,
-          });
-        }, 2000);
-      } else {
-        throw new Error(result.message || "Failed to save broadcast");
-      }
-    } catch (err) {
-      console.error("Error saving broadcast:", err);
-      setError("Unable to save broadcast. Please try again later.");
-      setAlertMessage("Failed to save broadcast. Please try again.");
+    if (result.success) {
+      setAlertMessage("Broadcast saved successfully!");
       setShowAlert(true);
+
+      if (onBroadcastCreated) {
+        onBroadcastCreated();
+      }
+
       setTimeout(() => {
         setShowAlert(false);
+        onClose();
+        navigate("/broadcast", {
+          state: { formData: updatedFormData },
+          replace: true,
+        });
       }, 2000);
-    } finally {
-      setIsSubmitting(false);
+    } else {
+      throw new Error(result.message || "Failed to save broadcast");
     }
-  };
+  } catch (err) {
+    console.error("Error saving broadcast:", err);
+    setError("Unable to save broadcast. Please try again later.");
+    setAlertMessage("Failed to save broadcast. Please try again.");
+    setShowAlert(true);
+    setTimeout(() => {
+      setShowAlert(false);
+    }, 2000);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   const openTemplate = () => {
     setIsTemplateOpen(true);

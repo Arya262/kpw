@@ -315,14 +315,14 @@ React.useEffect(() => {
             </div>
 
             {/* Forgot Password */}
-            <div className="flex justify-end text-xs sm:text-sm">
+            {/* <div className="flex justify-end text-xs sm:text-sm">
               <Link
                 to="#"
                 className="text-blue-600 hover:underline cursor-pointer"
               >
                 Forgot Password?
               </Link>
-            </div>
+            </div> */}
 
             {/* Login Button */}
             <button
@@ -359,7 +359,7 @@ React.useEffect(() => {
               )}
             </button>
             {/* Create Account Link */}
-            <div className="text-sm text-center">
+            {/* <div className="text-sm text-center">
               <span className="text-gray-600">Don't have an account?</span>
               <span
                 className="text-blue-600 hover:underline cursor-pointer"
@@ -367,7 +367,7 @@ React.useEffect(() => {
               >
                 Create one
               </span>
-            </div>
+            </div> */}
           </form>
         </div>
       </div>
