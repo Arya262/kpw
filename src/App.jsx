@@ -30,6 +30,7 @@ const UserSetting = lazy(() => import("./features/flow/UserSetting"));
 const OnboardingGuide = lazy(() =>
   import("./features/onboard/OnboardingGuide")
 );
+
 function App() {
   return (
     <>
@@ -98,6 +99,7 @@ function App() {
               </ErrorBoundary>
             }
           />
+
           {/* Protected Routes */}
           <Route element={<PrivateRoute />}>
             <Route element={<DashboardLayout />}>
@@ -187,6 +189,9 @@ function App() {
               />
             </Route>
           </Route>
+
+          {/* Redirect root to dashboard */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
           {/* Fallback */}
           <Route
