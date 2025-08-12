@@ -12,7 +12,7 @@ export const SocketProvider = ({ children }) => {
   const { addAlert } = useNotifications();
 
   useEffect(() => {
-    const newSocket = io("http://marketing.foodchow.co.uk:60000", {
+    const newSocket = io("https://marketing.foodchow.co.uk:60000", {
       transports: ["websocket"],
       withCredentials: true,
     });
