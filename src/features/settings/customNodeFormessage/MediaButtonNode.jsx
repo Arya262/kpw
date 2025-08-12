@@ -11,22 +11,6 @@ import {
 } from "lucide-react";
 import { Handle, Position } from "reactflow";
 
-import TextButtonPreview from "./TextButtonPreview";
-import MediaButtonPreview from "./MediaButtonPreview";
-import MultiProductPreview from "./MultiProductPreview";
-import SingleProductPreview from "./SingleProductPreview";
-import ListPreview from "./ListPreview";
-import TemplateboxPreview from "./Templateboxpreview";
-// Component map for different content types
-const contentComponents = {
-  "text-button": TextButtonPreview,
-  "media-button": MediaButtonPreview,
-  list: ListPreview,
-  "single-product": SingleProductPreview,
-  "multi-product": MultiProductPreview,
-  template: TemplateboxPreview,
-  media: MediaButtonPreview,
-};
 
 const contentTypes = [
   {
