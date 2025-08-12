@@ -14,7 +14,7 @@ import {
 import { Handle, Position } from "reactflow";
 
 import TextButtonPreview from "./TextButtonPreview";
-import MediaButtonPreview from "./MediaButtonPreview";
+import MediaButtonPreview from './MediaButtonPreview';
 import MultiProductPreview from "./MultiProductPreview";
 import SingleProductPreview from "./SingleProductPreview";
 import ListPreview from "./ListPreview";
