@@ -412,7 +412,12 @@ const Table = ({
               <tbody className="max-h-[calc(100vh-300px)] overflow-y-auto">
                 {displayedTemplates.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="text-center py-4 text-gray-500">
+                    <td colSpan="7" className="text-center py-4 text-gray-500 font-medium">
+                      <img
+                        src="/no_data.14591486.svg"
+                        alt="No data available"
+                        className="w-full h-70 mb-4 opacity-80"
+                      />
                       No templates found.
                     </td>
                   </tr>
@@ -433,22 +438,37 @@ const Table = ({
                           />
                         </div>
                       </td>
-                      <td className="px-2 py-4 sm:px-4 sm:py-4 whitespace-nowrap text-[12px] sm:text-[16px] text-gray-700">
+                      <td className="px-2 py-4 sm:px-4 sm:py-4 whitespace-nowrap text-[12px] sm:text-[16px] text-gray-700 font-medium">
                         {formatDate(template.created_on)}
                       </td>
-                      <td className="px-2 py-4 text-[12px] sm:text-[16px] text-green-600">
-                        {template.status}
+                      <td className="px-2 py-4 text-[12px] sm:text-[16px] font-semibold rounded text-center">
+                        <span
+                          className={`px-3 py-1 rounded-full inline-block text-center min-w-[100px] font-medium
+      shadow-sm transition-colors duration-200
+      ${
+        template.status?.toLowerCase() === "approved"
+          ? "text-green-800 bg-green-200"
+          : template.status?.toLowerCase() === "pending"
+          ? "text-yellow-800 bg-yellow-200"
+          : template.status?.toLowerCase() === "failed"
+          ? "text-red-800 bg-red-200"
+          : "text-gray-800 bg-gray-200"
+      }
+    `}
+                        >
+                          {template.status}
+                        </span>
                       </td>
-                      <td className="px-2 py-4 text-[12px] sm:text-[16px] text-gray-700">
+                      <td className="px-2 py-4 text-[12px] sm:text-[16px] text-gray-700 font-medium">
                         {template.element_name || "-"}
                       </td>
-                      <td className="px-2 py-4 text-[12px] sm:text-[16px] text-gray-700">
+                      <td className="px-2 py-4 text-[12px] sm:text-[16px] text-gray-700 font-medium">
                         {template.template_type
                           ? template.template_type.charAt(0).toUpperCase() +
                             template.template_type.slice(1)
                           : "-"}
                       </td>
-                      <td className="px-2 py-4 text-[12px] sm:text-[16px] text-gray-700">
+                      <td className="px-2 py-4 text-[12px] sm:text-[16px] text-gray-700 font-medium">
                         {template.category
                           ? template.category.charAt(0).toUpperCase() +
                             template.category.slice(1)

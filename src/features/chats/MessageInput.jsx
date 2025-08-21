@@ -257,18 +257,6 @@ const MessageInput = ({ onSendMessage, selectedContact, canSendMessage }) => {
             </button>
           </div>
         </form>
-        <ToastContainer
-          position="top-right"
-          autoClose={3000}
-          hideProgressBar={false}
-          newestOnTop
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="light"
-        />
       </div>
       {showTemplates && (
         <div className="fixed inset-0 bg-[#000]/50  z-50 flex justify-center items-center p-2">

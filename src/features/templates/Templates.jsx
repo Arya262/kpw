@@ -106,20 +106,20 @@ const Templates = () => {
       category: newTemplate.category,
       templateType: newTemplate.templateType,
       languageCode: newTemplate.languageCode,
-      header: newTemplate.header,
-      footer: newTemplate.footer,
+      header: newTemplate.header || null,
+      footer: newTemplate.footer || null,
       buttons: newTemplate.buttons || [],
       example: newTemplate.example,
-      exampleHeader: newTemplate.exampleHeader,
-      messageSendTTL: newTemplate.messageSendTTL,
+      exampleHeader: newTemplate.exampleHeader || null,
+      exampleMedia: newTemplate.exampleMedia || null,
+      messageSendTTL: Number(newTemplate.messageSendTTL) || 259200,
       customer_id: user?.customer_id,
-      container_meta: newTemplate.container_meta,
     };
 
     console.log("Sending to API:", requestBody);
 
     try {
-      const response = await fetch(API_ENDPOINTS.TEMPLATES.CREATE, {
+      const response = await fetch(API_ENDPOINTS.TEMPLATES.CREATE_MEDIA, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

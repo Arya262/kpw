@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useRef, useEffect } from "react";
 import axios from "axios";
 import { API_BASE, API_ENDPOINTS } from "../config/api";
 import { useNotifications } from "../context/NotificationContext";
@@ -12,7 +12,13 @@ export const useChatLogic = ({
   contacts,
   permissions,
 }) => {
-  const { markConversationAsRead } = useNotifications();
+  const { markConversationAsRead, setSelectedConversationId } = useNotifications();
+  const selectedContactRef = useRef(selectedContact);
+
+  // Keep ref in sync with selectedContact
+  useEffect(() => {
+    selectedContactRef.current = selectedContact;
+  }, [selectedContact]);
   const markAllAsRead = useCallback(async (conversationId) => {
     try {
       await axios.post(API_ENDPOINTS.CHAT.MARK_AS_READ, {
@@ -137,10 +143,29 @@ export const useChatLogic = ({
     (contact) => {
       if (!contact) return;
 
-      // ✅ Prevent redundant re-selection
-      if (selectedContact?.conversation_id === contact.conversation_id) return;
+      const currentConversationId = selectedContactRef.current?.conversation_id;
+      
+      // Prevent redundant re-selection
+      if (currentConversationId === contact.conversation_id) {
+        console.log('Skipping re-selection of same contact');
+        return;
+      }
 
+      console.log('Setting selected contact:', contact.conversation_id);
+      
+      // Update local state first
       setSelectedContact(contact);
+      
+      // Update notification context
+      console.log('Setting selected conversation ID in context:', contact.conversation_id);
+      if (setSelectedConversationId) {
+        // Use a small timeout to ensure state updates are processed
+        setTimeout(() => {
+          setSelectedConversationId(contact.conversation_id);
+        }, 0);
+      } else {
+        console.error('setSelectedConversationId is not available');
+      }
 
       setContacts((prev) =>
         prev.map((c) =>
@@ -162,28 +187,37 @@ export const useChatLogic = ({
 
   const handleIncomingMessage = useCallback(
     (msg) => {
+      const isFromSelectedChat = selectedContact?.conversation_id === msg.conversation_id;
+      
+      // Only show toast for messages not from the currently selected chat
+      if (!isFromSelectedChat) {
+        // Find the contact to get their name for the notification
+        const contact = contacts.find(c => c.conversation_id === msg.conversation_id);
+        if (contact) {
+          toast.info(`New message from ${contact.name}`);
+        }
+      }
+
       setContacts((prev) =>
         prev.map((c) => {
           if (c.conversation_id === msg.conversation_id) {
-            const isActive = selectedContact?.conversation_id === c.conversation_id;
-
             return {
               ...c,
               lastMessage: msg.content || msg.element_name,
               lastMessageType: msg.message_type,
               lastMessageTime: msg.sent_at,
-              unreadCount: isActive ? 0 : (c.unreadCount || 0) + 1,
+              unreadCount: isFromSelectedChat ? 0 : (c.unreadCount || 0) + 1,
             };
           }
           return c;
         })
       );
 
-      if (selectedContact?.conversation_id === msg.conversation_id) {
+      if (isFromSelectedChat) {
         setMessages((prev) => [...prev, msg]);
       }
     },
-    [setContacts, setMessages, selectedContact]
+    [setContacts, setMessages, selectedContact, contacts]
   );
 
   const setupSocketListener = useCallback(() => {
@@ -260,6 +294,11 @@ export const useChatLogic = ({
       const customerId = user?.customer_id;
 
       if (!conversationId || !customerId) return;
+      
+      // Clear selected conversation if we're deleting the current one
+      if (selectedContact?.conversation_id === conversationId) {
+        setSelectedConversationId(null);
+      }
 
         try {
           const response = await axios.delete(

@@ -46,6 +46,17 @@ function App() {
         draggable
         pauseOnHover
         theme="light"
+        style={{
+          zIndex: 999999, // Very high z-index to ensure it's above all other elements
+          position: 'fixed',
+          top: '1rem',
+          right: '1rem'
+        }}
+        toastStyle={{
+          marginBottom: '1rem',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
+        }}
       />
 
       <Suspense fallback={<Loader />}>

@@ -198,7 +198,7 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
         </NavLink>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 relative">
+      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 relative scrollbar-hide">
         {menuItems.map((item) => {
           const isParentActive =
             item.submenu &&
@@ -229,7 +229,7 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
     whitespace-nowrap overflow-hidden 
     transition-all duration-300 
     ml-0 
-    opacity-0
+    opacity-100
     group-hover:ml-1 group-hover:opacity-100
     ${submenuHovered ? "lg:opacity-100 lg:ml-1" : ""}
   `}
@@ -332,7 +332,7 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
                 className={`
     whitespace-nowrap overflow-hidden 
     transition-all duration-300 
-    ml-0 opacity-0
+    ml-0 opacity-100
     group-hover:ml-1 group-hover:opacity-100
     ${submenuHovered ? "lg:opacity-100 lg:ml-1" : ""}
   `}

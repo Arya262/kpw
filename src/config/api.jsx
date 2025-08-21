@@ -1,5 +1,5 @@
 export const API_BASE =
-  import.meta.env.VITE_API_BASEz || "https://marketing.foodchow.co.uk";
+  import.meta.env.VITE_API_BASE || "http://localhost:60000";
 
 export const API_ENDPOINTS = {
   BROADCASTS: {
@@ -25,7 +25,8 @@ export const API_ENDPOINTS = {
   },
   TEMPLATES: {
     GET_ALL: `${API_BASE}/templates`,
-    CREATE: `${API_BASE}/createtemplate`,
+    CREATE: `${API_BASE}/createMediaTemplate`,
+    CREATE_MEDIA: `${API_BASE}/createMediaTemplate`,
     UPDATE: (id) => `${API_BASE}/updatetemplate?templateId=${id}`,
     UPDATE_ALT: `${API_BASE}/updatetemplate`,
     DELETE: () => `${API_BASE}/deletetemplate`,
@@ -71,5 +72,8 @@ export const API_ENDPOINTS = {
     TOGGLE_STATUS: (flowId) => `${API_BASE}/flows/${flowId}/toggle`,
     EXECUTE: (flowId) => `${API_BASE}/flows/${flowId}/execute`,
     GET_EXECUTION_LOG: (flowId) => `${API_BASE}/flows/${flowId}/executions`,
+  },
+    GUPSHUP: {
+    CREATE_APP: `${API_BASE}/createGupshupApp`,
   },
 };

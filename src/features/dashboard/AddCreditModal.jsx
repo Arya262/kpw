@@ -121,7 +121,7 @@ const AddCreditModal = ({
   useEffect(() => {
     if (paymentSuccess) {
       const timer = setTimeout(() => {
-        onClose(); // auto-close after payment success
+        onClose();
       }, 2000);
 
       return () => clearTimeout(timer);
@@ -264,7 +264,10 @@ const AddCreditModal = ({
                     Processing...
                   </span>
                 ) : (
-                  "🔐 Secure Payment Now"
+                  <span className="flex items-center gap-2">
+                    <ShieldCheck className="w-5 h-5 text-white" />
+                    Secure Payment Now
+                  </span>
                 )}
               </motion.button>
             </form>
@@ -278,8 +281,8 @@ const AddCreditModal = ({
           className="mt-6 text-center text-xs text-gray-500 flex items-center justify-center gap-1"
         >
           <ShieldCheck className="w-4 h-4 text-green-500" />
-          {"🔒 100% Secure — Handled by "}
-          <strong>Razorpay</strong>
+          <span>100% Secure — Handled by</span>
+          <strong className="ml-1">Razorpay</strong>
         </motion.div>
       </div>
 

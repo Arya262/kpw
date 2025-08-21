@@ -120,28 +120,26 @@ class NotificationService {
     }
   }
 
-  async showBrowserNotification(title, options = {}, onClick) {
-    if (!("Notification" in window)) return;
-
-    if (Notification.permission === "granted") {
-      try {
-        const notification = new Notification(title, options);
-        if (onClick) {
-          notification.onclick = (event) => {
-            event.preventDefault();
-            onClick(event);
-          };
-        }
-      } catch (e) {
-        console.warn("🚫 Browser notification failed:", e.message);
-      }
-    } else if (Notification.permission === "default") {
-      await this.requestPermission();
-      if (Notification.permission === "granted") {
-        this.showBrowserNotification(title, options, onClick);
-      }
-    }
+showBrowserNotification(title, options = {}, onClick) {
+  if (!("Notification" in window)) {
+    console.warn("🚫 Browser notifications not supported");
+    return;
   }
+
+  if (Notification.permission === "granted") {
+    const notification = new Notification(title, options);
+
+    if (onClick) {
+      notification.onclick = (event) => {
+        event.preventDefault(); // Prevent the browser from focusing the Notification's tab
+        onClick(options.data);
+        window.focus();
+      };
+    }
+  } else {
+    console.warn("🚫 Notification permission not granted");
+  }
+}
 
   showInAppNotification(message, type = "info", options = {}) {
     // ✅ Uses react-toastify for in-app notifications

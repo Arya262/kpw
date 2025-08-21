@@ -713,7 +713,12 @@ export default function ContactList() {
                 </tr>
               ) : displayedContacts.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="text-center py-4 text-gray-500">
+                  <td colSpan="7" className="text-center py-4 text-gray-500 font-medium">
+                     <img
+                        src="/no_data.14591486.svg"
+                        alt="No data available"
+                        className="w-full h-72 mb-4 opacity-80"
+                      />
                     No contacts found.
                   </td>
                 </tr>

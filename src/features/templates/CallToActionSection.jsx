@@ -13,12 +13,12 @@ const CallToActionSection = ({
   return (
     <>
       {/* Call To Action 1 (URL) */}
-      <div className="border border-[#CACACA] rounded p-4 mb-4">
-        <div className="flex justify-between items-center mb-2  border-[#CACACA] pb-2">
+      <div className="border border-gray-200 rounded p-6 mb-4">
+        <div className="flex justify-between items-center mb-2  border-transperant pb-2">
           <div className="font-semibold">Call To Action 1 (URL)</div>
           <button
             type="button"
-            className="bg-[#0AA89E] text-white px-3 py-2 rounded text-sm cursor-pointer"
+            className="bg-[#0AA89E] text-white px-2 py-1.5 rounded text-sm cursor-pointer"
             onClick={() => setUrlCtas([...urlCtas, { title: "", url: "" }])}
           >
             + Add URL
@@ -32,7 +32,7 @@ const CallToActionSection = ({
             <input
               type="text"
               placeholder="Enter Button Title"
-              className="border border-[#CACACA] rounded p-2 w-full focus:outline-none focus:border-teal-500"
+              className="border border-transparent bg-gray-100 rounded p-3 text-sm font-medium w-full focus:outline-none focus:border-teal-500"
               value={cta.title}
               onChange={(e) => {
                 const updated = [...urlCtas];
@@ -40,7 +40,7 @@ const CallToActionSection = ({
                 setUrlCtas(updated);
               }}
             />
-            <select className="border rounded p-2 border-[#CACACA] focus:outline-none focus:border-teal-500">
+            <select className="border rounded p-3 text-sm font-medium border-transparent bg-gray-100 focus:outline-none focus:border-teal-500">
               <option value={"Static"}>Static</option>
               <option value={"Dynamic"}>Dynamic</option>
             </select>
@@ -48,7 +48,7 @@ const CallToActionSection = ({
               <input
                 type="text"
                 placeholder="Enter Static URL"
-                className="border rounded p-2 w-full border-[#CACACA] focus:outline-none focus:border-teal-500"
+                className="border rounded p-3 text-sm font-medium w-full border-transparent bg-gray-100 focus:outline-none focus:border-teal-500"
                 value={cta.url}
                 onChange={(e) => {
                   const updated = [...urlCtas];
@@ -64,29 +64,29 @@ const CallToActionSection = ({
                   setUrlCtas(updated);
                 }}
               >
-                <Trash2 className="w-5 h-5" />
+                <Trash2 className="w-4.5 h-4.5" />
               </button>
             </div>
           </div>
         ))}
       </div>
       {/* Call To Action 2 (Phone Number) */}
-      <div className="border border-[#CACACA] rounded p-4 mb-4">
-        <div className="font-semibold mb-1">
+      <div className="border border-gray-200 rounded p-6 mb-4">
+        <div className="font-semibold mb-4">
           Call To Action 2 (Phone Number)
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
           <input
             type="text"
             placeholder="Enter Button Title"
-            className="border border-[#CACACA] rounded p-2 w-full focus:outline-none focus:border-teal-500"
+            className="border p-3 text-sm font-medium border-transparent bg-gray-100 rounded  w-full focus:outline-none focus:border-teal-500"
             value={phoneCta.title}
             onChange={(e) =>
               setPhoneCta({ ...phoneCta, title: e.target.value })
             }
           />
           <select
-            className="border border-[#CACACA] rounded p-2 w-full focus:outline-none focus:border-teal-500"
+            className="border p-3 text-sm font-medium border-transparent bg-gray-100 rounded w-full focus:outline-none focus:border-teal-500"
             value={phoneCta.country}
             onChange={(e) =>
               setPhoneCta({
@@ -103,7 +103,7 @@ const CallToActionSection = ({
             <input
               type="text"
               placeholder="Enter mobile Number"
-              className="border border-[#CACACA] rounded p-2 w-full focus:outline-none focus:border-teal-500"
+              className="border p-3 text-sm font-medium border-transparent bg-gray-100 rounded w-full focus:outline-none focus:border-teal-500"
               value={phoneCta.number}
               onChange={(e) =>
                 setPhoneCta({
@@ -123,7 +123,7 @@ const CallToActionSection = ({
                 })
               }
             >
-              <Trash2 className="w-5 h-5" />
+              <Trash2 className="w-4.5 h-4.5" />
             </button>
           </div>
         </div>

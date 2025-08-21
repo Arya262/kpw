@@ -27,6 +27,7 @@ const ExploreTemplates = () => {
     const fetchTemplates = async () => {
       setLoading(true);
       setError(null);
+
       try {
         const response = await fetch(
           `${API_ENDPOINTS.TEMPLATES.GET_ALL}?customer_id=${user?.customer_id}`,
@@ -69,20 +70,24 @@ const ExploreTemplates = () => {
       footer: newTemplate.footer || null,
       buttons: newTemplate.buttons || [],
       example: newTemplate.example,
-      exampleHeader: newTemplate.exampleHeader,
+      exampleHeader: newTemplate.exampleHeader || null,
+      exampleMedia: newTemplate.exampleMedia || null,
       messageSendTTL: Number(newTemplate.messageSendTTL) || 259200,
       customer_id: user?.customer_id,
     };
 
     try {
-      const response = await fetch(API_ENDPOINTS.TEMPLATES.CREATE, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify(requestBody),
-      });
+      const response = await fetch(
+        API_ENDPOINTS.TEMPLATES.CREATE_MEDIA,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify(requestBody),
+        }
+      );
 
       const data = await response.json();
       if (data.success) {
@@ -90,16 +95,17 @@ const ExploreTemplates = () => {
         toast.success("Template created successfully!", toastConfig);
         setIsModalOpen(false);
       } else {
+        console.error("Template creation error:", data);
         toast.error(
           data.message || data.error || "Failed to create template",
           toastConfig
         );
       }
     } catch (error) {
+      console.error("Fetch error:", error);
       toast.error("Failed to create template", toastConfig);
     }
   };
-
   const handleDeleteClick = (template) => {
     if (!permissions.canDeleteTemplate) {
       toast.error(
@@ -188,73 +194,84 @@ const ExploreTemplates = () => {
       ) : error ? (
         <p className="text-red-500">{error}</p>
       ) : templates.length === 0 ? (
-        <p>No templates available.</p>
+        <div className="text-center font-medium">
+          <img
+            src="/no_data.14591486.svg"
+            alt="No data available"
+            className="w-full h-70 mb-4 opacity-80"
+          />
+          <p>No templates available.</p>
+        </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {templates.map((template) => (
-            <div
-              key={template.id || template.element_name}
-              className="bg-white rounded-xl shadow-[0px_4px_20px_rgba(0,0,0,0.25)] overflow-hidden flex flex-col"
-            >
-              {template.container_meta.mediaUrl && (
-                <img
-                  src={template.container_meta.mediaUrl}
-                  alt={template.element_name}
-                  className="w-full h-48 object-cover p-2 rounded-2xl"
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src = "/placeholder.jpg";
-                  }}
-                />
-              )}
-              <div className="p-4 flex-1">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-semibold text-lg mb-1">
-                      {template.element_name}
-                    </h3>
-                    <p className="text-sm text-gray-500 mb-2">
-                      {template.category}
-                    </p>
-                  </div>
+          {templates.map((template) => {
+            // console.log("Template full data:", template);
 
-                  <button
-                    onClick={() => handleDeleteClick(template)}
-                    className="p-1 rounded-full hover:bg-red-100 transition cursor-pointer"
-                    title="Delete Template"
-                  >
-                    <Trash2 className="w-5 h-5 text-red-600" />
-                  </button>
-                </div>
-                <p className="text-sm text-gray-700 whitespace-pre-line">
-                  {template.container_meta?.sampleText ||
-                    "No sample text available"}
-                </p>
-              </div>
-              <button
-                type="button"
-                disabled={template?.status?.toLowerCase() !== "approved"}
-                onClick={() => {
-                  if (template?.status?.toLowerCase() === "approved") {
-                    navigate("/broadcast", {
-                      state: {
-                        selectedTemplate: template,
-                        openForm: true,
-                      },
-                    });
-                  }
-                }}
-                className={`px-6 py-3 font-medium rounded border transition duration-300 ease-in-out cursor-pointer
-    ${
-      template?.status?.toLowerCase() === "approved"
-        ? "bg-teal-500 text-black border-teal-500 hover:bg-teal-400 hover:text-white hover:border-teal-400"
-        : "bg-gray-300 text-gray-600 border-gray-300 cursor-not-allowed"
-    }`}
+            return (
+              <div
+                key={template.id || template.element_name}
+                className="bg-white rounded-xl shadow-[0px_4px_20px_rgba(0,0,0,0.25)] overflow-hidden flex flex-col"
               >
-                Send Template
-              </button>
-            </div>
-          ))}
+                {template.container_meta?.mediaUrl && (
+                  <img
+                    src={template.container_meta.mediaUrl}
+                    alt={template.element_name}
+                    className="w-full h-48 object-cover p-2 rounded-2xl"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = "/placeholder.jpg";
+                    }}
+                  />
+                )}
+                <div className="p-4 flex-1">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-semibold text-lg mb-1">
+                        {template.element_name}
+                      </h3>
+                      <p className="text-sm text-gray-500 mb-2">
+                        {template.category}
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => handleDeleteClick(template)}
+                      className="p-1 rounded-full hover:bg-red-100 transition cursor-pointer"
+                      title="Delete Template"
+                    >
+                      <Trash2 className="w-5 h-5 text-red-600" />
+                    </button>
+                  </div>
+                  <p className="text-sm text-gray-700 whitespace-pre-line">
+                    {template.container_meta?.sampleText ||
+                      "No sample text available"}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={template?.status?.toLowerCase() !== "approved"}
+                  onClick={() => {
+                    if (template?.status?.toLowerCase() === "approved") {
+                      navigate("/broadcast", {
+                        state: {
+                          selectedTemplate: template,
+                          openForm: true,
+                        },
+                      });
+                    }
+                  }}
+                  className={`px-6 py-3 font-medium rounded border transition duration-300 ease-in-out cursor-pointer
+          ${
+            template?.status?.toLowerCase() === "approved"
+              ? "bg-teal-500 text-black border-teal-500 hover:bg-teal-400 hover:text-white hover:border-teal-400"
+              : "bg-gray-300 text-gray-600 border-gray-300 cursor-not-allowed"
+          }`}
+                >
+                  Send Template
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
 

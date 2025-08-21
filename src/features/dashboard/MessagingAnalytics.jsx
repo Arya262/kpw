@@ -2,11 +2,29 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import html2canvas from "html2canvas";
 import React, { useEffect, useState, useMemo } from "react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, } from "recharts";
-import { parseISO, startOfMonth, endOfMonth, startOfWeek, endOfWeek, } from "date-fns";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
+import {
+  parseISO,
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek,
+} from "date-fns";
 import { useAuth } from "../../context/AuthContext";
 import { toast, ToastContainer } from "react-toastify";
-import 'react-toastify/dist/ReactToastify.css';
+import "react-toastify/dist/ReactToastify.css";
 import { getPermissions } from "../../utils/getPermissions";
 import Loader from "../../components/Loader";
 // Utility: Get date range for filter
@@ -179,7 +197,6 @@ export default function MessagingAnalytics({ usageHistory }) {
       format: "a4",
     });
 
-  
     const logoBase64 = await getImageAsBase64("/logo.png");
     const customerName = user?.company_name || "FOODCHOW";
     const appId = user?.details?.app_id || "WhatsappMarketing";
@@ -271,7 +288,7 @@ export default function MessagingAnalytics({ usageHistory }) {
 
     // ✅ Header with logo only
     if (logoBase64) {
-      doc.addImage(logoBase64, "PNG", 40, 20, 100, 40); 
+      doc.addImage(logoBase64, "PNG", 40, 20, 100, 40);
     }
 
     doc.setFontSize(12);
@@ -359,20 +376,19 @@ export default function MessagingAnalytics({ usageHistory }) {
   };
 
   return (
-    
     <div className="p-6 space-y-10">
-          <ToastContainer 
-      position="top-right"
-      autoClose={5000}
-      hideProgressBar={false}
-      newestOnTop
-      closeOnClick
-      rtl={false}
-      pauseOnFocusLoss
-      draggable
-      pauseOnHover
-      theme="light"
-    />
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
       {/* Download PDF Button */}
       {/* {filteredData.length > 0 && (
         <div className="flex justify-end mb-4">
@@ -424,7 +440,7 @@ export default function MessagingAnalytics({ usageHistory }) {
               type="month"
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              max={todayMonth} 
+              max={todayMonth}
               className="border px-3 py-2 rounded"
             />
           )}
@@ -434,7 +450,7 @@ export default function MessagingAnalytics({ usageHistory }) {
               type="date"
               value={selectedWeekStart}
               onChange={(e) => setSelectedWeekStart(e.target.value)}
-              max={todayDate} 
+              max={todayDate}
               className="border px-3 py-2 rounded"
             />
           )}
@@ -452,17 +468,24 @@ export default function MessagingAnalytics({ usageHistory }) {
                 type="date"
                 value={customEnd}
                 onChange={(e) => setCustomEnd(e.target.value)}
-                max={todayDate} 
+                max={todayDate}
                 className="border px-3 py-2 rounded"
               />
             </>
           )}
         </div>
 
-        {filteredData.length === 0 ? (
-          <p className="text-center text-gray-500">
-            No data available for the selected filter.
-          </p>
+        {!filteredData || filteredData.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-10 text-center">
+            <img
+              src="/no_data.14591486.svg"
+              alt="No data available"
+              className="w-full h-70 mb-4 opacity-80"
+            />
+            <p className="text-gray-500 text-lg font-medium">
+              No data available for the selected filter.
+            </p>
+          </div>
         ) : (
           <>
             <ChartBlock
@@ -577,6 +600,5 @@ function ChartBlock({ title, dataKey, stroke, data }) {
         </LineChart>
       </ResponsiveContainer>
     </div>
-    
   );
 }

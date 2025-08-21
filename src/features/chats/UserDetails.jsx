@@ -7,10 +7,6 @@ const getAvatarColor = (name = "User") => {
   return `hsl(${hue}, 70%, 50%)`;
 };
 
-const UserDetails = ({ isExpanded, setIsExpanded, selectedContact }) => {
-  console.log("Selected Contact:", selectedContact);
-  if (!selectedContact) return null;
-
 const renderAvatar = (contact) => {
   const name = contact?.name || "User";
   const parts = name.trim().split(/\s+/);
@@ -30,7 +26,7 @@ const renderAvatar = (contact) => {
     return (
       <img
         src={contact.image}
-        alt="User Avatar"
+        alt={`${name} Avatar`}
         className="w-full h-full object-cover"
       />
     );
@@ -46,6 +42,16 @@ const renderAvatar = (contact) => {
   );
 };
 
+const UserDetails = ({ isExpanded, setIsExpanded, selectedContact }) => {
+  console.log("Selected Contact:", selectedContact);
+  if (!selectedContact) return null;
+
+  // Check if user is active within last 24 hours
+  const isActive =
+    selectedContact.updated_at &&
+    Date.now() - new Date(selectedContact.updated_at).getTime() <
+      24 * 60 * 60 * 1000;
+
   return (
     <div className="w-full md:w-auto md:min-w-[300px] bg-white border-l border-gray-300 p-0">
       <div className="user-details h-full">
@@ -54,7 +60,7 @@ const renderAvatar = (contact) => {
           <div className="avatar mx-auto mb-2 w-16 h-16 rounded-full overflow-hidden">
             {renderAvatar(selectedContact)}
           </div>
-          <h3 className="font-semibold text-lg">
+          <h3 className="font-semibold text-lg break-all text-center px-2 max-w-[280px] mx-auto">
             {selectedContact.name || "Unnamed"}
           </h3>
           <p className="text-sm text-gray-600">
@@ -74,15 +80,21 @@ const renderAvatar = (contact) => {
         <div className="flex justify-between items-center p-2">
           <p className="text-sm font-bold text-black">Last Message</p>
           <p className="text-sm text-black">
-            {formatTime(selectedContact.updated_at)}
+            {selectedContact.updated_at
+              ? formatTime(selectedContact.updated_at)
+              : "No activity"}
           </p>
         </div>
 
         {/* 24 Hours Status */}
         <div className="flex justify-between items-center px-2 mb-3">
           <p className="text-sm font-bold text-black">24 Hours Status</p>
-          <span className="px-3 py-1 bg-red-600 text-white text-sm rounded-full">
-            Inactive
+          <span
+            className={`px-3 py-1 text-sm rounded-full ${
+              isActive ? "bg-green-600 text-white" : "bg-red-600 text-white"
+            }`}
+          >
+            {isActive ? "Active" : "Inactive"}
           </span>
         </div>
 
@@ -90,6 +102,7 @@ const renderAvatar = (contact) => {
         <div
           className="details-toggle cursor-pointer flex items-center justify-between px-2 py-2 text-gray-600 hover:text-black"
           onClick={() => setIsExpanded(!isExpanded)}
+          aria-expanded={isExpanded}
         >
           <span className="text-sm font-semibold tracking-wide">
             GENERAL DETAILS

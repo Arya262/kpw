@@ -1,4 +1,3 @@
-// context/SocketContext.jsx
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { io } from "socket.io-client";
 import { useAuth } from "./AuthContext";
@@ -7,28 +6,39 @@ import { useNotifications } from "./NotificationContext";
 const SocketContext = createContext(null);
 
 export const SocketProvider = ({ children }) => {
-  const [socket, setSocket] = useState(null);
   const { user } = useAuth();
   const { addAlert } = useNotifications();
+  const [socket, setSocket] = useState(null);
 
   useEffect(() => {
-    const newSocket = io("https://marketing.foodchow.co.uk:60001", {
-      transports: ["websocket"],
-      withCredentials: true,
-    });
+    if (!user) {
+      // User logged out => disconnect socket
+      if (socket) {
+        socket.disconnect();
+        setSocket(null);
+        console.log("🛑 Socket disconnected due to logout");
+      }
+      return;
+    }
 
-    newSocket.on("connect", () => {
-      console.log("✅ Socket connected!", newSocket.id);
-    });
+    // User logged in => create socket if not already connected
+    if (!socket) {
+      const newSocket = io("https://marketing-uoxu.onrender.com", {
+        transports: ["websocket"],
+        withCredentials: true,
+      });
 
-    newSocket.on("connect_error", (err) => {
-      console.error("❌ Socket connect error:", err.message);
-    });
+      newSocket.on("connect", () => {
+        console.log("✅ Socket connected!", newSocket.id);
+      });
 
-    setSocket(newSocket);
+      newSocket.on("connect_error", (err) => {
+        console.error("❌ Socket connect error:", err.message);
+      });
 
-    return () => newSocket.disconnect();
-  }, []);
+      setSocket(newSocket);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (socket && user?.customer_id) {
@@ -43,15 +53,23 @@ export const SocketProvider = ({ children }) => {
 
     socket.on("newMessageAlert", (data) => {
       console.log("📥 Global alert received:", data);
-      addAlert(data); // ✅ no sound logic here anymore
+      addAlert(data);
     });
 
     return () => socket.off("newMessageAlert");
   }, [socket]);
 
-  return (
-    <SocketContext.Provider value={socket}>{children}</SocketContext.Provider>
-  );
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (socket) {
+        socket.disconnect();
+        console.log("🛑 Socket disconnected on context unmount");
+      }
+    };
+  }, [socket]);
+
+  return <SocketContext.Provider value={socket}>{children}</SocketContext.Provider>;
 };
 
 export const useSocket = () => useContext(SocketContext);

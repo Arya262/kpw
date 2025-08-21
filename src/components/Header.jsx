@@ -112,7 +112,7 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
       console.log("Sending to backend:", payload);
 
       const response = await axios.post(
-        "http://localhost:3000/createGupshupApp",
+        API_ENDPOINTS.GUPSHUP.CREATE_APP,
         payload,
         {
           withCredentials: true,

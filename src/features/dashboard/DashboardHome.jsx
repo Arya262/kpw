@@ -6,7 +6,6 @@ import { useAuth } from "../../context/AuthContext";
 import { API_ENDPOINTS } from "../../config/api";
 import AddCreditModal from "./AddCreditModal";
 import { getPermissions } from "../../utils/getPermissions";
-
 import vendor from "../../assets/Vector.png";
 
 const AnimatedNumber = ({ value, duration = 1.2 }) => {
@@ -150,7 +149,7 @@ const DashboardHome = () => {
       const { order } = await orderRes.json();
 
       const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        key: "rzp_live_MoWUoTrGF0woCD",
         amount: order.amount,
         currency: "INR",
         name: user?.company_name || "FoodChow",

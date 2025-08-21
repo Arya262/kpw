@@ -4,6 +4,7 @@ import React, {
   useState,
   useEffect,
   useRef,
+  useCallback,
   useMemo,
 } from "react";
 import { useSocket } from "./SocketContext";
@@ -19,6 +20,15 @@ export const NotificationProvider = ({ children }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [unreadConversations, setUnreadConversations] = useState({});
   const [isNotificationEnabled, setIsNotificationEnabled] = useState(true);
+  const [selectedConversationId, _setSelectedConversationId] = useState(null);
+  const selectedConversationIdRef = useRef(null);
+
+  // Keep ref in sync with state
+  const setSelectedConversationId = useCallback((id) => {
+    console.log('Updating selected conversation ID:', id);
+    selectedConversationIdRef.current = id;
+    _setSelectedConversationId(id);
+  }, []);
 
   const socket = useSocket();
   const { user } = useAuth();
@@ -60,6 +70,17 @@ export const NotificationProvider = ({ children }) => {
       }
     }
 
+    const conversationId = message.conversation_id || message.chat_id || "unknown";
+    if (conversationId === "unknown") return;
+
+    // Skip notification if this is the currently selected conversation
+    const currentSelectedId = selectedConversationIdRef.current;
+    console.log('Incoming message - Conversation ID:', conversationId, 'Selected ID (ref):', currentSelectedId);
+    if (conversationId === currentSelectedId) {
+      console.log('Skipping notification for selected conversation');
+      return;
+    }
+
     const contactName =
       message.contact_name ||
       message.sender_name ||
@@ -73,9 +94,6 @@ export const NotificationProvider = ({ children }) => {
       message.message ||
       message.text ||
       `New message from ${contactName}`;
-
-    const conversationId = message.conversation_id || message.chat_id || "unknown";
-    if (conversationId === "unknown") return;
 
     const now = Date.now();
     if (now - (lastNotificationTime.current[conversationId] || 0) < 2000) return;
@@ -215,7 +233,7 @@ export const NotificationProvider = ({ children }) => {
   const contextValue = useMemo(
     () => ({
       unreadCount,
-      unreadConversations, // ✅ per-conversation unread map
+      unreadConversations,
       notifications,
       isNotificationEnabled,
       markNotificationAsRead,
@@ -223,9 +241,11 @@ export const NotificationProvider = ({ children }) => {
       clearAllNotifications,
       toggleNotifications,
       addAlert: handleIncomingMessage,
-      markConversationAsRead, // ✅ expose this to reset per-chat
+      markConversationAsRead,
+      setSelectedConversationId,
+      selectedConversationId,
     }),
-    [unreadCount, unreadConversations, notifications, isNotificationEnabled]
+    [unreadCount, unreadConversations, notifications, isNotificationEnabled, setSelectedConversationId, selectedConversationId]
   );
 
   return (
