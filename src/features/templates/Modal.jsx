@@ -9,7 +9,7 @@ import OfferCodeSection from "./OfferCodeSection";
 import LivePreview from "./LivePreview";
 import ExitConfirmationDialog from "./ExitConfirmationDialog";
 import { useAuth } from "../../context/AuthContext";
-
+import { API_ENDPOINTS } from "../../config/api";
 const templateSchema = z.object({
   category: z.string().min(1, "Please select a template category"),
   templateName: z
@@ -119,8 +119,7 @@ const TemplateModal = ({
         throw new Error(`Upload failed: ${response.statusText}`);
       }
       const data = await response.json();
-      console.log("Upload response:", data); // Temporary for debugging
-      // Check for possible field names, prioritizing handleId
+      console.log("Upload response:", data); 
       const mediaIdentifier =
         data.handleId ||
         data.exampleMedia ||
