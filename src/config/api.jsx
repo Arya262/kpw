@@ -1,5 +1,5 @@
 export const API_BASE =
-  import.meta.env.VITE_API_BASE || "http://localhost:60000";
+  import.meta.env.VITE_API_BASEz || "http://localhost:60000";
 
 export const API_ENDPOINTS = {
   BROADCASTS: {
@@ -25,7 +25,7 @@ export const API_ENDPOINTS = {
   },
   TEMPLATES: {
     GET_ALL: `${API_BASE}/templates`,
-    CREATE: `${API_BASE}/createMediaTemplate`,
+    CREATE: `${API_BASE}/createTemplate`,
     CREATE_MEDIA: `${API_BASE}/createMediaTemplate`,
     UPDATE: (id) => `${API_BASE}/updatetemplate?templateId=${id}`,
     UPDATE_ALT: `${API_BASE}/updatetemplate`,
@@ -55,9 +55,9 @@ export const API_ENDPOINTS = {
     CREATE_ORDER: `${API_BASE}/create-payment`,
     VERIFY_PAYMENT: `${API_BASE}/verify-payment`,
   },
-  WHATSAPP: {
-    NUMBERS: "/api/whatsapp/numbers",
-  },
+  // WHATSAPP: {
+  //   NUMBERS: "/api/whatsapp/numbers",
+  // },
   USERS: {
     GET_SUBUSERS: (customerId) => `${API_BASE}/getsubusers?customer_id=${customerId}`,
     CREATE_SUBUSER: `${API_BASE}/createSubUser`,

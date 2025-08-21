@@ -238,16 +238,20 @@ export default function ContactRow({
           />
         </div>
       </td>
-      <td className="px-2 py-4 sm:px-4 sm:py-4 whitespace-nowrap text-[12px] sm:text-[16px] text-gray-700">
+       <td className="px-2 py-4 sm:px-4 sm:py-4 whitespace-nowrap text-[12px] sm:text-[16px] text-gray-700 font-medium">
         {contact.date}
       </td>
-      <td className="px-2 py-4 text-[12px] sm:text-[16px] text-green-600">
+      <td className="px-2 py-4 text-[12px] sm:text-[16px] text-green-600 font-medium">
         {contact.status}
       </td>
-      <td className="px-2 py-4 text-[12px] sm:text-[16px] text-gray-700">
+      <td
+        onClick={handleChat}
+        className="px-2 py-4 text-[12px] sm:text-[16px] text-gray-700 cursor-pointer hover:text-[#0AA89E] font-medium max-w-[180px] truncate"
+        title={contact.fullName}
+      >
         {contact.fullName}
       </td>
-      <td className="px-2 py-4 text-[12px] sm:text-[16px] text-gray-700">
+      <td className="px-2 py-4 text-[12px] sm:text-[16px] text-gray-700 font-medium">
         {contact.user_country_code}
         {contact.number}
       </td>
