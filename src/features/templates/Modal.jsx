@@ -173,7 +173,7 @@ const TemplateModal = ({
     formData.append("fileType", selectedFile.type);
 
     try {
-      const response = await fetch("http://localhost:60000/uploadMedia", {
+      const response = await fetch(API_ENDPOINTS.TEMPLATES.UPLOAD_MEDIA, {
         method: "POST",
         body: formData,
       });
@@ -181,7 +181,7 @@ const TemplateModal = ({
         throw new Error(`Retry upload failed: ${response.statusText}`);
       }
       const data = await response.json();
-      console.log("Retry upload response:", data); // Temporary for debugging
+      console.log("Retry upload response:", data); 
       const mediaIdentifier =
         data.handleId ||
         data.exampleMedia ||

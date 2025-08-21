@@ -30,6 +30,7 @@ export const API_ENDPOINTS = {
     UPDATE: (id) => `${API_BASE}/updatetemplate?templateId=${id}`,
     UPDATE_ALT: `${API_BASE}/updatetemplate`,
     DELETE: () => `${API_BASE}/deletetemplate`,
+    UPLOAD_MEDIA: `${API_BASE}/uploadMedia`,
   },
   GROUPS: {
     GET_ALL: `${API_BASE}/returnGroups`,
