@@ -111,7 +111,7 @@ const TemplateModal = ({
     formData.append("fileType", file.type);
     console.log("Uploading file:", file.name, "to customer ID:", customerId);
     try {
-      const response = await fetch("http://localhost:60000/uploadMedia", {
+      const response = await fetch(API_ENDPOINTS.TEMPLATES.UPLOAD_MEDIA, {
         method: "POST",
         body: formData,
       });
