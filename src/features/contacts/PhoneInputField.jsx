@@ -10,7 +10,7 @@ export default function PhoneInputField({
   isTouched,
   setIsTouched,
 }) {
-  console.log("typeof setPhoneError", typeof setPhoneError);
+
   
   const handleValidation = (value) => {
     // Standardized phone validation for all uses

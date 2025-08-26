@@ -47,7 +47,7 @@ const CallToActionSection = ({
             <div className="flex gap-2">
               <input
                 type="text"
-                placeholder="Enter Static URL"
+                placeholder="https://www.foodchow.com"
                 className="border rounded p-3 text-sm font-medium w-full border-transparent bg-gray-100 focus:outline-none focus:border-teal-500"
                 value={cta.url}
                 onChange={(e) => {

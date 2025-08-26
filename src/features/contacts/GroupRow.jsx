@@ -63,7 +63,11 @@ export default function GroupRow({
       const rect = dropdownBtnRef.current.getBoundingClientRect();
       setShouldFlipUp(window.innerHeight - rect.bottom < 220);
       setDropdownPos({
-        top: window.scrollY + (window.innerHeight - rect.bottom < 220 ? rect.top - 120 : rect.bottom),
+        top:
+          window.scrollY +
+          (window.innerHeight - rect.bottom < 220
+            ? rect.top - 120
+            : rect.bottom),
         left: window.scrollX + rect.right - 176,
       });
     }
@@ -101,31 +105,37 @@ export default function GroupRow({
   };
 
   return (
-    <tr ref={rowRef} className="border-t border-b border-b-[#C3C3C3] hover:bg-gray-50 text-md">
+    <tr
+      ref={rowRef}
+      className="border-t border-b border-b-[#C3C3C3] hover:bg-gray-50 text-md"
+    >
       <td className="px-2 py-4 sm:px-4">
         <div className="flex items-center justify-center h-full">
           <input
             type="checkbox"
-            className="form-checkbox w-4 h-4"
+            className="form-checkbox w-4 h-4 cursor-pointer"
             checked={isChecked}
             onChange={onCheckboxChange}
             aria-label={`Select group ${group.name}`}
           />
         </div>
       </td>
-      <td className="px-2 py-4 sm:px-4 whitespace-nowrap text-[12px] sm:text-[16px] text-gray-700 font-semibold cursor-pointer text-center" onClick={() => onEditClick(group)}>
+      <td className="px-2 py-4 sm:px-4 whitespace-nowrap text-[12px] sm:text-[16px] text-gray-700 font-medium  text-center">
         {group.name}
       </td>
-      <td className="px-2 py-4 text-[12px] sm:text-[16px] text-center text-gray-700">
+      <td
+        className="px-2 py-4 text-[12px] sm:text-[16px] text-gray-700 cursor-pointer hover:text-[#0AA89E] font-medium max-w-[180px] truncate"
+        title={group.description || "-"}
+      >
         {group.description || "-"}
       </td>
-      <td className="px-2 py-4 text-[12px] sm:text-[16px] text-center text-gray-700">
+      <td className="px-2 py-4 text-[12px] sm:text-[16px] text-center text-gray-700 font-medium">
         {group.category || "Imported Data"}
       </td>
-      <td className="px-2 py-4 text-[12px] sm:text-[16px] text-center text-gray-700">
+      <td className="px-2 py-4 text-[12px] sm:text-[16px] text-center text-gray-700 font-medium ">
         {group.total_contacts || 0}
       </td>
-      <td className="px-2 py-4 text-[12px] sm:text-[16px] text-center text-gray-700">
+      <td className="px-2 py-4 text-[12px] sm:text-[16px] text-center text-gray-700 font-medium">
         {group.created_at ? formatDate(group.created_at) : "-"}
       </td>
       <td className="relative py-4">
@@ -133,7 +143,7 @@ export default function GroupRow({
           <button
             ref={dropdownBtnRef}
             onClick={openDropdown}
-            className="p-2 rounded-full hover:bg-gray-100 focus:outline-none cursor-pointer"
+            className="p-2 rounded-full hover:bg-gray-100 focus:outline-none cursor-pointer "
             aria-label="Group options"
           >
             <svg
@@ -151,7 +161,10 @@ export default function GroupRow({
             </svg>
           </button>
           {isDropdownOpen && dropdownPos && (
-            <PortalDropdown position={dropdownPos} onClose={() => setDropdownOpen(false)}>
+            <PortalDropdown
+              position={dropdownPos}
+              onClose={() => setDropdownOpen(false)}
+            >
               <button
                 onClick={() => {
                   setDropdownOpen(false);
@@ -185,4 +198,4 @@ export default function GroupRow({
       </td>
     </tr>
   );
-} 
+}

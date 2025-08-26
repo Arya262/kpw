@@ -10,6 +10,7 @@ import LivePreview from "./LivePreview";
 import ExitConfirmationDialog from "./ExitConfirmationDialog";
 import { useAuth } from "../../context/AuthContext";
 import { API_ENDPOINTS } from "../../config/api";
+
 const templateSchema = z.object({
   category: z.string().min(1, "Please select a template category"),
   templateName: z
@@ -24,7 +25,7 @@ const templateSchema = z.object({
   header: z.string().max(60, "Header must be 60 characters or less").optional(),
   templateType: z.enum(["Text", "Image", "Video", "Document"], {
     required_error: "Please select a template type",
-  }),
+  }).optional(),
   format: z
     .string()
     .min(1, "Template format is required")
@@ -32,7 +33,8 @@ const templateSchema = z.object({
   footer: z.string().max(60, "Footer must be 60 characters or less").optional(),
   selectedAction: z.enum(["None", "Call To Actions", "Quick Replies", "All"], {
     required_error: "Please select an interactive action",
-  }),
+  }).optional(),
+  authButtonText: z.string().max(25, "Button text must be 25 characters or less").optional(),
 });
 
 const TemplateModal = ({
@@ -61,7 +63,6 @@ const TemplateModal = ({
   const [variables, setVariables] = useState([]);
   const [sampleValues, setSampleValues] = useState({});
   const [isUploading, setIsUploading] = useState(false);
-  // Validation errors state
   const [errors, setErrors] = useState({});
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -69,90 +70,130 @@ const TemplateModal = ({
   const [previewUrl, setPreviewUrl] = useState("");
   const [exampleMedia, setExampleMedia] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [authButtonText, setAuthButtonText] = useState("");
 
   const { user } = useAuth();
   const customerId = user?.customer_id;
+
+  // Upload file to server and return media identifier
+  const uploadFile = async (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("customer_id", customerId);
+    formData.append("fileType", file.type);
+
+    try {
+      const response = await fetch(API_ENDPOINTS.TEMPLATES.UPLOAD_MEDIA, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Upload failed: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const mediaIdentifier = data.handleId || data.exampleMedia || data.mediaId || data.url || data.fileUrl;
+
+      if (!mediaIdentifier) {
+        throw new Error("No media identifier returned from server");
+      }
+
+      return typeof mediaIdentifier === "string" ? mediaIdentifier.split("\n")[0] : mediaIdentifier;
+    } catch (error) {
+      throw new Error(`Upload failed: ${error.message}`);
+    }
+  };
 
   // Handle file selection and upload
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // File validation
-    const maxSize = 10 * 1024 * 1024;
     const validTypes = {
-      Image: ["image/jpeg", "image/png"],
-      Video: ["video/mp4"],
-      Document: ["application/pdf", "text/plain"],
+      Image: {
+        types: ["image/jpeg", "image/png"],
+        maxSize: 5 * 1024 * 1024, // 5MB
+        extensions: [".jpeg", ".png"],
+      },
+      Video: {
+        types: ["video/3gpp", "video/mp4"],
+        maxSize: 16 * 1024 * 1024, // 16MB
+        extensions: [".3gp", ".mp4"],
+      },
+      Document: {
+        types: [
+          "text/plain",
+          "application/vnd.ms-excel",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "application/msword",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "application/vnd.ms-powerpoint",
+          "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+          "application/pdf",
+        ],
+        maxSize: 100 * 1024 * 1024,
+        extensions: [".txt", ".xls", ".xlsx", ".doc", ".docx", ".ppt", ".pptx", ".pdf"],
+      },
     };
-    if (file.size > maxSize) {
-      setErrors((prev) => ({ ...prev, file: "File size must be under 10MB" }));
-      toast.error("File size must be under 10MB");
+
+    const typeConfig = validTypes[templateType];
+    if (!typeConfig) {
+      setErrors((prev) => ({ ...prev, file: "Invalid template type" }));
+      toast.error("Invalid template type");
       return;
     }
-    if (!validTypes[templateType]?.includes(file.type)) {
-      setErrors((prev) => ({
-        ...prev,
-        file: `Invalid file type for ${templateType}`,
-      }));
-      toast.error(`Invalid file type for ${templateType}`);
+
+    // Validate size
+    if (file.size > typeConfig.maxSize) {
+      const maxSizeMB = typeConfig.maxSize / (1024 * 1024);
+      const message = `File size must be under ${maxSizeMB}MB`;
+      setErrors((prev) => ({ ...prev, file: message }));
+      toast.error(message);
       return;
+    }
+
+    // Validate MIME type
+    if (!typeConfig.types.includes(file.type)) {
+      const message = `Invalid file type for ${templateType}. Supported types: ${typeConfig.extensions.join(", ")}`;
+      setErrors((prev) => ({ ...prev, file: message }));
+      toast.error(message);
+      return;
+    }
+
+    // Image validation
+    if (templateType === "Image") {
+      try {
+        const img = new Image();
+        img.src = URL.createObjectURL(file);
+        await new Promise((resolve, reject) => {
+          img.onload = () => {
+            if (img.width < 100 || img.height < 100) {
+              reject(new Error("Image dimensions must be at least 100x100"));
+            }
+            resolve();
+          };
+          img.onerror = () => reject(new Error("Failed to validate image"));
+        });
+      } catch (error) {
+        setErrors((prev) => ({ ...prev, file: error.message }));
+        toast.error(error.message);
+        return;
+      }
     }
 
     setSelectedFile(file);
-    const localPreviewUrl = URL.createObjectURL(file);
-    setPreviewUrl(localPreviewUrl);
+    setPreviewUrl(URL.createObjectURL(file));
     setIsUploading(true);
 
-    // Upload file to server
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("customer_id", customerId);
-    formData.append("fileType", file.type);
-    console.log("Uploading file:", file.name, "to customer ID:", customerId);
     try {
-      const response = await fetch(API_ENDPOINTS.TEMPLATES.UPLOAD_MEDIA, {
-        method: "POST",
-        body: formData,
-      });
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.statusText}`);
-      }
-      const data = await response.json();
-      console.log("Upload response:", data); 
-      const mediaIdentifier =
-        data.handleId ||
-        data.exampleMedia ||
-        data.mediaId ||
-        data.url ||
-        data.fileUrl;
-      if (!mediaIdentifier) {
-        throw new Error(
-          "No media identifier returned from server (expected handleId, exampleMedia, mediaId, url, or fileUrl)"
-        );
-      }
-      // Handle multiple handleId values
-      const firstMediaIdentifier =
-        typeof mediaIdentifier === "string"
-          ? mediaIdentifier.split("\n")[0]
-          : mediaIdentifier;
-      if (
-        typeof mediaIdentifier === "string" &&
-        mediaIdentifier.includes("\n")
-      ) {
-        console.warn(
-          "Multiple handleId values detected; using the first one:",
-          firstMediaIdentifier
-        );
-      }
-      setExampleMedia(firstMediaIdentifier);
+      const mediaId = await uploadFile(file);
+      setExampleMedia(mediaId);
       setErrors((prev) => ({ ...prev, file: null }));
       toast.success("File uploaded successfully!");
     } catch (error) {
-      setErrors((prev) => ({
-        ...prev,
-        file: `Upload failed: ${error.message}`,
-      }));
+      setErrors((prev) => ({ ...prev, file: `Upload failed: ${error.message}` }));
       toast.error(`Failed to upload file: ${error.message}`);
     } finally {
       setIsUploading(false);
@@ -166,53 +207,13 @@ const TemplateModal = ({
       return;
     }
     setIsUploading(true);
-    const formData = new FormData();
-    formData.append("file", selectedFile);
-    formData.append("customer_id", customerId);
-    formData.append("fileType", selectedFile.type);
-
     try {
-      const response = await fetch(API_ENDPOINTS.TEMPLATES.UPLOAD_MEDIA, {
-        method: "POST",
-        body: formData,
-      });
-      if (!response.ok) {
-        throw new Error(`Retry upload failed: ${response.statusText}`);
-      }
-      const data = await response.json();
-      console.log("Retry upload response:", data); 
-      const mediaIdentifier =
-        data.handleId ||
-        data.exampleMedia ||
-        data.mediaId ||
-        data.url ||
-        data.fileUrl;
-      if (!mediaIdentifier) {
-        throw new Error(
-          "No media identifier returned from server (expected handleId, exampleMedia, mediaId, url, or fileUrl)"
-        );
-      }
-      const firstMediaIdentifier =
-        typeof mediaIdentifier === "string"
-          ? mediaIdentifier.split("\n")[0]
-          : mediaIdentifier;
-      if (
-        typeof mediaIdentifier === "string" &&
-        mediaIdentifier.includes("\n")
-      ) {
-        console.warn(
-          "Multiple handleId values detected; using the first one:",
-          firstMediaIdentifier
-        );
-      }
-      setExampleMedia(firstMediaIdentifier);
+      const mediaId = await uploadFile(selectedFile);
+      setExampleMedia(mediaId);
       setErrors((prev) => ({ ...prev, file: null }));
       toast.success("File uploaded successfully!");
     } catch (error) {
-      setErrors((prev) => ({
-        ...prev,
-        file: `Retry upload failed: ${error.message}`,
-      }));
+      setErrors((prev) => ({ ...prev, file: `Retry upload failed: ${error.message}` }));
       toast.error(`Failed to upload file: ${error.message}`);
     } finally {
       setIsUploading(false);
@@ -251,6 +252,7 @@ const TemplateModal = ({
     setHasUnsavedChanges(false);
     setShowExitDialog(false);
     setIsUploading(false);
+    setAuthButtonText("");
   };
 
   // Detect variables from format
@@ -270,6 +272,22 @@ const TemplateModal = ({
     });
   }, [format]);
 
+  // Set defaults for Authentication category
+  useEffect(() => {
+    if (category === "AUTHENTICATION") {
+      setTemplateType("Text");
+      setSelectedAction("None");
+      setFormat("{{1}} is your verification code. For your security, do not share this code.");
+      setFooter("This code expires in 10 minutes.");
+      setAuthButtonText("");
+    } else {
+      setTemplateType("None");
+      setFormat("");
+      setFooter("");
+      setAuthButtonText("");
+    }
+  }, [category]);
+
   // Check for unsaved changes
   useEffect(() => {
     const hasChanges =
@@ -285,7 +303,8 @@ const TemplateModal = ({
       phoneCta.title.trim() ||
       phoneCta.number.trim() ||
       offerCode.trim() ||
-      selectedFile;
+      selectedFile ||
+      authButtonText.trim();
     setHasUnsavedChanges(hasChanges);
   }, [
     category,
@@ -300,6 +319,7 @@ const TemplateModal = ({
     phoneCta,
     offerCode,
     selectedFile,
+    authButtonText,
   ]);
 
   // Reset form when modal opens
@@ -317,7 +337,7 @@ const TemplateModal = ({
     }
   }, [isOpen]);
 
-  // Add a useEffect to pre-fill fields if initialValues is provided (edit mode)
+  // Pre-fill fields for edit mode
   useEffect(() => {
     if (isOpen && mode === "edit" && Object.keys(initialValues).length > 0) {
       setCategory(initialValues.category || "MARKETING");
@@ -355,6 +375,7 @@ const TemplateModal = ({
           : "None"
       );
       setExampleMedia(initialValues.exampleMedia || "");
+      setAuthButtonText(initialValues.authButtonText || "");
 
       const formatStr = initialValues.content || "";
       const sampleText = initialValues.example || "";
@@ -401,10 +422,10 @@ const TemplateModal = ({
         category,
         templateName,
         language,
-        templateType,
         format,
         footer,
-        selectedAction,
+        ...(category !== "AUTHENTICATION" && { templateType, selectedAction }),
+        ...(category === "AUTHENTICATION" && { authButtonText }),
       };
 
       templateSchema.parse(formData);
@@ -439,7 +460,6 @@ const TemplateModal = ({
 
   const handleSampleValueChange = (variable, value) => {
     setSampleValues((prev) => ({ ...prev, [variable]: value }));
-    // Clear error for this field on change
     if (errors.sampleValues?.[variable]) {
       setErrors((prev) => {
         const newSampleErrors = { ...prev.sampleValues };
@@ -491,80 +511,62 @@ const TemplateModal = ({
     setShowExitDialog(false);
   };
 
-const handleSubmit = (e) => {
-  e.preventDefault();
-  console.log("handleSubmit triggered");
-  console.log("TemplateName:", templateName, "TemplateType:", templateType);
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!validateForm()) return;
 
-  if (!validateForm()) return;
+    const generateSampleText = (formatString, samples) => {
+      return formatString.replace(/{{\s*(\d+)\s*}}/g, (match, number) => {
+        return samples[number] || match;
+      });
+    };
+    const sampleText = generateSampleText(format, sampleValues);
 
-  if (!templateName || !templateType) {
-    alert("Template Name and Template Type are required.");
-    return;
-  }
+    const buttons = category === "AUTHENTICATION"
+      ? [{ text: authButtonText, type: "COPY_CODE" }]
+      : [
+          ...quickReplies
+            .filter((reply) => reply.trim() && reply.trim() !== "QUICK_REPLY")
+            .map((text) => ({ text: text.trim(), type: "QUICK_REPLY" })),
+          ...urlCtas
+            .filter((cta) => cta.title && cta.url && cta.title.trim() !== "URL_TITLE")
+            .map((cta) => ({ text: cta.title, type: "URL", url: cta.url })),
+          ...(phoneCta.title && phoneCta.number && phoneCta.title.trim() !== "PHONE_NUMBER"
+            ? [{
+                text: phoneCta.title,
+                type: "PHONE",
+                country: phoneCta.country,
+                number: phoneCta.number,
+              }]
+            : []),
+        ];
 
-  // Generate sample text
-  const generateSampleText = (formatString, samples) => {
-    return formatString.replace(/{{\s*(\d+)\s*}}/g, (match, number) => {
-      return samples[number] || match;
-    });
+    const isMediaTemplate = ["IMAGE", "VIDEO", "DOCUMENT"].includes(
+      templateType.toUpperCase()
+    );
+
+    const newTemplate = {
+      elementName: templateName,
+      content: format,
+      category,
+      templateType: category === "AUTHENTICATION" ? "TEXT" : templateType.toUpperCase(),
+      languageCode: language,
+      footer,
+      buttons,
+      example: sampleText,
+      exampleMedia,
+      messageSendTTL: 3360,
+      container_meta: {
+        header: isMediaTemplate ? { type: templateType.toUpperCase(), media: { id: exampleMedia } } : header || null,
+        footer,
+        data: format,
+        sampleText,
+        sampleValues,
+      },
+      ...(category === "AUTHENTICATION" && { authButtonText }),
+    };
+    onSubmit(newTemplate);
   };
-  const sampleText = generateSampleText(format, sampleValues);
-
-  // Build buttons array
-  const buttons = [
-    ...quickReplies
-      .filter((reply) => reply.trim() && reply.trim() !== "QUICK_REPLY")
-      .map((text) => ({ text: text.trim(), type: "QUICK_REPLY" })),
-    ...urlCtas
-      .filter((cta) => cta.title && cta.url && cta.title.trim() !== "URL_TITLE")
-      .map((cta) => ({ text: cta.title, type: "URL", url: cta.url })),
-    ...(phoneCta.title &&
-    phoneCta.number &&
-    phoneCta.title.trim() !== "PHONE_NUMBER"
-      ? [
-          {
-            text: phoneCta.title,
-            type: "PHONE",
-            country: phoneCta.country,
-            number: phoneCta.number,
-          },
-        ]
-      : []),
-  ];
-
-  const isMediaTemplate = ["IMAGE", "VIDEO", "DOCUMENT"].includes(
-    templateType.toUpperCase()
-  );
-
-  // Prepare template object
-const newTemplate = {
-  elementName: templateName,
-  content: format,
-  category,
-  templateType: templateType.toUpperCase(),
-  languageCode: "en_US",
-  footer,
-  buttons,
-  example: sampleText,
-  exampleMedia: exampleMedia, 
-  messageSendTTL: 3360,
-  container_meta: {
-    header: isMediaTemplate
-      ? { type: templateType.toUpperCase(), media: { id: exampleMedia } }
-      : header || null,
-    footer,
-    data: format,
-    sampleText,
-    sampleValues,
-  },
-};
-
-
-  console.log("Sending template:", newTemplate);
-  onSubmit(newTemplate);
-};
-
 
   if (!isOpen) return null;
 
@@ -584,11 +586,11 @@ const newTemplate = {
 
   return (
     <div
-      className="fixed inset-0 bg-[#000]/50 flex items-center justify-center z-50 p-7"
+      className="fixed inset-0 bg-[#000]/50 flex items-start justify-center z-50 overflow-y-auto scrollbar-hide"
       onClick={showExitDialog ? undefined : handleClose}
     >
       <div
-        className="bg-white rounded-lg w-full max-w-6xl h-[90vh] overflow-hidden flex flex-col"
+        className="bg-white rounded-lg w-full  overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center p-5 flex-shrink-0 relative">
@@ -602,110 +604,102 @@ const newTemplate = {
             ×
           </button>
         </div>
-        <div className="flex-1 overflow-hidden bg-gray-50">
-          <div className="h-full overflow-auto">
-            <div className="bg-white p-4 md:p-6 shadow rounded-md flex flex-col lg:flex-row gap-6 h-full">
-              <div className="flex-1 overflow-auto scrollbar-hide">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 overflow-visible border-b-2 border-gray-200">
-                  <div className="mb-4">
-                    <label
-                      htmlFor="templateName"
-                      className="block text-sm font-medium text-gray-700 mb-1"
-                    >
-                      Template Name
-                    </label>
-                    <input
-                      id="templateName"
-                      type="text"
-                      placeholder="Template Name ex. sample (Only lowercase letters and underscores)"
-                      className={`border bg-gray-100 rounded p-2.5 w-full placeholder:text-sm ${
-                        errors.templateName
-                          ? "border-red-500"
-                          : "border-transparent"
-                      } focus:outline-none focus:border-teal-500`}
-                      value={templateName}
-                      onChange={(e) => {
-                        setTemplateName(e.target.value);
-                        validateField("templateName", e.target.value);
-                      }}
-                      disabled={mode === "edit"}
-                    />
-                    {errors.templateName && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {errors.templateName}
-                      </p>
-                    )}
-                  </div>
-                  <div className="mb-4">
-                    <label
-                      htmlFor="templateCategory"
-                      className="block text-sm font-normal text-gray-700 mb-1"
-                    >
-                      Template Category
-                    </label>
-                    <select
-                      id="templateCategory"
-                      className={`appearance-none border rounded text-sm font-medium bg-gray-100 p-3 w-full ${
-                        errors.category
-                          ? "border-red-500"
-                          : "border-transparent"
-                      } focus:outline-none focus:border-teal-500`}
-                      value={category}
-                      onChange={(e) => {
-                        setCategory(e.target.value);
-                        validateField("category", e.target.value);
-                      }}
-                    >
-                      <option value="" disabled>
-                        Select Template Category
-                      </option>
-                      <option value="MARKETING">Marketing</option>
-                      <option value="UTILITY">Utility</option>
-                    </select>
-                    {errors.category && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {errors.category}
-                      </p>
-                    )}
-                  </div>
-                  <div className="mb-6">
-                    <label
-                      htmlFor="language"
-                      className="block text-sm font-medium text-gray-700 mb-1"
-                    >
-                      Language
-                    </label>
-                    <select
-                      id="language"
-                      className={`border appearance-none bg-gray-100 text-sm font-medium rounded p-3 w-full ${
-                        errors.language
-                          ? "border-red-500"
-                          : "border-transparent"
-                      } focus:outline-none focus:border-teal-500`}
-                      value={language}
-                      onChange={(e) => {
-                        setLanguage(e.target.value);
-                        validateField("language", e.target.value);
-                      }}
-                    >
-                      <option value="" disabled>
-                        Select Language
-                      </option>
-                      <option value="en_US">English</option>
-                    </select>
-                    {errors.language && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {errors.language}
-                      </p>
-                    )}
-                  </div>
+        <div className="flex-1 flex flex-col lg:flex-row bg-gray-50">
+          <div className="w-full lg:flex-1 overflow-y-auto scrollbar-hide p-4 lg:p-6 max-h-[calc(100vh-50px)]">
+            <div className="bg-white p-4 lg:p-6 shadow rounded-md">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4 border-b-2 border-gray-200">
+                <div className="mb-4">
+                  <label
+                    htmlFor="templateName"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Template Name
+                  </label>
+                  <input
+                    id="templateName"
+                    type="text"
+                    placeholder="Template Name ex. sample (Only lowercase letters and underscores)"
+                    className={`border bg-gray-100 rounded p-2.5 w-full placeholder:text-sm ${
+                      errors.templateName ? "border-red-500" : "border-transparent"
+                    } focus:outline-none focus:border-teal-500`}
+                    value={templateName}
+                    onChange={(e) => {
+                      setTemplateName(e.target.value);
+                      validateField("templateName", e.target.value);
+                    }}
+                    disabled={mode === "edit"}
+                    aria-describedby={errors.templateName ? "templateName-error" : undefined}
+                  />
+                  {errors.templateName && (
+                    <p id="templateName-error" className="text-red-500 text-sm mt-1">
+                      {errors.templateName}
+                    </p>
+                  )}
                 </div>
+                <div className="mb-4">
+                  <label
+                    htmlFor="templateCategory"
+                    className="block text-sm font-normal text-gray-700 mb-1"
+                  >
+                    Template Category
+                  </label>
+                  <select
+                    id="templateCategory"
+                    className={`appearance-none border rounded text-sm font-medium bg-gray-100 p-3 w-full ${
+                      errors.category ? "border-red-500" : "border-transparent"
+                    } focus:outline-none focus:border-teal-500`}
+                    value={category}
+                    onChange={(e) => {
+                      setCategory(e.target.value);
+                      validateField("category", e.target.value);
+                    }}
+                  >
+                    <option value="" disabled>
+                      Select Template Category
+                    </option>
+                    <option value="MARKETING">Marketing</option>
+                    <option value="UTILITY">Utility</option>
+                    <option value="AUTHENTICATION">Authentication</option>
+                  </select>
+                  {errors.category && (
+                    <p className="text-red-500 text-sm mt-1">{errors.category}</p>
+                  )}
+                </div>
+                <div className="mb-6">
+                  <label
+                    htmlFor="language"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Language
+                  </label>
+                  <select
+                    id="language"
+                    className={`border appearance-none bg-gray-100 text-sm font-medium rounded p-3 w-full ${
+                      errors.language ? "border-red-500" : "border-transparent"
+                    } focus:outline-none focus:border-teal-500`}
+                    value={language}
+                    onChange={(e) => {
+                      setLanguage(e.target.value);
+                      validateField("language", e.target.value);
+                    }}
+                  >
+                    <option value="" disabled>
+                      Select Language
+                    </option>
+                    <option value="en_US">English</option>
+                  </select>
+                  {errors.language && (
+                    <p className="text-red-500 text-sm mt-1">{errors.language}</p>
+                  )}
+                </div>
+              </div>
 
-                <div className="mt-8">
-                  <div className="font-semibold mb-1">Template Type</div>
-                  <div className="flex gap-4">
-                    {["None", "Text", "Image", "Video", "Document"].map(
-                      (type) => (
+              {category !== "AUTHENTICATION" && (
+                <>
+                  <div className="mt-8">
+                    <div className="font-semibold mb-1">Template Type</div>
+                    <div className="flex gap-4">
+                      {["None", "Text", "Image", "Video", "Document"].map((type) => (
                         <label key={type} className="flex items-center gap-2">
                           <input
                             type="radio"
@@ -723,330 +717,244 @@ const newTemplate = {
                           />
                           {type}
                         </label>
-                      )
-                    )}
+                      ))}
+                    </div>
                   </div>
-                </div>
 
-                <div className="mb-5 mt-2 relative  ">
-                  {templateType === "Text" && (
-                    <>
-                      <div className="mb-4  border-gray-200">
-                        <input
-                          id="header"
-                          type="text"
-                          placeholder="Template Header (optional)"
-                          onChange={(e) => {
-                            setHeader(e.target.value);
-                            validateField("header", e.target.value);
-                          }}
-                          value={header}
-                          className={`border text-sm font-medium bg-gray-100 rounded p-3 w-full ${
-                            errors.header
-                              ? "border-red-500"
-                              : "border-transparent"
-                          } focus:outline-none focus:border-teal-500`}
-                        />
-                        {errors.header && (
-                          <p className="text-red-500 text-sm mt-1">
-                            {errors.header}
+                  <div className="mb-5 mt-2 relative">
+                    {templateType === "Text" && (
+                      <>
+                        <div className="mb-4 border-gray-200">
+                          <input
+                            id="header"
+                            type="text"
+                            placeholder="Template Header (optional)"
+                            onChange={(e) => {
+                              setHeader(e.target.value);
+                              validateField("header", e.target.value);
+                            }}
+                            value={header}
+                            className={`border text-sm font-medium bg-gray-100 rounded p-3 w-full ${
+                              errors.header ? "border-red-500" : "border-transparent"
+                            } focus:outline-none focus:border-teal-500`}
+                            aria-describedby={errors.header ? "header-error" : undefined}
+                          />
+                          {errors.header && (
+                            <p id="header-error" className="text-red-500 text-sm mt-1">
+                              {errors.header}
+                            </p>
+                          )}
+                          <p className="text-xs font-light text-gray-500 mt-1 mb-6">
+                            Max 60 characters
+                          </p>
+                        </div>
+                      </>
+                    )}
+
+                    {["Image", "Video", "Document"].includes(templateType) && (
+                      <div className="flex items-center gap-3 mt-4 mb-2">
+                        <div className="relative flex-1">
+                          <span className="text-blue-600 text-xs">
+                            ({templateType}: {templateType === "Image" ? ".jpeg, .png" : templateType === "Video" ? ".mp4" : ".pdf"})
+                          </span>
+                          <input
+                            type="text"
+                            value={selectedFile ? selectedFile.name : ""}
+                            placeholder={`Upload a ${templateType.toLowerCase()} file`}
+                            readOnly
+                            className={`w-full border bg-gray-100 font-medium text-sm rounded p-3 mt-4 mb-2 focus:outline-none ${
+                              errors.file ? "border-red-500" : "border-transparent"
+                            } focus:border-teal-500`}
+                            aria-describedby={errors.file ? "file-error" : undefined}
+                          />
+                          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">
+                            {selectedFile ? selectedFile.name.length : 0}/2000
+                          </span>
+                        </div>
+                        <span className="text-gray-500 text-sm">or</span>
+                        <div className="flex gap-2">
+                          <label
+                            className={`border border-green-500 text-green-500 font-medium rounded p-3 mt-4 mb-2 text-sm ${
+                              isUploading ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:bg-green-50"
+                            }`}
+                          >
+                            {isUploading ? "Uploading..." : "Upload Media"}
+                            <input
+                              type="file"
+                              accept={templateType === "Image" ? "image/*" : templateType === "Video" ? "video/mp4" : "application/pdf"}
+                              onChange={handleFileChange}
+                              className="hidden"
+                              disabled={isUploading}
+                              aria-label={`Upload ${templateType.toLowerCase()} file`}
+                            />
+                          </label>
+                          {errors.file && selectedFile && (
+                            <button
+                              onClick={handleRetryUpload}
+                              className={`border border-blue-500 text-blue-500 font-medium rounded p-3 mt-4 mb-2 text-sm ${
+                                isUploading ? "opacity-50 cursor-not-allowed" : "hover:bg-blue-50 cursor-pointer"
+                              }`}
+                              disabled={isUploading}
+                              aria-label="Retry uploading file"
+                            >
+                              Retry Upload
+                            </button>
+                          )}
+                        </div>
+                        {errors.file && (
+                          <p id="file-error" className="text-red-500 text-xs mb-2 mt-1">
+                            {errors.file}
                           </p>
                         )}
-                        <p className="text-xs font-light text-gray-500 mt-1 mb-6">
-                          Max 60 characters
-                        </p>
                       </div>
-                    </>
-                  )}
-
-                  {/* //For Image */}
-                  {templateType === "Image" && (
-                    <div className="flex items-center gap-3 mt-4 mb-2">
-                      <div className="relative flex-1">
-                        <span className="text-blue-600 text-xs">
-                          (Image: .jpeg, .png)
-                        </span>
-                        <input
-                          type="text"
-                          value={selectedFile ? selectedFile.name : ""}
-                          placeholder="Upload an image file"
-                          readOnly
-                          className={`w-full border bg-gray-100 font-medium text-sm rounded p-3 mt-4 mb-2 focus:outline-none ${
-                            errors.file
-                              ? "border-red-500"
-                              : "border-transparent"
-                          } focus:border-teal-500`}
-                        />
-                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">
-                          {selectedFile ? selectedFile.name.length : 0}/2000
-                        </span>
-                      </div>
-                      <span className="text-gray-500 text-sm">or</span>
-                      <div className="flex gap-2">
-                        <label
-                          className={`border border-green-500 text-green-500 font-medium rounded p-3 mt-4 mb-2 text-sm ${
-                            isUploading
-                              ? "opacity-50 cursor-not-allowed"
-                              : "cursor-pointer hover:bg-green-50"
-                          }`}
-                        >
-                          {isUploading ? "Uploading..." : "Upload Media"}
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleFileChange}
-                            className="hidden"
-                            disabled={isUploading}
-                          />
-                        </label>
-                        {errors.file && selectedFile && (
-                          <button
-                            onClick={handleRetryUpload}
-                            className={`border border-blue-500 text-blue-500 font-medium rounded p-3 mt-4 mb-2 text-sm ${
-                              isUploading
-                                ? "opacity-50 cursor-not-allowed"
-                                : "hover:bg-blue-50 cursor-pointer"
-                            }`}
-                            disabled={isUploading}
-                          >
-                            Retry Upload
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  {errors.file && (
-                    <p className="text-red-500 text-xs mb-2 mt-1">
-                      {errors.file}
-                    </p>
-                  )}
-                  {/* For video */}
-                  {templateType === "Video" && (
-                    <div className="flex items-center gap-3 mt-4 mb-2">
-                      <div className="relative flex-1">
-                        <span className="text-blue-600 text-xs ">
-                          (Video: .mp4)
-                        </span>
-                        <input
-                          type="text"
-                          value={selectedFile ? selectedFile.name : ""}
-                          placeholder="Upload a video file"
-                          readOnly
-                          className={`w-full border bg-gray-100 font-medium text-sm rounded p-3 mt-4 mb-2 focus:outline-none ${
-                            errors.file
-                              ? "border-red-500"
-                              : "border-transparent"
-                          } focus:border-teal-500`}
-                        />
-                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">
-                          {selectedFile ? selectedFile.name.length : 0}/2000
-                        </span>
-                      </div>
-                      <span className="text-gray-500 text-sm">or</span>
-                      <div className="flex gap-2">
-                        <label
-                          className={`border border-green-500 text-green-500 font-medium rounded p-3 mt-4 mb-2 text-sm ${
-                            isUploading
-                              ? "opacity-50 cursor-not-allowed"
-                              : "cursor-pointer hover:bg-green-50"
-                          }`}
-                        >
-                          {isUploading ? "Uploading..." : "Upload Media"}
-                          <input
-                            type="file"
-                            accept="video/mp4"
-                            onChange={handleFileChange}
-                            className="hidden"
-                            disabled={isUploading}
-                          />
-                        </label>
-                        {errors.file && selectedFile && (
-                          <button
-                            onClick={handleRetryUpload}
-                            className={`border border-blue-500 text-blue-500 font-medium rounded p-3 mt-4 mb-2 text-sm ${
-                              isUploading
-                                ? "opacity-50 cursor-not-allowed"
-                                : "hover:bg-blue-50 cursor-pointer"
-                            }`}
-                            disabled={isUploading}
-                          >
-                            Retry Upload
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  {errors.file && (
-                    <p className="text-red-500 text-xs mb-2 mt-1">
-                      {errors.file}
-                    </p>
-                  )}
-                  {/* for document */}
-
-                  {templateType === "Document" && (
-                    <div className="flex items-center gap-3 mt-4 mb-2">
-                      <div className="relative flex-1">
-                        <span className="text-blue-600 text-xs ">
-                          (Document: .pdf)
-                        </span>
-                        <input
-                          type="text"
-                          value={selectedFile ? selectedFile.name : ""}
-                          placeholder="Upload a video file"
-                          readOnly
-                          className={`w-full border bg-gray-100 font-medium text-sm rounded p-3 mt-4 mb-2 focus:outline-none ${
-                            errors.file
-                              ? "border-red-500"
-                              : "border-transparent"
-                          } focus:border-teal-500`}
-                        />
-                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">
-                          {selectedFile ? selectedFile.name.length : 0}/2000
-                        </span>
-                      </div>
-                      <span className="text-gray-500 text-sm">or</span>
-                      <div className="flex gap-2">
-                        <label
-                          className={`border border-green-500 text-green-500 font-medium rounded p-3 mt-4 mb-2 text-sm ${
-                            isUploading
-                              ? "opacity-50 cursor-not-allowed"
-                              : "cursor-pointer hover:bg-green-50"
-                          }`}
-                        >
-                          {isUploading ? "Uploading..." : "Upload Media"}
-                          <input
-                            type="file"
-                            accept="application/pdf"
-                            onChange={handleFileChange}
-                            className="hidden"
-                            disabled={isUploading}
-                          />
-                        </label>
-                        {errors.file && selectedFile && (
-                          <button
-                            onClick={handleRetryUpload}
-                            className={`border border-blue-500 text-blue-500 font-medium rounded p-3 mt-4 mb-2 text-sm ${
-                              isUploading
-                                ? "opacity-50 cursor-not-allowed"
-                                : "hover:bg-blue-50 cursor-pointer"
-                            }`}
-                            disabled={isUploading}
-                          >
-                            Retry Upload
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  {errors.file && (
-                    <p className="text-red-500 text-xs mb-2 mt-1">
-                      {errors.file}
-                    </p>
-                  )}
-                </div>
-                <div className="mb-5  border-t-2 pt-4 border-gray-200">
-                  <label
-                    htmlFor="body"
-                    className="block w-full text-md font-semibold text-gray-700 "
-                  >
-                    Body
-                  </label>
-                  {/* Character Counter Outside (Top Right) */}
-                  <div className="flex justify-end mb-1 ">
-                    <span
-                      className={`text-xs  ${
-                        format.length === 1024
-                          ? "text-red-500 font-semibold"
-                          : format.length >= 950
-                          ? "text-yellow-500"
-                          : "text-gray-400"
-                      }`}
-                    >
-                      {format.length}/1024
-                    </span>
+                    )}
                   </div>
-                  <textarea
-                    className={`w-full border text-sm bg-gray-100 rounded p-4 pt-4 ${
-                      errors.format ? "border-red-500" : "border-transparent"
-                    } focus:outline-none focus:border-teal-500`}
-                    rows={4}
-                    placeholder="Template Format (use {{1}}, {{2}}... for variables)"
-                    value={format}
-                    maxLength={1024}
-                    style={{ resize: "vertical" }}
-                    onChange={(e) => {
-                      if (e.target.value.length <= 1024) {
-                        setFormat(e.target.value);
-                        validateField("format", e.target.value);
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        const cursorPosition = e.target.selectionStart;
-                        const textBefore = format.substring(0, cursorPosition);
-                        const textAfter = format.substring(cursorPosition);
-                        const newText = textBefore + "\n" + textAfter;
-                        setFormat(newText);
-                        // Set cursor position after the newline
-                        setTimeout(() => {
-                          e.target.setSelectionRange(
-                            cursorPosition + 1,
-                            cursorPosition + 1
-                          );
-                        }, 0);
-                      }
-                    }}
-                  ></textarea>
-                  <p className="text-xs font-light text-gray-500 mb-2 ">
-                    Use text formatting - bold, italic, etc. Max 1024
-                    characters.
-                  </p>
-                  {errors.format && (
-                    <p className="text-red-500 text-xs mb-2 mt-2">
-                      {errors.format}
-                    </p>
-                  )}
-                  {/* Sample Values */}
-                  <SampleValuesSection
-                    variables={variables}
-                    sampleValues={sampleValues}
-                    handleSampleValueChange={handleSampleValueChange}
-                    errors={errors}
-                  />
+                </>
+              )}
+
+              <div className="mb-5 border-t-2 pt-4 border-gray-200">
+                <label
+                  htmlFor="body"
+                  className="block w-full text-md font-semibold text-gray-700"
+                >
+                  Body
+                </label>
+                <div className="flex justify-end mb-1">
+                  <span
+                    className={`text-xs ${
+                      format.length === 1024 ? "text-red-500 font-semibold" : format.length >= 950 ? "text-yellow-500" : "text-gray-400"
+                    }`}
+                  >
+                    {format.length}/1024
+                  </span>
                 </div>
-                <div className="mb-5  border-t-2 pt-4 border-gray-200">
+                <textarea
+                  id="body"
+                  className={`w-full border text-sm bg-gray-100 rounded p-4 pt-4 ${
+                    errors.format ? "border-red-500" : "border-transparent"
+                  } focus:outline-none focus:border-teal-500`}
+                  rows={4}
+                  placeholder="Template Format (use {{1}}, {{2}}... for variables)"
+                  value={format}
+                  maxLength={1024}
+                  style={{ resize: "vertical" }}
+                  onChange={(e) => {
+                    if (e.target.value.length <= 1024) {
+                      setFormat(e.target.value);
+                      validateField("format", e.target.value);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      const cursorPosition = e.target.selectionStart;
+                      const textBefore = format.substring(0, cursorPosition);
+                      const textAfter = format.substring(cursorPosition);
+                      const newText = textBefore + "\n" + textAfter;
+                      setFormat(newText);
+                      setTimeout(() => {
+                        e.target.setSelectionRange(cursorPosition + 1, cursorPosition + 1);
+                      }, 0);
+                    }
+                  }}
+                  aria-describedby={errors.format ? "format-error" : undefined}
+                ></textarea>
+                <p className="text-xs font-light text-gray-500 mb-2">
+                  Use text formatting - bold, italic, etc. Max 1024 characters.
+                </p>
+                {errors.format && (
+                  <p id="format-error" className="text-red-500 text-xs mb-2 mt-2">
+                    {errors.format}
+                  </p>
+                )}
+                <SampleValuesSection
+                  variables={variables}
+                  sampleValues={sampleValues}
+                  handleSampleValueChange={handleSampleValueChange}
+                  errors={errors}
+                />
+              </div>
+
+              <div className="mb-5 border-t-2 pt-4 border-gray-200">
+                <label
+                  htmlFor="footer"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Footer (optional)
+                </label>
+                <input
+                  id="footer"
+                  type="text"
+                  className={`w-full bg-gray-100 border rounded p-3 text-sm font-medium mb-1 ${
+                    errors.footer ? "border-red-500" : "border-transparent"
+                  } focus:outline-none focus:border-teal-500`}
+                  placeholder="Template Footer"
+                  value={footer}
+                  onChange={(e) => {
+                    setFooter(e.target.value);
+                    validateField("footer", e.target.value);
+                  }}
+                  aria-describedby={errors.footer ? "footer-error" : undefined}
+                />
+                {errors.footer && (
+                  <p id="footer-error" className="text-red-500 text-xs mb-1">
+                    {errors.footer}
+                  </p>
+                )}
+                <p className="text-xs font-light text-gray-500 mb-6">
+                  You are allowed a maximum of 60 characters.
+                </p>
+              </div>
+
+              {category === "AUTHENTICATION" && (
+                <div className="mb-5 border-t-2 pt-4 border-gray-200">
+                  <p className="text-sm text-gray-600 mb-2">
+                    Basic authentication with quick setup. Your customers copy and paste the code into your app.
+                  </p>
                   <label
-                    htmlFor="footer"
+                    htmlFor="authButtonText"
                     className="block text-sm font-medium text-gray-700 mb-1"
                   >
-                    Footer (optional)
+                    Button Text
                   </label>
+                  <div className="flex justify-end mb-1">
+                    <span
+                      className={`text-xs ${
+                        authButtonText.length === 25 ? "text-red-500 font-semibold" : authButtonText.length >= 20 ? "text-yellow-500" : "text-gray-400"
+                      }`}
+                    >
+                      {authButtonText.length}/25
+                    </span>
+                  </div>
                   <input
+                    id="authButtonText"
                     type="text"
                     className={`w-full bg-gray-100 border rounded p-3 text-sm font-medium mb-1 ${
-                      errors.footer ? "border-red-500" : "border-transparent"
+                      errors.authButtonText ? "border-red-500" : "border-transparent"
                     } focus:outline-none focus:border-teal-500`}
-                    placeholder="Template Footer"
-                    value={footer}
+                    placeholder="Button Text"
+                    value={authButtonText}
                     onChange={(e) => {
-                      setFooter(e.target.value);
-                      validateField("footer", e.target.value);
+                      setAuthButtonText(e.target.value);
+                      validateField("authButtonText", e.target.value);
                     }}
+                    maxLength={25}
+                    aria-describedby={errors.authButtonText ? "authButtonText-error" : undefined}
                   />
-                  {errors.footer && (
-                    <p className="text-red-500 text-xs mb-1">{errors.footer}</p>
+                  {errors.authButtonText && (
+                    <p id="authButtonText-error" className="text-red-500 text-xs mb-1">
+                      {errors.authButtonText}
+                    </p>
                   )}
-                  <p className="text-xs font-light text-gray-500 mb-6">
-                    You are allowed a maximum of 60 characters.
-                  </p>
                 </div>
+              )}
 
-                <div className="mb-5  border-t-2 pt-4 border-gray-200">
-                  <div className="font-semibold mb-1">Interactive Actions</div>
-                  <div className="flex gap-4 flex-wrap">
-                    {["None", "Call To Actions", "Quick Replies", "All"].map(
-                      (option) => (
+              {category !== "AUTHENTICATION" && (
+                <>
+                  <div className="mb-5 border-t-2 pt-4 border-gray-200">
+                    <div className="font-semibold mb-1">Interactive Actions</div>
+                    <div className="flex gap-4 flex-wrap">
+                      {["None", "Call To Actions", "Quick Replies", "All"].map((option) => (
                         <label key={option} className="flex items-center gap-2">
                           <input
                             type="radio"
@@ -1060,75 +968,71 @@ const newTemplate = {
                           />
                           {option}
                         </label>
-                      )
+                      ))}
+                    </div>
+                    {errors.selectedAction && (
+                      <p className="text-red-500 text-sm mt-1">{errors.selectedAction}</p>
                     )}
                   </div>
-                  {errors.selectedAction && (
-                    <p className="text-red-500 text-sm mt-1">
-                      {errors.selectedAction}
-                    </p>
+                  {(selectedAction === "Quick Replies" || selectedAction === "All") && (
+                    <QuickRepliesSection
+                      quickReplies={quickReplies}
+                      setQuickReplies={setQuickReplies}
+                    />
                   )}
-                </div>
-                {(selectedAction === "Quick Replies" ||
-                  selectedAction === "All") && (
-                  <QuickRepliesSection
-                    quickReplies={quickReplies}
-                    setQuickReplies={setQuickReplies}
-                  />
-                )}
-                {(selectedAction === "Call To Actions" ||
-                  selectedAction === "All") && (
-                  <CallToActionSection
-                    urlCtas={urlCtas}
-                    setUrlCtas={setUrlCtas}
-                    phoneCta={phoneCta}
-                    setPhoneCta={setPhoneCta}
+                  {(selectedAction === "Call To Actions" || selectedAction === "All") && (
+                    <CallToActionSection
+                      urlCtas={urlCtas}
+                      setUrlCtas={setUrlCtas}
+                      phoneCta={phoneCta}
+                      setPhoneCta={setPhoneCta}
+                      selectedAction={selectedAction}
+                    />
+                  )}
+                  <OfferCodeSection
+                    offerCode={offerCode}
+                    setOfferCode={setOfferCode}
                     selectedAction={selectedAction}
                   />
-                )}
-                <OfferCodeSection
-                  offerCode={offerCode}
-                  setOfferCode={setOfferCode}
-                  selectedAction={selectedAction}
-                />
-                <div className="flex gap-2 justify-end flex-wrap pb-4">
-                  <button
-                    onClick={handleSubmit}
-                    className={`bg-[#05a3a3] w-25 text-white px-6 py-2 rounded font-semibold ${
-                      isSubmitting || isUploading
-                        ? "opacity-50 cursor-not-allowed"
-                        : "hover:cursor-pointer"
-                    }`}
-                    disabled={isSubmitting || isUploading}
-                  >
-                    {mode === "edit" ? "Update" : "Add"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleCancel}
-                    className={`border border-red-500 text-red-500 px-6 py-2 w-25 rounded font-semibold ${
-                      isSubmitting || isUploading
-                        ? "opacity-50 cursor-not-allowed"
-                        : "hover:bg-red-50 hover:cursor-pointer"
-                    }`}
-                    disabled={isSubmitting || isUploading}
-                  >
-                    Cancel
-                  </button>
-                </div>
+                </>
+              )}
+
+              <div className="flex gap-2 justify-end flex-wrap pb-4">
+                <button
+                  onClick={handleSubmit}
+                  className={`bg-[#05a3a3] w-25 text-white px-6 py-2 rounded font-semibold ${
+                    isSubmitting || isUploading ? "opacity-50 cursor-not-allowed" : "hover:cursor-pointer"
+                  }`}
+                  disabled={isSubmitting || isUploading}
+                >
+                  {mode === "edit" ? "Update" : "Add"}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className={`border border-red-500 text-red-500 px-6 py-2 w-25 rounded font-semibold ${
+                    isSubmitting || isUploading ? "opacity-50 cursor-not-allowed" : "hover:bg-red-50 hover:cursor-pointer"
+                  }`}
+                  disabled={isSubmitting || isUploading}
+                >
+                  Cancel
+                </button>
               </div>
-              <LivePreview
-                header={header}
-                templateType={templateType}
-                livePreviewSampleText={livePreviewSampleText}
-                footer={footer}
-                quickReplies={quickReplies}
-                selectedAction={selectedAction}
-                urlCtas={urlCtas}
-                offerCode={offerCode}
-                phoneCta={phoneCta}
-              />
             </div>
+          </div>
+          <div className="w-full lg:w-[400px]  p-4 lg:p-6  lg:flex-shrink-0">
+            <LivePreview
+              header={header}
+              templateType={category === "AUTHENTICATION" ? "Text" : templateType}
+              livePreviewSampleText={livePreviewSampleText}
+              footer={footer}
+              quickReplies={category === "AUTHENTICATION" ? [] : quickReplies}
+              selectedAction={category === "AUTHENTICATION" ? "None" : selectedAction}
+              urlCtas={category === "AUTHENTICATION" ? [] : urlCtas}
+              offerCode={category === "AUTHENTICATION" ? "" : offerCode}
+              phoneCta={category === "AUTHENTICATION" ? { title: "", country: "", number: "" } : phoneCta}
+              authButtonText={category === "AUTHENTICATION" ? authButtonText : ""}
+            />
           </div>
         </div>
         <ExitConfirmationDialog

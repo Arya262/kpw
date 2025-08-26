@@ -512,75 +512,86 @@ const BroadcastForm = ({
               </div>
             ) : templatesError ? (
               <p className="text-red-500 text-center py-8">{templatesError}</p>
-            ) : templates.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">
-                No templates available.
-              </p>
             ) : (
-              /* Template Grid */
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto scrollbar-hide">
-                {templates.map((template) => (
-                  <div
-                    key={template.id || template.element_name}
-                    className={`bg-white rounded-xl shadow-md overflow-hidden cursor-pointer transition-all duration-200 border-2 ${
-                      formData.selectedTemplate?.id === template.id ||
-                      formData.selectedTemplate?.element_name ===
-                        template.element_name
-                        ? "border-teal-500 bg-teal-50"
-                        : "border-gray-200 hover:border-teal-300 hover:shadow-lg"
-                    }`}
-                    onClick={() => {
-                      onTemplateSelect(template);
-                      setErrors((prev) => ({ ...prev, template: "" }));
-                    }}
-                  >
-                    {template.container_meta?.mediaUrl && (
-                      <img
-                        src={template.container_meta.mediaUrl}
-                        alt={template.element_name}
-                        className="w-full h-32 object-cover"
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.style.display = "none";
-                        }}
-                      />
-                    )}
-                    <div className="p-4">
-                      <div className="flex justify-between items-start mb-2">
-                        <h4 className="font-semibold text-sm text-gray-800 truncate">
-                          {template.element_name}
-                        </h4>
-                        {(formData.selectedTemplate?.id === template.id ||
+              (() => {
+                const approvedTemplates = templates.filter(
+                  (t) => t.status?.toLowerCase() === "approved"
+                );
+
+                if (approvedTemplates.length === 0) {
+                  return (
+                    <p className="text-gray-500 text-center py-8">
+                      No approved templates available.
+                    </p>
+                  );
+                }
+
+                return (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto scrollbar-hide">
+                    {approvedTemplates.map((template) => (
+                      <div
+                        key={template.id || template.element_name}
+                        className={`bg-white rounded-xl shadow-md overflow-hidden cursor-pointer transition-all duration-200 border-2 ${
+                          formData.selectedTemplate?.id === template.id ||
                           formData.selectedTemplate?.element_name ===
-                            template.element_name) && (
-                          <div className="flex-shrink-0 w-5 h-5 bg-teal-500 rounded-full flex items-center justify-center">
-                            <svg
-                              className="w-3 h-3 text-white"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M5 13l4 4L19 7"
-                              />
-                            </svg>
-                          </div>
+                            template.element_name
+                            ? "border-teal-500 bg-teal-50"
+                            : "border-gray-200 hover:border-teal-300 hover:shadow-lg"
+                        }`}
+                        onClick={() => {
+                          onTemplateSelect(template);
+                          setErrors((prev) => ({ ...prev, template: "" }));
+                        }}
+                      >
+                        {template.container_meta?.mediaUrl && (
+                          <img
+                            src={template.container_meta.mediaUrl}
+                            alt={template.element_name || "Template image"}
+                            className="w-full h-32 object-cover"
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.style.display = "none";
+                            }}
+                          />
                         )}
+                        <div className="p-4">
+                          <div className="flex justify-between items-start mb-2">
+                            <h4 className="font-semibold text-sm text-gray-800 truncate">
+                              {template.element_name}
+                            </h4>
+                            {(formData.selectedTemplate?.id === template.id ||
+                              formData.selectedTemplate?.element_name ===
+                                template.element_name) && (
+                              <div className="flex-shrink-0 w-5 h-5 bg-teal-500 rounded-full flex items-center justify-center">
+                                <svg
+                                  className="w-3 h-3 text-white"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M5 13l4 4L19 7"
+                                  />
+                                </svg>
+                              </div>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-500 mb-2">
+                            {template.category}
+                          </p>
+                          <p className="text-xs text-gray-700 line-clamp-3">
+                            {template.container_meta?.sampleText ||
+                              "No sample text available"}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-xs text-gray-500 mb-2">
-                        {template.category}
-                      </p>
-                      <p className="text-xs text-gray-700 line-clamp-3">
-                        {template.container_meta?.sampleText ||
-                          "No sample text available"}
-                      </p>
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                );
+              })()
             )}
 
             {errors.template && (

@@ -16,24 +16,24 @@ export const SocketProvider = ({ children }) => {
       if (socket) {
         socket.disconnect();
         setSocket(null);
-        console.log("🛑 Socket disconnected due to logout");
+        
       }
       return;
     }
 
     // User logged in => create socket if not already connected
     if (!socket) {
-      const newSocket = io("https://marketing-uoxu.onrender.com", {
+      const newSocket = io("https://marketing.foodchow.co.uk:60001", {
         transports: ["websocket"],
         withCredentials: true,
       });
 
       newSocket.on("connect", () => {
-        console.log("✅ Socket connected!", newSocket.id);
+        
       });
 
       newSocket.on("connect_error", (err) => {
-        console.error("❌ Socket connect error:", err.message);
+       
       });
 
       setSocket(newSocket);
@@ -52,7 +52,7 @@ export const SocketProvider = ({ children }) => {
     socket.off("newMessageAlert");
 
     socket.on("newMessageAlert", (data) => {
-      console.log("📥 Global alert received:", data);
+      
       addAlert(data);
     });
 
@@ -64,7 +64,7 @@ export const SocketProvider = ({ children }) => {
     return () => {
       if (socket) {
         socket.disconnect();
-        console.log("🛑 Socket disconnected on context unmount");
+       
       }
     };
   }, [socket]);

@@ -412,7 +412,10 @@ const Table = ({
               <tbody className="max-h-[calc(100vh-300px)] overflow-y-auto">
                 {displayedTemplates.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="text-center py-4 text-gray-500 font-medium">
+                    <td
+                      colSpan="7"
+                      className="text-center py-4 text-gray-500 font-medium"
+                    >
                       <img
                         src="/no_data.14591486.svg"
                         alt="No data available"

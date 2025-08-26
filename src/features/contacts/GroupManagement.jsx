@@ -487,9 +487,7 @@ export default function GroupManagement() {
   const searchInputRef = useRef(null);
   const [deletingGroup, setDeletingGroup] = useState(null);
   const modalRef = useRef(null);
-  // Add state for close icon highlight
   const [isCrossHighlighted, setIsCrossHighlighted] = useState(false);
-  // Add state for border glow
   const [isModalGlow, setIsModalGlow] = useState(false);
   const [showExitDialog, setShowExitDialog] = useState(false);
 
@@ -543,13 +541,7 @@ export default function GroupManagement() {
       const customerId = user?.customer_id;
       const groupName = groupData.name;
       const file = groupData.file;
-      const fileRemoved = groupData.fileRemoved; // Pass fileRemoved
-      console.log("Creating group with:", {
-        customer_id: customerId,
-        group_name: groupName,
-        file: file,
-        fileRemoved: fileRemoved,
-      });
+      const fileRemoved = groupData.fileRemoved; 
       formData.append('customer_id', customerId);
       formData.append('group_name', groupName);
       formData.append('description', groupData.description || '');
@@ -557,7 +549,7 @@ export default function GroupManagement() {
         formData.append('file', file);
       }
       if (fileRemoved) {
-        formData.append('remove_file', 'true'); // Indicate file removal
+        formData.append('remove_file', 'true'); 
       }
 
       const response = await fetch(`${API_ENDPOINTS.GROUPS.CREATE}`, {

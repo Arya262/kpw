@@ -58,8 +58,8 @@ const getMessagePreview = (message, type) => {
   }
 };
 
-// Reusable Avatar component
-const Avatar = ({ name = "User", image }) => {
+// ✅ Reusable Avatar component (exported)
+export const Avatar = ({ name = "User", image }) => {
   // Extract first letter of first and last name
   let initials = "U";
   if (name && typeof name === "string") {
@@ -67,7 +67,9 @@ const Avatar = ({ name = "User", image }) => {
     if (parts.length === 1) {
       initials = parts[0][0]?.toUpperCase() || "U";
     } else if (parts.length > 1) {
-      initials = (parts[0][0] || "").toUpperCase() + (parts[parts.length - 1][0] || "").toUpperCase();
+      initials =
+        (parts[0][0] || "").toUpperCase() +
+        (parts[parts.length - 1][0] || "").toUpperCase();
     }
   }
   const bgColor = getAvatarColor(name);
@@ -196,4 +198,5 @@ const ChatSidebar = ({
   );
 };
 
+// ✅ Default export
 export default ChatSidebar;

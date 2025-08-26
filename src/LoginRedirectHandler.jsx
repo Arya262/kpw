@@ -112,7 +112,7 @@ React.useEffect(() => {
         }
       );
 
-      console.log("Login response:", response);
+      // console.log("Login response:", response);
       const { success, user, error } = response.data;
 
       if (success) {

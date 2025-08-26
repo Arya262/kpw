@@ -1,7 +1,6 @@
 import MessageStatusIcon from "./MessageStatusIcon";
 
 const TemplateMessage = ({ msg, sent }) => {
-  console.log("🧾 Full Message Object:", msg);
   const meta = msg.container_meta;
 
   const bubbleBg = sent ? "#dcf8c6" : "#f0f0f0";

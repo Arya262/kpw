@@ -147,17 +147,14 @@ export const useChatLogic = ({
       
       // Prevent redundant re-selection
       if (currentConversationId === contact.conversation_id) {
-        console.log('Skipping re-selection of same contact');
         return;
       }
 
-      console.log('Setting selected contact:', contact.conversation_id);
       
       // Update local state first
       setSelectedContact(contact);
       
       // Update notification context
-      console.log('Setting selected conversation ID in context:', contact.conversation_id);
       if (setSelectedConversationId) {
         // Use a small timeout to ensure state updates are processed
         setTimeout(() => {

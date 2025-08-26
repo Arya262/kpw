@@ -197,9 +197,6 @@ const handleSubmit = async (e) => {
       type: "Manual Broadcast",
     };
 
-    console.log("Submitting form data with template:", updatedFormData);
-    console.log("Using API endpoint:", API_ENDPOINTS.BROADCASTS.GET_CUSTOMERS);
-
     const response = await fetch(API_ENDPOINTS.BROADCASTS.GET_CUSTOMERS, {
       method: "POST",
       headers: {

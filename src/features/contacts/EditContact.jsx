@@ -62,7 +62,7 @@ export default function EditContact({ contact, closePopup, onSuccess }) {
       mobile_no: mobileNumber,
     };
 
-    console.log("📤 Sending update request:", requestBody);
+
 
     try {
       const response = await fetch(API_ENDPOINTS.CONTACTS.UPDATE, {

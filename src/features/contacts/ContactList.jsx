@@ -293,7 +293,7 @@ export default function ContactList() {
   const canEditContact = (contact) => {
     if (!permissions.canEdit) return false;
     if (user?.role?.toLowerCase?.() === "user") {
-      return contact.created_by === user?.id; // assuming contact.created_by is the user id
+      return contact.created_by === user?.id; 
     }
     return true;
   };
@@ -413,7 +413,7 @@ export default function ContactList() {
         const contact = displayedContacts[idx];
         return contact?.contact_id;
       });
-    console.log("Final selected contact_ids:", selectedIds);
+
 
     try {
       setIsDeleting(true);

@@ -15,12 +15,9 @@ class NotificationService {
   initAudio() {
     try {
       this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      console.log("🎵 AudioContext initialized:", this.audioContext.state);
-      
       // Pre-load the default audio file
       this.preloadAudio();
     } catch (error) {
-      console.warn("🚫 AudioContext not available:", error.message);
     }
 
     document.addEventListener("click", this.resumeAudioContextIfNeeded.bind(this), {
@@ -37,15 +34,15 @@ class NotificationService {
       
       // Test if the audio file can be loaded
       this.audioElement.addEventListener('canplaythrough', () => {
-        console.log("🎵 Default notification sound loaded successfully");
+        
       });
       
       this.audioElement.addEventListener('error', (e) => {
-        console.warn("🔇 Failed to load default notification sound:", e);
+      
         this.audioElement = null;
       });
     } catch (error) {
-      console.warn("🔇 Error preloading audio:", error.message);
+      
     }
   }
 
@@ -53,16 +50,16 @@ class NotificationService {
     try {
       if (this.audioContext && this.audioContext.state === "suspended") {
         await this.audioContext.resume();
-        console.log("🎵 AudioContext resumed");
+        
       }
     } catch (e) {
-      console.warn("🚫 Failed to resume AudioContext:", e.message);
+      
     }
   }
 
   setCustomAudio(url) {
     this.customAudioUrl = url;
-    console.log("🎵 Custom audio URL set:", url);
+   
   }
 
   async playNotificationSound() {
@@ -131,7 +128,7 @@ showBrowserNotification(title, options = {}, onClick) {
 
     if (onClick) {
       notification.onclick = (event) => {
-        event.preventDefault(); // Prevent the browser from focusing the Notification's tab
+        event.preventDefault();
         onClick(options.data);
         window.focus();
       };

@@ -1,5 +1,6 @@
 export const API_BASE =
-  import.meta.env.VITE_API_BASE || "http://localhost:60000";
+  // import.meta.env.VITE_API_BASEz || "http://localhost:60000";
+  import.meta.env.VITE_API_BASEz || "https://marketing.foodchow.co.uk";
 
 export const API_ENDPOINTS = {
   BROADCASTS: {

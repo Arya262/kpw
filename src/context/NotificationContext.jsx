@@ -25,7 +25,7 @@ export const NotificationProvider = ({ children }) => {
 
   // Keep ref in sync with state
   const setSelectedConversationId = useCallback((id) => {
-    console.log('Updating selected conversation ID:', id);
+
     selectedConversationIdRef.current = id;
     _setSelectedConversationId(id);
   }, []);

@@ -34,13 +34,13 @@ const SendTemplate = ({ onSelect, onClose, returnFullTemplate = false }) => {
 
         const data = await response.json();
         if (Array.isArray(data.templates)) {
-          // const approvedTemplates = data.templates.filter(
-          //   (t) => t.status?.toLowerCase() === "approved"
-          // );
-          // setTemplates(approvedTemplates);
-          // setFilteredTemplates(approvedTemplates);
-          setTemplates(data.templates);
-          setFilteredTemplates(data.templates);
+          const approvedTemplates = data.templates.filter(
+            (t) => t.status?.toLowerCase() === "approved"
+          );
+          setTemplates(approvedTemplates);
+          setFilteredTemplates(approvedTemplates);
+          // setTemplates(data.templates);
+          // setFilteredTemplates(data.templates);
         } else {
           setError("Unexpected response format from server.");
         }

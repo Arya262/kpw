@@ -6,6 +6,7 @@ import { useAuth } from "../../context/AuthContext";
 import { API_ENDPOINTS } from "../../config/api";
 import AddCreditModal from "./AddCreditModal";
 import { getPermissions } from "../../utils/getPermissions";
+
 import vendor from "../../assets/Vector.png";
 
 const AnimatedNumber = ({ value, duration = 1.2 }) => {
@@ -78,25 +79,25 @@ const DashboardHome = () => {
       title: "Total Credit",
       icon: Wallet,
       value: summary.total_credit,
-      gradient: "gradient-1",
+      gradient: "bg-gradient-to-b from-blue-400 to-blue-800",
     },
     {
       title: "Used Credit",
       icon: Banknote,
       value: summary.total_credit_consumed,
-      gradient: "gradient-2",
+      gradient: "bg-gradient-to-b from-orange-400 to-yellow-500",
     },
     {
       title: "Remaining Credit",
       icon: PiggyBank,
       value: remaining,
-      gradient: "gradient-3",
+      gradient: "bg-gradient-to-b from-green-400 to-green-900",
     },
     {
       title: "Plan Type",
       icon: Crown,
       value: summary.plan_type,
-      gradient: "gradient-4",
+      gradient: "bg-gradient-to-b from-purple-400 to-purple-700",
     },
   ];
 
@@ -149,7 +150,7 @@ const DashboardHome = () => {
       const { order } = await orderRes.json();
 
       const options = {
-        key: "rzp_live_MoWUoTrGF0woCD",
+        key: rzp_live_MoWUoTrGF0woCD,
         amount: order.amount,
         currency: "INR",
         name: user?.company_name || "FoodChow",
@@ -196,12 +197,10 @@ const DashboardHome = () => {
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 text-center md:text-left">
+      <div className="flex justify-between items-center mb-6 gap-4 px-4">
         <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
           Dashboard
         </h2>
-        {/* Always show Add Credit button, enforce permission in handler */}
         <button
           className="bg-[#0AA89E] hover:bg-[#0AA89E] text-white flex items-center gap-2 px-4 py-2 rounded cursor-pointer"
           onClick={
@@ -214,9 +213,7 @@ const DashboardHome = () => {
           Add Credit
         </button>
       </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-6 mx-7">
         {stats.map(({ title, icon: Icon, value, gradient }, i) => (
           <motion.div
             key={title}
@@ -239,10 +236,8 @@ const DashboardHome = () => {
           </motion.div>
         ))}
       </div>
-
-      {/* Chart Section */}
       <motion.div
-        className="mt-10"
+        className="mt-5"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -255,8 +250,6 @@ const DashboardHome = () => {
           </div>
         )}
       </motion.div>
-
-      {/* Add Credit Modal */}
       {permissions.canAddCredits && (
         <AddCreditModal
           isOpen={showAddCredit}
