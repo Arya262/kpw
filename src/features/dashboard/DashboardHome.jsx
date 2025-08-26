@@ -150,7 +150,7 @@ const DashboardHome = () => {
       const { order } = await orderRes.json();
 
       const options = {
-        key: rzp_live_MoWUoTrGF0woCD,
+        key: "rzp_live_MoWUoTrGF0woCD",
         amount: order.amount,
         currency: "INR",
         name: user?.company_name || "FoodChow",
