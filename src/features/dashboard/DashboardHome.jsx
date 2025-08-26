@@ -176,7 +176,7 @@ const DashboardHome = () => {
           email: user?.email || "",
           contact: user?.phone || "",
         },
-        theme: { color: "#3399cc" },
+        theme: { color: "#0AA89E" },
         modal: {
           ondismiss: () => setPaymentLoading(false),
         },
