@@ -132,11 +132,11 @@ export default function MessagingAnalytics({ usageHistory }) {
         const data = await response.json();
         setBroadcasts(Array.isArray(data.broadcasts) ? data.broadcasts : []);
       } catch (err) {
-        console.error("Error fetching broadcasts:", err);
-        toast.error("Failed to load broadcast data. Please try again.", {
-          position: "top-right",
-          autoClose: 5000,
-        });
+        // console.error("Error fetching broadcasts:", err);
+        // toast.error("Failed to load broadcast data. Please try again.", {
+        //   position: "top-right",
+        //   autoClose: 5000,
+        // });
       }
     };
     fetchBroadcasts();

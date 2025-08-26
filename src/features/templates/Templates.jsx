@@ -13,7 +13,7 @@ import approvedIcon from "../../assets/Approve.png";
 import pendingIcon from "../../assets/Pending.png";
 import rejectedIcon from "../../assets/Rejected.png";
 import { defaultToastConfig, createToastConfig } from "../../utils/toastConfig";
-import { useTemplates } from "../../hooks/useTemplates"; 
+import { useTemplates } from "../../hooks/useTemplates"; // ✅ our hook
 
 const Templates = () => {
   const { user } = useAuth();
@@ -24,7 +24,7 @@ const Templates = () => {
     setTemplates,
     loading,
     addTemplate,
-    deleteTemplates,
+    deleteTemplate,
   } = useTemplates(user?.customer_id);
 
   const [editingTemplate, setEditingTemplate] = useState(null);
@@ -83,7 +83,42 @@ const Templates = () => {
 
   // ✅ Delete templates
   const handleDelete = async (ids) => {
-    await deleteTemplates(ids);
+    if (!Array.isArray(ids)) {
+      ids = [ids]; // Convert single ID to array for consistency
+    }
+    
+    try {
+      // Delete each template one by one
+      for (const id of ids) {
+        const template = templates.find(t => t.id === id);
+        if (template) {
+          const success = await deleteTemplate(template.element_name, id, user?.customer_id);
+          if (!success) {
+            throw new Error(`Failed to delete template: ${template.element_name}`);
+          }
+        }
+      }
+      
+      // Only update the UI if all deletions were successful
+      setTemplates(prev => prev.filter(t => !ids.includes(t.id)));
+      
+      // Show success message
+      toast.success(
+        ids.length === 1 
+          ? 'Template deleted successfully' 
+          : `${ids.length} templates deleted successfully`,
+        defaultToastConfig
+      );
+      
+      return true;
+    } catch (error) {
+      console.error('Error in handleDelete:', error);
+      toast.error(
+        error.message || 'Failed to delete template(s)',
+        defaultToastConfig
+      );
+      return false;
+    }
   };
 
   // ✅ Edit template (update locally)

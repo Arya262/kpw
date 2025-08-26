@@ -120,15 +120,25 @@ const Table = ({
   };
 
   const handleCheckboxChange = (idx, event) => {
-    setSelectedRows((prev) => ({
-      ...prev,
-      [idx]: event.target.checked,
-    }));
+    const isChecked = event.target.checked;
+    console.log('Checkbox changed - Index:', idx, 'Checked:', isChecked);
+    setSelectedRows((prev) => {
+      const newState = {
+        ...prev,
+        [idx]: isChecked,
+      };
+      console.log('Selected Rows:', newState);
+      return newState;
+    });
   };
 
   // Permission-aware handlers
   const handleDeleteSelected = async () => {
+    console.log('Delete Selected clicked');
+    console.log('Selected Rows:', selectedRows);
+    
     if (!canDelete) {
+      console.log('Delete permission denied');
       toast.error("You do not have permission to delete templates.", {
         position: "top-right",
         autoClose: 3000,
@@ -139,25 +149,51 @@ const Table = ({
       });
       return;
     }
+    
     const selectedIds = Object.entries(selectedRows)
       .filter(([_, isSelected]) => isSelected)
-      .map(([idx]) => displayedTemplates[idx]?.id)
+      .map(([idx]) => {
+        const template = displayedTemplates[parseInt(idx)];
+        console.log(`Processing index ${idx}:`, template);
+        return template?.id;
+      })
       .filter(Boolean);
-    if (selectedIds.length === 0) return;
-    setIsDeleting(true);
-    try {
-      await onDelete(selectedIds);
-      setSelectedRows({});
-      setSelectAll(false);
-    } catch (e) {
-      // handle error
-    } finally {
-      setIsDeleting(false);
+      
+    console.log('Selected IDs for deletion:', selectedIds);
+      
+    if (selectedIds.length === 0) {
+      console.log('No valid templates selected for deletion');
+      toast.error("No templates selected for deletion.", {
+        position: "top-right",
+        autoClose: 3000,
+      });
+      return;
+    }
+    
+    // Show confirmation dialog
+    console.log(`Showing confirmation dialog for ${selectedIds.length} templates`);
+    if (window.confirm(`Are you sure you want to delete ${selectedIds.length} selected template(s)? This action cannot be undone.`)) {
+      setIsDeleting(true);
+      try {
+        const success = await onDelete(selectedIds);
+        if (success) {
+          // Only clear selection if deletion was successful
+          setSelectedRows({});
+          setSelectAll(false);
+        }
+      } catch (error) {
+        console.error('Error in handleDeleteSelected:', error);
+        // Error handling is now done in the handleDelete function
+      } finally {
+        setIsDeleting(false);
+      }
     }
   };
 
   const handleDeleteClick = (template) => {
+    console.log('Delete clicked for template:', template);
     if (!canDelete) {
+      console.log('Delete permission denied');
       toast.error("You do not have permission to delete templates.", {
         position: "top-right",
         autoClose: 3000,
@@ -168,6 +204,7 @@ const Table = ({
       });
       return;
     }
+    console.log('Setting template for deletion:', { id: template.id, name: template.element_name });
     setSelectedTemplate(template);
     setShowDeleteDialog(true);
     setMenuOpen(null);
@@ -198,6 +235,15 @@ const Table = ({
       await onDelete(selectedTemplate.id);
       setShowDeleteDialog(false);
       setSelectedTemplate(null);
+      // Show success message
+      toast.success('Template deleted successfully', {
+        position: 'top-right',
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
     } catch (error) {
       // handle error
     } finally {
@@ -356,19 +402,6 @@ const Table = ({
               </button>
             )}
           </div>
-          {Object.values(selectedRows).some(Boolean) && (
-            <th colSpan="6" className="px-2 py-3 sm:px-6">
-              <div className="flex justify-center">
-                <button
-                  onClick={handleDeleteSelected}
-                  disabled={isDeleting}
-                  className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200"
-                >
-                  Delete Selected
-                </button>
-              </div>
-            </th>
-          )}
         </div>
         <div className="overflow-x-auto">
           <div className="min-w-[900px] bg-white rounded-2xl shadow-[0px_-0.91px_3.66px_0px_#00000042] overflow-hidden">
@@ -385,7 +418,30 @@ const Table = ({
                       />
                     </div>
                   </th>
-                  {!Object.values(selectedRows).some(Boolean) && (
+                  {Object.values(selectedRows).some(Boolean) ? (
+                    <th colSpan="6" className="px-4 py-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-700">
+                          {Object.values(selectedRows).filter(Boolean).length} template(s) selected
+                        </span>
+                        <button
+                          onClick={handleDeleteSelected}
+                          disabled={isDeleting}
+                          className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isDeleting ? (
+                            <>
+                              <svg className="animate-spin h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                              Deleting...
+                            </>
+                          ) : 'Delete Selected'}
+                        </button>
+                      </div>
+                    </th>
+                  ) : (
                     <>
                       <th className="px-2 py-3 sm:px-6 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">
                         Created Date
@@ -416,11 +472,11 @@ const Table = ({
                       colSpan="7"
                       className="text-center py-4 text-gray-500 font-medium"
                     >
-                      <img
+                      {/* <img
                         src="/no_data.14591486.svg"
                         alt="No data available"
                         className="w-full h-70 mb-4 opacity-80"
-                      />
+                      /> */}
                       No templates found.
                     </td>
                   </tr>

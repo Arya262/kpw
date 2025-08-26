@@ -36,8 +36,8 @@ export const useTemplates = (customerId) => {
           setTemplates(normalized);
         }
       } catch (err) {
-        console.error("Failed to fetch templates", err);
-        setError("Failed to load templates");
+        // console.error("Failed to fetch templates", err);
+        // setError("Failed to load templates");
       } finally {
         setLoading(false);
       }
@@ -94,29 +94,32 @@ export const useTemplates = (customerId) => {
   };
 
   // ✅ delete template
-  const deleteTemplate = async (templateName, id) => {
-    try {
-      const response = await fetch(API_ENDPOINTS.TEMPLATES.DELETE(), {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ templateName }),
-      });
+const deleteTemplate = async (templateName, id, customer_id) => {
+  try {
+    const response = await fetch(API_ENDPOINTS.TEMPLATES.DELETE(), {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ elementName: templateName, customer_id }),
+    });
 
-      const data = await response.json();
-      if (data.success) {
-        setTemplates((prev) => prev.filter((t) => t.id !== id));
-        toast.success("Template deleted successfully", defaultToastConfig);
-        return true;
-      } else {
-        toast.error(data.message || "Failed to delete template", defaultToastConfig);
-        return false;
-      }
-    } catch (err) {
-      toast.error("An error occurred while deleting", defaultToastConfig);
+    const data = await response.json();
+
+    if (data.success) {
+      setTemplates((prev) => prev.filter((t) => t.id !== id));
+      toast.success("Template deleted successfully", defaultToastConfig);
+      return true;
+    } else {
+      toast.error(data.error || "Failed to delete template", defaultToastConfig);
       return false;
     }
-  };
+  } catch (err) {
+    console.error("Delete template error:", err);
+    toast.error("An error occurred while deleting", defaultToastConfig);
+    return false;
+  }
+};
+
 
   return { templates, loading, error, addTemplate, deleteTemplate };
 };

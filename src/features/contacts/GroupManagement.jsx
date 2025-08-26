@@ -503,7 +503,7 @@ export default function GroupManagement() {
       );
 
       if (!response.ok) {
-        throw new Error("Failed to fetch groups");
+        // throw new Error("Failed to fetch groups");
       }
 
       const data = await response.json();
@@ -522,8 +522,8 @@ export default function GroupManagement() {
       }));
       setGroups(transformedGroups);
     } catch (error) {
-      console.error("Error fetching groups:", error);
-      toast.error("Failed to fetch groups");
+      // console.error("Error fetching groups:", error);
+      // toast.error("Failed to fetch groups");
     } finally {
       setLoading(false);
     }

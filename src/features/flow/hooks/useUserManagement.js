@@ -18,9 +18,9 @@ export const useUserManagement = (user) => {
       const data = await res.json();
       setUsersMatrix(data.users || []);
     } catch (err) {
-      console.error("Failed to fetch users:", err);
+      // console.error("Failed to fetch users:", err);
       setUsersMatrix([]);
-      toast.error("Failed to fetch users");
+      // toast.error("Failed to fetch users");
     } finally {
       setIsLoading(false);
     }
