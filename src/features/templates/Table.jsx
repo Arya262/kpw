@@ -121,21 +121,21 @@ const Table = ({
 
   const handleCheckboxChange = (idx, event) => {
     const isChecked = event.target.checked;
-    console.log('Checkbox changed - Index:', idx, 'Checked:', isChecked);
+    // console.log('Checkbox changed - Index:', idx, 'Checked:', isChecked);
     setSelectedRows((prev) => {
       const newState = {
         ...prev,
         [idx]: isChecked,
       };
-      console.log('Selected Rows:', newState);
+      // console.log('Selected Rows:', newState);
       return newState;
     });
   };
 
   // Permission-aware handlers
-  const handleDeleteSelected = async () => {
-    console.log('Delete Selected clicked');
-    console.log('Selected Rows:', selectedRows);
+  const handleDeleteSelected = () => {
+    // console.log('Delete Selected clicked');
+    // console.log('Selected Rows:', selectedRows);
     
     if (!canDelete) {
       console.log('Delete permission denied');
@@ -150,18 +150,12 @@ const Table = ({
       return;
     }
     
-    const selectedIds = Object.entries(selectedRows)
+    const selectedTemplates = Object.entries(selectedRows)
       .filter(([_, isSelected]) => isSelected)
-      .map(([idx]) => {
-        const template = displayedTemplates[parseInt(idx)];
-        console.log(`Processing index ${idx}:`, template);
-        return template?.id;
-      })
-      .filter(Boolean);
+      .map(([idx]) => displayedTemplates[parseInt(idx)])
+      .filter(template => template);
       
-    console.log('Selected IDs for deletion:', selectedIds);
-      
-    if (selectedIds.length === 0) {
+    if (selectedTemplates.length === 0) {
       console.log('No valid templates selected for deletion');
       toast.error("No templates selected for deletion.", {
         position: "top-right",
@@ -170,28 +164,17 @@ const Table = ({
       return;
     }
     
-    // Show confirmation dialog
-    console.log(`Showing confirmation dialog for ${selectedIds.length} templates`);
-    if (window.confirm(`Are you sure you want to delete ${selectedIds.length} selected template(s)? This action cannot be undone.`)) {
-      setIsDeleting(true);
-      try {
-        const success = await onDelete(selectedIds);
-        if (success) {
-          // Only clear selection if deletion was successful
-          setSelectedRows({});
-          setSelectAll(false);
-        }
-      } catch (error) {
-        console.error('Error in handleDeleteSelected:', error);
-        // Error handling is now done in the handleDelete function
-      } finally {
-        setIsDeleting(false);
-      }
-    }
+    // Set the first selected template to show in the dialog
+    // and store all selected template IDs in the state
+    setSelectedTemplate({
+      ...selectedTemplates[0],
+      _selectedIds: selectedTemplates.map(t => t.id)
+    });
+    setShowDeleteDialog(true);
   };
 
   const handleDeleteClick = (template) => {
-    console.log('Delete clicked for template:', template);
+    // console.log('Delete clicked for template:', template);
     if (!canDelete) {
       console.log('Delete permission denied');
       toast.error("You do not have permission to delete templates.", {
@@ -204,7 +187,7 @@ const Table = ({
       });
       return;
     }
-    console.log('Setting template for deletion:', { id: template.id, name: template.element_name });
+    // console.log('Setting template for deletion:', { id: template.id, name: template.element_name });
     setSelectedTemplate(template);
     setShowDeleteDialog(true);
     setMenuOpen(null);
@@ -230,22 +213,23 @@ const Table = ({
 
   const handleDeleteConfirm = async () => {
     if (!selectedTemplate) return;
+    
     try {
       setIsDeleting(true);
-      await onDelete(selectedTemplate.id);
+      // Check if we have multiple templates to delete (from checkbox selection)
+      const idsToDelete = selectedTemplate._selectedIds || [selectedTemplate.id];
+      const success = await onDelete(idsToDelete);
+      
+      if (success) {
+        // Clear selection if deletion was successful
+        setSelectedRows({});
+        setSelectAll(false);
+      }
+      
       setShowDeleteDialog(false);
       setSelectedTemplate(null);
-      // Show success message
-      toast.success('Template deleted successfully', {
-        position: 'top-right',
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-      });
     } catch (error) {
-      // handle error
+      console.error('Error in handleDeleteConfirm:', error);
     } finally {
       setIsDeleting(false);
     }
@@ -595,7 +579,11 @@ const Table = ({
       <DeleteConfirmationDialog
         showDialog={showDeleteDialog}
         title="Delete Template"
-        message={`Are you sure you want to delete ${selectedTemplate?.element_name}? This action cannot be undone.`}
+        message={
+          selectedTemplate?._selectedIds?.length > 1
+            ? `Are you sure you want to delete ${selectedTemplate._selectedIds.length} selected templates? This action cannot be undone.`
+            : `Are you sure you want to delete "${selectedTemplate?.element_name}"? This action cannot be undone.`
+        }
         onCancel={handleDeleteCancel}
         onConfirm={handleDeleteConfirm}
         isDeleting={isDeleting}

@@ -11,7 +11,7 @@ import DeleteConfirmationDialog from "../shared/DeleteConfirmationDialog";
 import UserFormModal from "./components/UserFormModal";
 import { useUserManagement } from "./hooks/useUserManagement";
 import { useFormState } from "./hooks/useFormState";
-
+import vendor from "../../assets/Vector.png";
 // PopoverPortal component for rendering popover in a portal
 function PopoverPortal({ anchorRect, children, onClose, position = "bottom" }) {
   const popoverRef = useRef();
@@ -95,7 +95,7 @@ const UserSetting = () => {
     { key: "/chats", label: "Chats" },
     { key: "/broadcast", label: "Broadcast" },
     { key: "/settings", label: "Settings" },
-    { key: "/flow", label: "Flow" },
+    // { key: "/flow", label: "Flow" },
     { key: "/help", label: "Help" },
   ];
 
@@ -235,9 +235,9 @@ const roleOptions = [
             <h2 className="text-xl font-bold">Users</h2>
             {/* You can add filter buttons here if needed */}
           </div>
-          <div>
+          <div >
             <button
-              className="px-4 py-2 bg-[#0AA89E] text-white rounded hover:bg-[#0AA89E] transition cursor-pointer"
+             className="bg-[#0AA89E] hover:bg-[#0AA89E] text-white flex items-center gap-2 px-4 py-2 rounded cursor-pointer"
               onClick={() => {
                 if (permissions.canManageUsers) {
                   setShowAddUser(true);
@@ -246,9 +246,10 @@ const roleOptions = [
                 }
               }}
               type="button"
-            >
-              + Add User
-            </button>
+        >
+          <img src={vendor} alt="plus sign" className="w-5 h-5" />
+          Add Contact
+        </button>
           </div>
         </div>
         {/* Add User Modal */}
