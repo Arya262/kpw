@@ -188,14 +188,16 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
             <div className="text-sm text-gray-600 whitespace-nowrap hidden sm:block">
               WhatsApp Number:
             </div>
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={handleSearchChange}
-              placeholder="+91 92743 34248"
-              aria-label="WhatsApp number input"
-              className="bg-white text-sm text-gray-800 placeholder-gray-500 placeholder:italic placeholder:font-medium outline-none flex-1 min-w-0 cursor-pointer rounded"
-            />
+<input
+  type="text"
+  value={searchTerm}
+  onChange={handleSearchChange} 
+  placeholder="+91 92743 34248"
+  aria-label="WhatsApp number input"
+  className="bg-white text-sm text-gray-800 placeholder-gray-500 placeholder:italic placeholder:font-medium outline-none flex-1 min-w-0 cursor-pointer rounded"
+  readOnly
+/>
+
             {searchTerm && (
               <button
                 onClick={handleClearSearch}

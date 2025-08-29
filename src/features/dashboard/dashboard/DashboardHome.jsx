@@ -8,8 +8,10 @@ import AddCreditModal from "./AddCreditModal";
 import { getPermissions } from "../../utils/getPermissions";
 import { FaWhatsapp } from "react-icons/fa";
 import vendor from "../../assets/Vector.png";
+import FestivalBanner from "./FestivalBanner";
 import WalletDetailsModal from "./WalletDetailsModal.jsx";
 import TransactionHistoryModal from "./TransactionHistoryModal.jsx";
+
 
 const AnimatedNumber = ({ value, duration = 1.2 }) => {
   const count = useMotionValue(0);
@@ -200,6 +202,7 @@ const DashboardHome = () => {
 
   return (
     <div>
+      <FestivalBanner />
       <div className="flex justify-between items-center mb-6 gap-4 px-4 pt-2">
         <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
           Dashboard

@@ -9,16 +9,18 @@ import { getPermissions } from "../../utils/getPermissions";
 import Loader from "../../components/Loader";
 import { defaultToastConfig } from "../../utils/toastConfig";
 import SingleDeleteDialog from "../contacts/SingleDeleteDialog";
-import { Trash2 } from "lucide-react";
-
+import { Trash2, Eye, Send } from "lucide-react";
 import { useTemplates } from "../../hooks/useTemplates";
 import { AnimatePresence, motion } from "framer-motion";
+import SkeletonCard from "../../components/SkeletonCard";
+import TemplateDrawer from "../../components/TemplateDrawer";
+
 const ExploreTemplates = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const permissions = getPermissions(user);
-
-  // ✅ useTemplates hook handles API logic
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
   const { templates, loading, error, addTemplate, deleteTemplate } =
     useTemplates(user?.customer_id);
 
@@ -29,7 +31,10 @@ const ExploreTemplates = () => {
 
   const handleAddTemplate = async (newTemplate) => {
     if (!permissions.canAddTemplate) {
-      toast.error("You do not have permission to add templates.", toastConfig);
+      toast.error(
+        "You do not have permission to add templates.",
+        defaultToastConfig
+      );
       return;
     }
     const success = await addTemplate(newTemplate);
@@ -40,7 +45,7 @@ const ExploreTemplates = () => {
     if (!permissions.canDeleteTemplate) {
       toast.error(
         "You do not have permission to delete templates.",
-        toastConfig
+        defaultToastConfig
       );
       return;
     }
@@ -53,7 +58,7 @@ const ExploreTemplates = () => {
     setIsDeleting(true);
     const success = await deleteTemplate(templateToDelete);
     if (success) {
-      toast.success("Template deleted successfully", toastConfig);
+      toast.success("Template deleted successfully", defaultToastConfig);
     }
     setIsDeleting(false);
     setShowDeleteDialog(false);
@@ -65,118 +70,171 @@ const ExploreTemplates = () => {
     setTemplateToDelete(null);
   };
 
+  const hasImage = (template) =>
+    template.container_meta?.mediaUrl &&
+    template.container_meta.mediaUrl.trim() !== "";
+
   return (
-    <div className="p-6">
+    <div className="p-6 min-h-screen bg-gray-50">
       <ToastContainer position="top-right" autoClose={3000} />
 
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold">Explore Templates</h2>
+      {/* Header */}
+      <div className="flex justify-between items-center mb-8 sticky top-0 bg-gray-50/90 backdrop-blur-md z-20 py-3 shadow-sm">
+        <h2 className="text-3xl font-bold tracking-tight text-gray-800 flex items-center gap-2">
+          ✨ Explore <span className="text-cyan-600">Templates</span>
+        </h2>
         <button
-          className="bg-teal-500 text-white flex items-center gap-2 px-4 py-2 rounded cursor-pointer"
+          className="bg-gradient-to-r from-teal-500 to-cyan-500 text-white flex items-center gap-2 px-5 py-2.5 rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all"
           onClick={() => setIsModalOpen(true)}
         >
           <img src={vendor} alt="plus sign" className="w-5 h-5" />
-          Add New Templates
+          Add Template
         </button>
       </div>
 
+      {/* Content */}
       {loading ? (
-        <Loader />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </div>
       ) : error ? (
         <p className="text-red-500">{error}</p>
       ) : templates.length === 0 ? (
-        <p>No templates available.</p>
+        <div className="flex flex-col items-center justify-center py-20 text-center text-gray-500">
+          <img
+            src="/illustrations/empty.svg"
+            alt="No templates"
+            className="w-40 mb-6"
+          />
+          <p className="text-lg">No templates available yet.</p>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="mt-4 px-6 py-2 bg-cyan-500 text-white rounded-lg shadow hover:scale-105 transition"
+          >
+            Create your first template
+          </button>
+        </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {templates.map((template) => (
-            <div
+            <motion.div
               key={template.id}
-              className="bg-white rounded-xl shadow-[0px_4px_20px_rgba(0,0,0,0.25)] overflow-hidden flex flex-col"
+              whileHover={{ y: -8, scale: 1.02 }}
+              transition={{ duration: 0.2 }}
+              className="bg-white/90 backdrop-blur rounded-2xl shadow-lg overflow-hidden flex flex-col border border-gray-100 hover:border-cyan-300 transition-all duration-300 group"
             >
-              {template.container_meta.mediaUrl && (
-                <img
-                  src={template.container_meta.mediaUrl}
-                  alt={template.element_name}
-                  className="w-full h-48 object-cover p-2 rounded-2xl"
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src = "/placeholder.jpg";
-                  }}
-                />
+              {/* Image */}
+              {hasImage(template) && (
+                <div className="relative">
+                  <img
+                    src={template.container_meta.mediaUrl}
+                    alt={template.element_name || "Template image"}
+                    className="w-full h-44 object-cover"
+                    onError={(e) => {
+                      e.target.src = "/fallbacks/default.jpg";
+                      e.target.onerror = null;
+                    }}
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-70 group-hover:opacity-90 transition" />
+                </div>
               )}
-              <div className="p-4 flex-1">
+
+              <div className="p-4 flex-1 flex flex-col justify-between">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h3 className="font-semibold text-lg mb-1">
+                    <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">
                       {template.element_name}
                     </h3>
-                    <p className="text-sm text-gray-500 mb-2">
-                      {template.category}
-                    </p>
+                    <span
+                      className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium mt-1 ${
+                        template.category?.toLowerCase() === "marketing"
+                          ? "bg-green-100 text-green-700"
+                          : template.category?.toLowerCase() === "info"
+                          ? "bg-blue-100 text-blue-700"
+                          : "bg-gray-100 text-gray-600"
+                      }`}
+                    >
+                       {template.category}
+                    </span>
                   </div>
 
-                  <button
-                    onClick={() => handleDeleteClick(template)}
-                    className="p-1 rounded-full hover:bg-red-100 transition cursor-pointer"
-                    title="Delete Template"
-                  >
-                    <Trash2 className="w-5 h-5 text-red-600" />
-                  </button>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        setSelectedTemplate(template);
+                        setIsDrawerOpen(true);
+                      }}
+                      className="p-2 rounded-full hover:bg-gray-100 transition"
+                      title="Preview Template"
+                    >
+                      <Eye className="w-5 h-5 text-gray-600 group-hover:scale-110 transition" />
+                    </button>
+
+                    <button
+                      onClick={() => handleDeleteClick(template)}
+                      className="p-2 rounded-full hover:bg-red-50 transition"
+                      title="Delete Template"
+                    >
+                      <Trash2 className="w-5 h-5 text-red-500 group-hover:scale-110 transition" />
+                    </button>
+                  </div>
                 </div>
-                <p className="text-sm text-gray-700 whitespace-pre-line">
+
+                <p className="text-sm text-gray-600 mt-3 line-clamp-3">
                   {template.container_meta?.sampleText ||
                     "No sample text available"}
                 </p>
               </div>
-              <button
-                type="button"
-                disabled={template?.status?.toLowerCase() !== "approved"}
-                onClick={() => {
-                  if (template?.status?.toLowerCase() === "approved") {
+
+              <div className="flex">
+                <button
+                  disabled={template?.status?.toLowerCase() !== "approved"}
+                  onClick={() =>
                     navigate("/broadcast", {
                       state: { selectedTemplate: template, openForm: true },
-                    });
+                    })
                   }
-                }}
-                className={`px-6 py-3 font-medium rounded border transition duration-300 ease-in-out cursor-pointer
-                  ${
+                  className={`flex-1 px-4 py-3 font-semibold rounded-b-2xl transition-all cursor-pointer ${
                     template?.status?.toLowerCase() === "approved"
-                      ? "bg-teal-500 text-black border-teal-500 hover:bg-teal-400 hover:text-white hover:border-teal-400"
-                      : "bg-gray-300 text-gray-600 border-gray-300 cursor-not-allowed"
+                      ? "bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:brightness-110"
+                      : "bg-gray-200 text-gray-500 cursor-not-allowed"
                   }`}
-              >
-                Send Template
-              </button>
-            </div>
+                >
+                  {template?.status?.toLowerCase() === "approved" ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Send className="w-4 h-4" /> Send
+                    </span>
+                  ) : (
+                    "Pending Approval"
+                  )}
+                </button>
+              </div>
+            </motion.div>
           ))}
         </div>
       )}
+
       <AnimatePresence>
         {isModalOpen && (
           <>
-            {/* Backdrop */}
             <motion.div
               key="backdrop"
               initial={{ opacity: 0 }}
-              animate={{ opacity: 0.5 }}
+              animate={{ opacity: 0.6 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.35, ease: "easeOut" }}
-              className="fixed inset-0 bg-black backdrop-blur-sm z-40"
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
               onClick={() => setIsModalOpen(false)}
             />
-
-            {/* Modal */}
             <motion.div
               key="modal"
-              initial={{ scale: 0.7, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.7, opacity: 0 }}
-              transition={{
-                type: "spring",
-                stiffness: 260,
-                damping: 20,
-                duration: 0.5,
-              }}
+              initial={{ y: "-100vh", opacity: 0 }}
+              animate={{ y: "0", opacity: 1 }}
+              exit={{ y: "-100vh", opacity: 0 }}
+              transition={{ type: "spring", stiffness: 120 }}
               className="fixed inset-0 flex items-center justify-center z-50"
               onClick={(e) => e.stopPropagation()}
             >
@@ -196,6 +254,13 @@ const ExploreTemplates = () => {
         onCancel={handleCancelDelete}
         onConfirm={handleConfirmDelete}
         isDeleting={isDeleting}
+      />
+
+  
+      <TemplateDrawer
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        template={selectedTemplate}
       />
     </div>
   );

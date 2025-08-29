@@ -157,7 +157,7 @@ const MessageModal = ({ message, onClose, highlightCancel }) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
       onMouseDown={handleOutsideClick}
     >
       <div
@@ -175,7 +175,7 @@ const MessageModal = ({ message, onClose, highlightCancel }) => {
           }`}
           aria-label="Close"
         >
-          <span className="text-2xl font-bold">×</span>
+          <span className="text-2xl font-bold cursor-pointer">×</span>
         </button>
         <h2 className="text-xl font-semibold text-gray-800 mb-4">Message</h2>
         <div className="text-gray-700 text-sm sm:text-base whitespace-pre-wrap max-h-80 overflow-y-auto leading-relaxed pr-1 custom-scroll">

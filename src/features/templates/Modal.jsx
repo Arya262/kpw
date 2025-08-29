@@ -10,6 +10,7 @@ import LivePreview from "./LivePreview";
 import ExitConfirmationDialog from "./ExitConfirmationDialog";
 import { useAuth } from "../../context/AuthContext";
 import { API_ENDPOINTS } from "../../config/api";
+import Dropdown from "../../components/Dropdown";
 
 const templateSchema = z.object({
   category: z.string().min(1, "Please select a template category"),
@@ -23,18 +24,25 @@ const templateSchema = z.object({
     ),
   language: z.string().min(1, "Please select a language"),
   header: z.string().max(60, "Header must be 60 characters or less").optional(),
-  templateType: z.enum(["Text", "Image", "Video", "Document"], {
-    required_error: "Please select a template type",
-  }).optional(),
+  templateType: z
+    .enum(["Text", "Image", "Video", "Document"], {
+      required_error: "Please select a template type",
+    })
+    .optional(),
   format: z
     .string()
     .min(1, "Template format is required")
     .max(1024, "Template format must be 1024 characters or less"),
   footer: z.string().max(60, "Footer must be 60 characters or less").optional(),
-  selectedAction: z.enum(["None", "Call To Actions", "Quick Replies", "All"], {
-    required_error: "Please select an interactive action",
-  }).optional(),
-  authButtonText: z.string().max(25, "Button text must be 25 characters or less").optional(),
+  selectedAction: z
+    .enum(["None", "Call To Actions", "Quick Replies", "All"], {
+      required_error: "Please select an interactive action",
+    })
+    .optional(),
+  authButtonText: z
+    .string()
+    .max(25, "Button text must be 25 characters or less")
+    .optional(),
 });
 
 const TemplateModal = ({
@@ -90,17 +98,26 @@ const TemplateModal = ({
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || `Upload failed: ${response.statusText}`);
+        throw new Error(
+          errorData.message || `Upload failed: ${response.statusText}`
+        );
       }
 
       const data = await response.json();
-      const mediaIdentifier = data.handleId || data.exampleMedia || data.mediaId || data.url || data.fileUrl;
+      const mediaIdentifier =
+        data.handleId ||
+        data.exampleMedia ||
+        data.mediaId ||
+        data.url ||
+        data.fileUrl;
 
       if (!mediaIdentifier) {
         throw new Error("No media identifier returned from server");
       }
 
-      return typeof mediaIdentifier === "string" ? mediaIdentifier.split("\n")[0] : mediaIdentifier;
+      return typeof mediaIdentifier === "string"
+        ? mediaIdentifier.split("\n")[0]
+        : mediaIdentifier;
     } catch (error) {
       throw new Error(`Upload failed: ${error.message}`);
     }
@@ -134,7 +151,16 @@ const TemplateModal = ({
           "application/pdf",
         ],
         maxSize: 100 * 1024 * 1024,
-        extensions: [".txt", ".xls", ".xlsx", ".doc", ".docx", ".ppt", ".pptx", ".pdf"],
+        extensions: [
+          ".txt",
+          ".xls",
+          ".xlsx",
+          ".doc",
+          ".docx",
+          ".ppt",
+          ".pptx",
+          ".pdf",
+        ],
       },
     };
 
@@ -156,7 +182,9 @@ const TemplateModal = ({
 
     // Validate MIME type
     if (!typeConfig.types.includes(file.type)) {
-      const message = `Invalid file type for ${templateType}. Supported types: ${typeConfig.extensions.join(", ")}`;
+      const message = `Invalid file type for ${templateType}. Supported types: ${typeConfig.extensions.join(
+        ", "
+      )}`;
       setErrors((prev) => ({ ...prev, file: message }));
       toast.error(message);
       return;
@@ -193,7 +221,10 @@ const TemplateModal = ({
       setErrors((prev) => ({ ...prev, file: null }));
       toast.success("File uploaded successfully!");
     } catch (error) {
-      setErrors((prev) => ({ ...prev, file: `Upload failed: ${error.message}` }));
+      setErrors((prev) => ({
+        ...prev,
+        file: `Upload failed: ${error.message}`,
+      }));
       toast.error(`Failed to upload file: ${error.message}`);
     } finally {
       setIsUploading(false);
@@ -213,7 +244,10 @@ const TemplateModal = ({
       setErrors((prev) => ({ ...prev, file: null }));
       toast.success("File uploaded successfully!");
     } catch (error) {
-      setErrors((prev) => ({ ...prev, file: `Retry upload failed: ${error.message}` }));
+      setErrors((prev) => ({
+        ...prev,
+        file: `Retry upload failed: ${error.message}`,
+      }));
       toast.error(`Failed to upload file: ${error.message}`);
     } finally {
       setIsUploading(false);
@@ -277,7 +311,9 @@ const TemplateModal = ({
     if (category === "AUTHENTICATION") {
       setTemplateType("Text");
       setSelectedAction("None");
-      setFormat("{{1}} is your verification code. For your security, do not share this code.");
+      setFormat(
+        "{{1}} is your verification code. For your security, do not share this code."
+      );
       setFooter("This code expires in 10 minutes.");
       setAuthButtonText("");
     } else {
@@ -342,7 +378,7 @@ const TemplateModal = ({
     if (isOpen && mode === "edit" && Object.keys(initialValues).length > 0) {
       setCategory(initialValues.category || "MARKETING");
       setTemplateName(initialValues.elementName || "");
-      setLanguage(initialValues.languageCode || "en_US");
+      setLanguage(initialValues.languageCode);
       setTemplateType(
         initialValues.templateType
           ? initialValues.templateType.charAt(0).toUpperCase() +
@@ -522,24 +558,32 @@ const TemplateModal = ({
     };
     const sampleText = generateSampleText(format, sampleValues);
 
-    const buttons = category === "AUTHENTICATION"
-      ? [{ text: authButtonText, type: "COPY_CODE" }]
-      : [
-          ...quickReplies
-            .filter((reply) => reply.trim() && reply.trim() !== "QUICK_REPLY")
-            .map((text) => ({ text: text.trim(), type: "QUICK_REPLY" })),
-          ...urlCtas
-            .filter((cta) => cta.title && cta.url && cta.title.trim() !== "URL_TITLE")
-            .map((cta) => ({ text: cta.title, type: "URL", url: cta.url })),
-          ...(phoneCta.title && phoneCta.number && phoneCta.title.trim() !== "PHONE_NUMBER"
-            ? [{
-                text: phoneCta.title,
-                type: "PHONE",
-                country: phoneCta.country,
-                number: phoneCta.number,
-              }]
-            : []),
-        ];
+    const buttons =
+      category === "AUTHENTICATION"
+        ? [{ text: authButtonText, type: "COPY_CODE" }]
+        : [
+            ...quickReplies
+              .filter((reply) => reply.trim() && reply.trim() !== "QUICK_REPLY")
+              .map((text) => ({ text: text.trim(), type: "QUICK_REPLY" })),
+            ...urlCtas
+              .filter(
+                (cta) =>
+                  cta.title && cta.url && cta.title.trim() !== "URL_TITLE"
+              )
+              .map((cta) => ({ text: cta.title, type: "URL", url: cta.url })),
+            ...(phoneCta.title &&
+            phoneCta.number &&
+            phoneCta.title.trim() !== "PHONE_NUMBER"
+              ? [
+                  {
+                    text: phoneCta.title,
+                    type: "PHONE",
+                    country: phoneCta.country,
+                    number: phoneCta.number,
+                  },
+                ]
+              : []),
+          ];
 
     const isMediaTemplate = ["IMAGE", "VIDEO", "DOCUMENT"].includes(
       templateType.toUpperCase()
@@ -549,22 +593,27 @@ const TemplateModal = ({
       elementName: templateName,
       content: format,
       category,
-      templateType: category === "AUTHENTICATION" ? "TEXT" : templateType.toUpperCase(),
+      templateType:
+        category === "AUTHENTICATION" ? "TEXT" : templateType.toUpperCase(),
       languageCode: language,
-      footer,
       buttons,
       example: sampleText,
       exampleMedia,
       messageSendTTL: 3360,
       container_meta: {
-        header: isMediaTemplate ? { type: templateType.toUpperCase(), media: { id: exampleMedia } } : header || null,
-        footer,
+        header: header
+          ? header
+          : isMediaTemplate
+          ? { type: templateType.toUpperCase(), media: { id: exampleMedia } }
+          : null,
+        footer: footer || null,
         data: format,
         sampleText,
         sampleValues,
       },
       ...(category === "AUTHENTICATION" && { authButtonText }),
     };
+    console.log("Submitting template:", newTemplate);
     onSubmit(newTemplate);
   };
 
@@ -620,18 +669,25 @@ const TemplateModal = ({
                     type="text"
                     placeholder="Template Name ex. sample (Only lowercase letters and underscores)"
                     className={`border bg-gray-100 rounded p-2.5 w-full placeholder:text-sm ${
-                      errors.templateName ? "border-red-500" : "border-transparent"
-                    } focus:outline-none focus:border-teal-500`}
+                      errors.templateName
+                        ? "border-red-500"
+                        : "border-transparent"
+                    } focus:outline-none focus:border-teal-500 shadow-sm`}
                     value={templateName}
                     onChange={(e) => {
                       setTemplateName(e.target.value);
                       validateField("templateName", e.target.value);
                     }}
                     disabled={mode === "edit"}
-                    aria-describedby={errors.templateName ? "templateName-error" : undefined}
+                    aria-describedby={
+                      errors.templateName ? "templateName-error" : undefined
+                    }
                   />
                   {errors.templateName && (
-                    <p id="templateName-error" className="text-red-500 text-sm mt-1">
+                    <p
+                      id="templateName-error"
+                      className="text-red-500 text-sm mt-1"
+                    >
                       {errors.templateName}
                     </p>
                   )}
@@ -643,26 +699,24 @@ const TemplateModal = ({
                   >
                     Template Category
                   </label>
-                  <select
-                    id="templateCategory"
-                    className={`appearance-none border rounded text-sm font-medium bg-gray-100 p-3 w-full ${
-                      errors.category ? "border-red-500" : "border-transparent"
-                    } focus:outline-none focus:border-teal-500`}
+                  <Dropdown
+                    options={[
+                      { value: "MARKETING", label: "Marketing" },
+                      { value: "UTILITY", label: "Utility" },
+                      { value: "AUTHENTICATION", label: "Authentication" },
+                    ]}
                     value={category}
-                    onChange={(e) => {
-                      setCategory(e.target.value);
-                      validateField("category", e.target.value);
+                    onChange={(val) => {
+                      setCategory(val);
+                      validateField("category", val);
                     }}
-                  >
-                    <option value="" disabled>
-                      Select Template Category
-                    </option>
-                    <option value="MARKETING">Marketing</option>
-                    <option value="UTILITY">Utility</option>
-                    <option value="AUTHENTICATION">Authentication</option>
-                  </select>
+                    placeholder="Select Template Category"
+                  />
+
                   {errors.category && (
-                    <p className="text-red-500 text-sm mt-1">{errors.category}</p>
+                    <p className="text-red-500 text-sm mt-1">
+                      {errors.category}
+                    </p>
                   )}
                 </div>
                 <div className="mb-6">
@@ -672,24 +726,89 @@ const TemplateModal = ({
                   >
                     Language
                   </label>
-                  <select
-                    id="language"
-                    className={`border appearance-none bg-gray-100 text-sm font-medium rounded p-3 w-full ${
-                      errors.language ? "border-red-500" : "border-transparent"
-                    } focus:outline-none focus:border-teal-500`}
+                  <Dropdown
+                    options={[
+                      { value: "af", label: "Afrikaans" },
+                      { value: "sq", label: "Albanian" },
+                      { value: "ar", label: "Arabic" },
+                      { value: "az", label: "Azerbaijani" },
+                      { value: "bn", label: "Bengali" },
+                      { value: "bg", label: "Bulgarian" },
+                      { value: "ca", label: "Catalan" },
+                      { value: "zh_CN", label: "Chinese" },
+                      { value: "zh_HK", label: "Chinese (HKG)" },
+                      { value: "zh_TW", label: "Chinese (TAI))" },
+                      { value: "hr", label: "Croatian" },
+                      { value: "cs", label: "Czech" },
+                      { value: "da", label: "Danish" },
+                      { value: "nl", label: "Dutch" },
+                      { value: "en", label: "English" },
+                      { value: "en_GB", label: "English (UK)" },
+                      { value: "en_US", label: "English (US)" },
+                      { value: "et", label: "Estonian" },
+                      { value: "fil", label: "Filipino" },
+                      { value: "fi", label: "Finnish" },
+                      { value: "fr", label: "French" },
+                      { value: "ka", label: "Georgian" },
+                      { value: "de", label: "German" },
+                      { value: "el", label: "Greek" },
+                      { value: "gu", label: "Gujarati" },
+                      { value: "ha", label: "Hausa" },
+                      { value: "he", label: "Hebrew" },
+                      { value: "hi", label: "Hindi" },
+                      { value: "hu", label: "Hungarian" },
+                      { value: "id", label: "Indonesian" },
+                      { value: "ga", label: "Irish" },
+                      { value: "it", label: "Italian" },
+                      { value: "ja", label: "Japanese" },
+                      { value: "kn", label: "Kannada" },
+                      { value: "kk", label: "Kazakh" },
+                      { value: "ko", label: "Korean" },
+                      { value: "lo", label: "Lao" },
+                      { value: "lv", label: "Latvian" },
+                      { value: "lt", label: "Lithuanian" },
+                      { value: "mk", label: "Macedonian" },
+                      { value: "ms", label: "Malay" },
+                      { value: "ml", label: "Malayalam" },
+                      { value: "mr", label: "Marathi" },
+                      { value: "nb", label: "Norwegian" },
+                      { value: "fa", label: "Persian" },
+                      { value: "pl", label: "Polish" },
+                      { value: "pt_BR", label: "Portuguese (Brazil)" },
+                      { value: "pt_PT", label: "Portuguese (Portugal)" },
+                      { value: "pa", label: "Punjabi" },
+                      { value: "ro", label: "Romanian" },
+                      { value: "ru", label: "Russian" },
+                      { value: "sr", label: "Serbian" },
+                      { value: "sk", label: "Slovak" },
+                      { value: "sl", label: "Slovenian" },
+                      { value: "es", label: "Spanish" },
+                      { value: "es_AR", label: "Spanish (ARG)" },
+                      { value: "es_ES", label: "Spanish (SPA)" },
+                      { value: "es_MX", label: "Spanish (MEX)" },
+                      { value: "sw", label: "Swahili" },
+                      { value: "sv", label: "Swedish" },
+                      { value: "ta", label: "Tamil" },
+                      { value: "te", label: "Telugu" },
+                      { value: "th", label: "Thai" },
+                      { value: "tr", label: "Turkish" },
+                      { value: "uk", label: "Ukrainian" },
+                      { value: "ur", label: "Urdu" },
+                      { value: "uz", label: "Uzbek" },
+                      { value: "vi", label: "Vietnamese" },
+                      { value: "zu", label: "Zulu" },
+                    ]}
                     value={language}
-                    onChange={(e) => {
-                      setLanguage(e.target.value);
-                      validateField("language", e.target.value);
+                    onChange={(val) => {
+                      setLanguage(val);
+                      validateField("language", val);
                     }}
-                  >
-                    <option value="" disabled>
-                      Select Language
-                    </option>
-                    <option value="en_US">English</option>
-                  </select>
+                    placeholder="Select Language"
+                  />
                   {errors.language && (
-                    <p className="text-red-500 text-sm mt-1">{errors.language}</p>
+                    <p className="text-red-500 text-sm mt-1">
+                      {errors.language}
+                    </p>
                   )}
                 </div>
               </div>
@@ -699,25 +818,27 @@ const TemplateModal = ({
                   <div className="mt-8">
                     <div className="font-semibold mb-1">Template Type</div>
                     <div className="flex gap-4">
-                      {["None", "Text", "Image", "Video", "Document"].map((type) => (
-                        <label key={type} className="flex items-center gap-2">
-                          <input
-                            type="radio"
-                            name="templateType"
-                            checked={templateType === type}
-                            onChange={() => {
-                              setTemplateType(type);
-                              validateField("templateType", type);
-                              setSelectedFile(null);
-                              setPreviewUrl("");
-                              setExampleMedia("");
-                              setErrors((prev) => ({ ...prev, file: null }));
-                            }}
-                            aria-label={`Select ${type} template type`}
-                          />
-                          {type}
-                        </label>
-                      ))}
+                      {["None", "Text", "Image", "Video", "Document"].map(
+                        (type) => (
+                          <label key={type} className="flex items-center gap-2">
+                            <input
+                              type="radio"
+                              name="templateType"
+                              checked={templateType === type}
+                              onChange={() => {
+                                setTemplateType(type);
+                                validateField("templateType", type);
+                                setSelectedFile(null);
+                                setPreviewUrl("");
+                                setExampleMedia("");
+                                setErrors((prev) => ({ ...prev, file: null }));
+                              }}
+                              aria-label={`Select ${type} template type`}
+                            />
+                            {type}
+                          </label>
+                        )
+                      )}
                     </div>
                   </div>
 
@@ -735,12 +856,19 @@ const TemplateModal = ({
                             }}
                             value={header}
                             className={`border text-sm font-medium bg-gray-100 rounded p-3 w-full ${
-                              errors.header ? "border-red-500" : "border-transparent"
+                              errors.header
+                                ? "border-red-500"
+                                : "border-transparent"
                             } focus:outline-none focus:border-teal-500`}
-                            aria-describedby={errors.header ? "header-error" : undefined}
+                            aria-describedby={
+                              errors.header ? "header-error" : undefined
+                            }
                           />
                           {errors.header && (
-                            <p id="header-error" className="text-red-500 text-sm mt-1">
+                            <p
+                              id="header-error"
+                              className="text-red-500 text-sm mt-1"
+                            >
                               {errors.header}
                             </p>
                           )}
@@ -755,7 +883,13 @@ const TemplateModal = ({
                       <div className="flex items-center gap-3 mt-4 mb-2">
                         <div className="relative flex-1">
                           <span className="text-blue-600 text-xs">
-                            ({templateType}: {templateType === "Image" ? ".jpeg, .png" : templateType === "Video" ? ".mp4" : ".pdf"})
+                            ({templateType}:{" "}
+                            {templateType === "Image"
+                              ? ".jpeg, .png"
+                              : templateType === "Video"
+                              ? ".mp4"
+                              : ".pdf"}
+                            )
                           </span>
                           <input
                             type="text"
@@ -763,9 +897,13 @@ const TemplateModal = ({
                             placeholder={`Upload a ${templateType.toLowerCase()} file`}
                             readOnly
                             className={`w-full border bg-gray-100 font-medium text-sm rounded p-3 mt-4 mb-2 focus:outline-none ${
-                              errors.file ? "border-red-500" : "border-transparent"
+                              errors.file
+                                ? "border-red-500"
+                                : "border-transparent"
                             } focus:border-teal-500`}
-                            aria-describedby={errors.file ? "file-error" : undefined}
+                            aria-describedby={
+                              errors.file ? "file-error" : undefined
+                            }
                           />
                           <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">
                             {selectedFile ? selectedFile.name.length : 0}/2000
@@ -775,13 +913,21 @@ const TemplateModal = ({
                         <div className="flex gap-2">
                           <label
                             className={`border border-green-500 text-green-500 font-medium rounded p-3 mt-4 mb-2 text-sm ${
-                              isUploading ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:bg-green-50"
+                              isUploading
+                                ? "opacity-50 cursor-not-allowed"
+                                : "cursor-pointer hover:bg-green-50"
                             }`}
                           >
                             {isUploading ? "Uploading..." : "Upload Media"}
                             <input
                               type="file"
-                              accept={templateType === "Image" ? "image/*" : templateType === "Video" ? "video/mp4" : "application/pdf"}
+                              accept={
+                                templateType === "Image"
+                                  ? "image/*"
+                                  : templateType === "Video"
+                                  ? "video/mp4"
+                                  : "application/pdf"
+                              }
                               onChange={handleFileChange}
                               className="hidden"
                               disabled={isUploading}
@@ -792,7 +938,9 @@ const TemplateModal = ({
                             <button
                               onClick={handleRetryUpload}
                               className={`border border-blue-500 text-blue-500 font-medium rounded p-3 mt-4 mb-2 text-sm ${
-                                isUploading ? "opacity-50 cursor-not-allowed" : "hover:bg-blue-50 cursor-pointer"
+                                isUploading
+                                  ? "opacity-50 cursor-not-allowed"
+                                  : "hover:bg-blue-50 cursor-pointer"
                               }`}
                               disabled={isUploading}
                               aria-label="Retry uploading file"
@@ -802,7 +950,10 @@ const TemplateModal = ({
                           )}
                         </div>
                         {errors.file && (
-                          <p id="file-error" className="text-red-500 text-xs mb-2 mt-1">
+                          <p
+                            id="file-error"
+                            className="text-red-500 text-xs mb-2 mt-1"
+                          >
                             {errors.file}
                           </p>
                         )}
@@ -811,7 +962,6 @@ const TemplateModal = ({
                   </div>
                 </>
               )}
-
               <div className="mb-5 border-t-2 pt-4 border-gray-200">
                 <label
                   htmlFor="body"
@@ -822,7 +972,11 @@ const TemplateModal = ({
                 <div className="flex justify-end mb-1">
                   <span
                     className={`text-xs ${
-                      format.length === 1024 ? "text-red-500 font-semibold" : format.length >= 950 ? "text-yellow-500" : "text-gray-400"
+                      format.length === 1024
+                        ? "text-red-500 font-semibold"
+                        : format.length >= 950
+                        ? "text-yellow-500"
+                        : "text-gray-400"
                     }`}
                   >
                     {format.length}/1024
@@ -853,7 +1007,10 @@ const TemplateModal = ({
                       const newText = textBefore + "\n" + textAfter;
                       setFormat(newText);
                       setTimeout(() => {
-                        e.target.setSelectionRange(cursorPosition + 1, cursorPosition + 1);
+                        e.target.setSelectionRange(
+                          cursorPosition + 1,
+                          cursorPosition + 1
+                        );
                       }, 0);
                     }
                   }}
@@ -863,7 +1020,10 @@ const TemplateModal = ({
                   Use text formatting - bold, italic, etc. Max 1024 characters.
                 </p>
                 {errors.format && (
-                  <p id="format-error" className="text-red-500 text-xs mb-2 mt-2">
+                  <p
+                    id="format-error"
+                    className="text-red-500 text-xs mb-2 mt-2"
+                  >
                     {errors.format}
                   </p>
                 )}
@@ -909,7 +1069,8 @@ const TemplateModal = ({
               {category === "AUTHENTICATION" && (
                 <div className="mb-5 border-t-2 pt-4 border-gray-200">
                   <p className="text-sm text-gray-600 mb-2">
-                    Basic authentication with quick setup. Your customers copy and paste the code into your app.
+                    Basic authentication with quick setup. Your customers copy
+                    and paste the code into your app.
                   </p>
                   <label
                     htmlFor="authButtonText"
@@ -920,7 +1081,11 @@ const TemplateModal = ({
                   <div className="flex justify-end mb-1">
                     <span
                       className={`text-xs ${
-                        authButtonText.length === 25 ? "text-red-500 font-semibold" : authButtonText.length >= 20 ? "text-yellow-500" : "text-gray-400"
+                        authButtonText.length === 25
+                          ? "text-red-500 font-semibold"
+                          : authButtonText.length >= 20
+                          ? "text-yellow-500"
+                          : "text-gray-400"
                       }`}
                     >
                       {authButtonText.length}/25
@@ -930,7 +1095,9 @@ const TemplateModal = ({
                     id="authButtonText"
                     type="text"
                     className={`w-full bg-gray-100 border rounded p-3 text-sm font-medium mb-1 ${
-                      errors.authButtonText ? "border-red-500" : "border-transparent"
+                      errors.authButtonText
+                        ? "border-red-500"
+                        : "border-transparent"
                     } focus:outline-none focus:border-teal-500`}
                     placeholder="Button Text"
                     value={authButtonText}
@@ -939,10 +1106,15 @@ const TemplateModal = ({
                       validateField("authButtonText", e.target.value);
                     }}
                     maxLength={25}
-                    aria-describedby={errors.authButtonText ? "authButtonText-error" : undefined}
+                    aria-describedby={
+                      errors.authButtonText ? "authButtonText-error" : undefined
+                    }
                   />
                   {errors.authButtonText && (
-                    <p id="authButtonText-error" className="text-red-500 text-xs mb-1">
+                    <p
+                      id="authButtonText-error"
+                      className="text-red-500 text-xs mb-1"
+                    >
                       {errors.authButtonText}
                     </p>
                   )}
@@ -952,35 +1124,51 @@ const TemplateModal = ({
               {category !== "AUTHENTICATION" && (
                 <>
                   <div className="mb-5 border-t-2 pt-4 border-gray-200">
-                    <div className="font-semibold mb-1">Interactive Actions</div>
-                    <div className="flex gap-4 flex-wrap">
-                      {["None", "Call To Actions", "Quick Replies", "All"].map((option) => (
-                        <label key={option} className="flex items-center gap-2">
-                          <input
-                            type="radio"
-                            name="actions"
-                            checked={selectedAction === option}
-                            onChange={() => {
-                              setSelectedAction(option);
-                              validateField("selectedAction", option);
-                            }}
-                            aria-label={`Select ${option} action`}
-                          />
-                          {option}
-                        </label>
-                      ))}
+                    <div className="font-semibold mb-1">Buttons (Optional)</div>
+                    <p className="text-sm text-gray-600 mb-2">
+                      Insert buttons so your customers can take action and
+                      engage with your message!
+                    </p>
+
+                    {/* Dropdown instead of radio buttons */}
+                    <div style={{ width: "40%" }}>
+                      <Dropdown
+                        options={[
+                          {
+                            value: "None",
+                            label: "None",
+                            color: "text-gray-700",
+                          },
+                          {
+                            value: "Call To Actions",
+                            label: "Call to action",
+                          },
+                          { value: "Quick Replies", label: "Quick reply" },
+                          { value: "All", label: "All" },
+                        ]}
+                        value={selectedAction}
+                        onChange={setSelectedAction}
+                        placeholder="Choose action"
+                      />
                     </div>
+
                     {errors.selectedAction && (
-                      <p className="text-red-500 text-sm mt-1">{errors.selectedAction}</p>
+                      <p className="text-red-500 text-sm mt-1">
+                        {errors.selectedAction}
+                      </p>
                     )}
                   </div>
-                  {(selectedAction === "Quick Replies" || selectedAction === "All") && (
+
+                  {(selectedAction === "Quick Replies" ||
+                    selectedAction === "All") && (
                     <QuickRepliesSection
                       quickReplies={quickReplies}
                       setQuickReplies={setQuickReplies}
                     />
                   )}
-                  {(selectedAction === "Call To Actions" || selectedAction === "All") && (
+
+                  {(selectedAction === "Call To Actions" ||
+                    selectedAction === "All") && (
                     <CallToActionSection
                       urlCtas={urlCtas}
                       setUrlCtas={setUrlCtas}
@@ -989,6 +1177,7 @@ const TemplateModal = ({
                       selectedAction={selectedAction}
                     />
                   )}
+
                   <OfferCodeSection
                     offerCode={offerCode}
                     setOfferCode={setOfferCode}
@@ -1001,7 +1190,9 @@ const TemplateModal = ({
                 <button
                   onClick={handleSubmit}
                   className={`bg-[#05a3a3] w-25 text-white px-6 py-2 rounded font-semibold ${
-                    isSubmitting || isUploading ? "opacity-50 cursor-not-allowed" : "hover:cursor-pointer"
+                    isSubmitting || isUploading
+                      ? "opacity-50 cursor-not-allowed"
+                      : "hover:cursor-pointer"
                   }`}
                   disabled={isSubmitting || isUploading}
                 >
@@ -1011,7 +1202,9 @@ const TemplateModal = ({
                   type="button"
                   onClick={handleCancel}
                   className={`border border-red-500 text-red-500 px-6 py-2 w-25 rounded font-semibold ${
-                    isSubmitting || isUploading ? "opacity-50 cursor-not-allowed" : "hover:bg-red-50 hover:cursor-pointer"
+                    isSubmitting || isUploading
+                      ? "opacity-50 cursor-not-allowed"
+                      : "hover:bg-red-50 hover:cursor-pointer"
                   }`}
                   disabled={isSubmitting || isUploading}
                 >
@@ -1023,15 +1216,25 @@ const TemplateModal = ({
           <div className="w-full lg:w-[400px]  p-4 lg:p-6  lg:flex-shrink-0">
             <LivePreview
               header={header}
-              templateType={category === "AUTHENTICATION" ? "Text" : templateType}
+              templateType={
+                category === "AUTHENTICATION" ? "Text" : templateType
+              }
               livePreviewSampleText={livePreviewSampleText}
               footer={footer}
               quickReplies={category === "AUTHENTICATION" ? [] : quickReplies}
-              selectedAction={category === "AUTHENTICATION" ? "None" : selectedAction}
+              selectedAction={
+                category === "AUTHENTICATION" ? "None" : selectedAction
+              }
               urlCtas={category === "AUTHENTICATION" ? [] : urlCtas}
               offerCode={category === "AUTHENTICATION" ? "" : offerCode}
-              phoneCta={category === "AUTHENTICATION" ? { title: "", country: "", number: "" } : phoneCta}
-              authButtonText={category === "AUTHENTICATION" ? authButtonText : ""}
+              phoneCta={
+                category === "AUTHENTICATION"
+                  ? { title: "", country: "", number: "" }
+                  : phoneCta
+              }
+              authButtonText={
+                category === "AUTHENTICATION" ? authButtonText : ""
+              }
             />
           </div>
         </div>

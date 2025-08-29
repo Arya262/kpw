@@ -40,9 +40,6 @@ export const API_ENDPOINTS = {
     DELETE: `${API_BASE}/deleteGroup`,
     GET_CONTACTS: (groupId) => `${API_BASE}/groups/groupContacts?group_id=${groupId}`,
   },
-  EXTERNAL: {
-    COUNTRY_CODES: "https://countriesnow.space/api/v0.1/countries/codes",
-  },
   AUTH: {
     LOGOUT: `${API_BASE}/logout`,
     LOGIN: `${API_BASE}/login`,
@@ -57,9 +54,6 @@ export const API_ENDPOINTS = {
     CREATE_ORDER: `${API_BASE}/create-payment`,
     VERIFY_PAYMENT: `${API_BASE}/verify-payment`,
   },
-  // WHATSAPP: {
-  //   NUMBERS: "/api/whatsapp/numbers",
-  // },
   USERS: {
     GET_SUBUSERS: (customerId) => `${API_BASE}/getsubusers?customer_id=${customerId}`,
     CREATE_SUBUSER: `${API_BASE}/createSubUser`,

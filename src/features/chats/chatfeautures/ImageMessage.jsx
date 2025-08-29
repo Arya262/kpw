@@ -4,16 +4,29 @@ import MessageStatusIcon from "./MessageStatusIcon";
 const ImageMessage = ({ msg, sent }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [hasImageError, setHasImageError] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [fullImageLoaded, setFullImageLoaded] = useState(false);
+
+  const handleDownloadClick = () => {
+    setIsDownloading(true);
+    const img = new Image();
+    img.src = msg.media_url;
+    img.onload = () => {
+      setFullImageLoaded(true);
+      setIsDownloading(false);
+    };
+    img.onerror = () => {
+      setHasImageError(true);
+      setIsDownloading(false);
+    };
+  };
 
   const handleImageClick = () => {
-    if (!hasImageError) setIsModalOpen(true);
+    if (!hasImageError && fullImageLoaded) setIsModalOpen(true);
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-  };
+  const handleCloseModal = () => setIsModalOpen(false);
 
-  // Escape key to close modal
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === "Escape") setIsModalOpen(false);
@@ -24,21 +37,18 @@ const ImageMessage = ({ msg, sent }) => {
 
   const bubbleBg = sent ? "#dcf8c6" : "#f0f0f0";
   const tailAlignment = sent ? "right-[-4px]" : "left-[-4px]";
-  const tailPath = sent
-    ? "M0 0 Q10 20 20 0" // Tail on right
-    : "M20 0 Q10 20 0 0"; // Tail on left
 
   return (
     <div className={`relative flex ${sent ? "justify-end" : "justify-start"} px-2 mb-4`}>
-      <div className="relative max-w-[60%]">
-        {/* Tail SVG */}
+      <div className="relative max-w-[60%] min-w-[150px]">
+        {/* Tail */}
         <svg
           className={`absolute top-1 ${tailAlignment}`}
           width="20"
           height="20"
           viewBox="0 0 20 20"
         >
-          <path d={tailPath} fill={bubbleBg} />
+          <path d="M0 0 Q10 20 20 0" fill={bubbleBg} />
         </svg>
 
         {/* Image Bubble */}
@@ -47,18 +57,53 @@ const ImageMessage = ({ msg, sent }) => {
           style={{ backgroundColor: bubbleBg }}
           onClick={handleImageClick}
         >
-          <img
-            src={hasImageError ? "https://placehold.co/150?text=Image+Not+Found" : msg.media_url}
-            alt={msg.content || "Sent image"}
-            className="w-full object-cover max-h-[300px]"
-            onError={() => setHasImageError(true)}
-          />
+          {/* Placeholder / Blurred Preview / Download Button */}
+          {!fullImageLoaded && !hasImageError && (
+            <div className="w-full h-[200px] relative flex justify-center items-center">
+              {/* Blurred Placeholder */}
+              <img
+                src={msg.preview_base64 || "https://placehold.co/50x50?text=Loading"}
+                alt="Image preview"
+                className="w-full h-full object-cover filter blur-md"
+                style={{ transition: "filter 0.3s ease, opacity 0.5s ease" }}
+              />
+              {/* Download Button Overlay */}
+              <button
+                onClick={handleDownloadClick}
+                className="absolute bg-white text-black px-3 py-1 rounded shadow"
+                aria-label={isDownloading ? "Downloading image" : "Download image"}
+              >
+                {isDownloading ? "Downloading..." : "Download"}
+              </button>
+            </div>
+          )}
 
-          {/* Timestamp & Status Icon */}
-          <div className="absolute bottom-1 right-2 flex items-center gap-1 bg-black bg-opacity-50 px-1 py-[1px] rounded">
-            <span className="text-[10px] text-white">{msg.sent_at}</span>
-            {sent && <MessageStatusIcon status={msg.status} />}
-          </div>
+          {/* Full Image */}
+          {fullImageLoaded && !hasImageError && (
+            <img
+              src={msg.media_url}
+              alt={msg.content || "Sent image"}
+              className="w-full object-cover max-h-[300px] transition-opacity duration-500 opacity-100"
+              loading="lazy"
+            />
+          )}
+
+          {/* Error Fallback */}
+          {hasImageError && (
+            <img
+              src="https://placehold.co/150?text=Image+Not+Found"
+              alt="Image not found"
+              className="w-full object-cover max-h-[300px]"
+            />
+          )}
+
+          {/* Timestamp & Status */}
+          {fullImageLoaded && !hasImageError && (
+            <div className="absolute bottom-1 right-2 flex items-center gap-1 bg-black bg-opacity-50 px-1 py-[1px] rounded">
+              <span className="text-[10px] text-white">{msg.sent_at}</span>
+              {sent && <MessageStatusIcon status={msg.status} />}
+            </div>
+          )}
         </div>
       </div>
 
@@ -72,7 +117,7 @@ const ImageMessage = ({ msg, sent }) => {
         >
           <div className="relative" onClick={(e) => e.stopPropagation()}>
             <img
-              src={msg.media_url}
+              src={hasImageError ? "https://placehold.co/150?text=Image+Not+Found" : msg.media_url}
               alt={msg.content || "Sent image"}
               className="max-w-[90%] max-h-[90%] object-contain rounded transition duration-300 ease-in-out transform hover:scale-105"
             />

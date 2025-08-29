@@ -10,10 +10,7 @@ export default function PhoneInputField({
   isTouched,
   setIsTouched,
 }) {
-
-  
   const handleValidation = (value) => {
-    // Standardized phone validation for all uses
     const cleaned = value.replace(/\D/g, '');
     if (!cleaned) {
       setPhoneError('Please enter a phone number.');
@@ -30,12 +27,14 @@ export default function PhoneInputField({
         Phone Number
       </label>
       <PhoneInput
-        country={'in'} 
+        country={'in'}
         value={phone}
-        onChange={(value) => {
+        onChange={(value, country) => {
           setPhone(value);
           setIsTouched(true);
-handleValidation(value);
+          handleValidation(value);
+          // Optional: If you want to store country code separately
+          console.log('Country Code:', country.dialCode);
         }}
         enableSearch
         inputStyle={{
@@ -43,7 +42,7 @@ handleValidation(value);
           height: '38px',
           fontSize: '0.875rem',
           borderRadius: '0.375rem',
-          border: phoneError ? '1px solid #05A3A3' : '1px solid #D1D5DB',
+          border: phoneError ? '1px solid #e53e3e' : '1px solid #D1D5DB',
         }}
         containerStyle={{ width: '100%' }}
         buttonStyle={{

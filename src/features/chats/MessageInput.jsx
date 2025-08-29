@@ -231,15 +231,16 @@ const MessageInput = ({ onSendMessage, selectedContact, canSendMessage }) => {
                   handleSubmit(e);
                 }
               }}
-              onPaste={(e) => {
-                if (!isWithin24Hours || !canSendMessage) e.preventDefault();
-              }}
-              className={`flex-1 text-sm focus:outline-none max-h-36 overflow-y-auto ${
+              className={`flex-1 text-sm focus:outline-none max-h-36 overflow-y-auto break-words whitespace-pre-wrap resize-none ${
                 !isWithin24Hours || !canSendMessage
                   ? "text-gray-400 cursor-not-allowed"
                   : ""
               }`}
-              style={{ minHeight: "20px" }}
+              style={{
+                minHeight: "20px",
+                maxHeight: "9rem",
+                wordBreak: "break-word",
+              }}
             ></div>
 
             <button
@@ -253,7 +254,12 @@ const MessageInput = ({ onSendMessage, selectedContact, canSendMessage }) => {
               }}
             >
               <Send className="w-4 h-4 mr-1" />
-              {sanitizeHtml(message).trim() ? "Send Message" : "Send Template"}
+              {/* Hide text on small screens, show on medium and above */}
+              <span className="hidden sm:inline">
+                {sanitizeHtml(message).trim()
+                  ? "Send Message"
+                  : "Send Template"}
+              </span>
             </button>
           </div>
         </form>
@@ -266,6 +272,7 @@ const MessageInput = ({ onSendMessage, selectedContact, canSendMessage }) => {
           >
             <SendTemplate
               onSelect={(filledTemplate) => {
+                console.log("MessageInput payload:", filledTemplate);
                 const parameters =
                   filledTemplate.dynamicFields?.map(
                     (field) => field.value || ""
@@ -273,8 +280,9 @@ const MessageInput = ({ onSendMessage, selectedContact, canSendMessage }) => {
                 onSendMessage({
                   template_name: filledTemplate.element_name,
                   parameters,
+                  headerType: filledTemplate.headerType,
+                  headerValue: filledTemplate.headerValue,
                 });
-
                 setShowTemplates(false);
               }}
               onClose={() => setShowTemplates(false)}

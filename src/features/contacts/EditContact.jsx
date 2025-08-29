@@ -19,7 +19,8 @@ export default function EditContact({ contact, closePopup, onSuccess }) {
   useEffect(() => {
     if (contact) {
       setName(contact.first_name || "");
-      setPhone(`${contact.country_code || ""} ${contact.mobile_no || ""}`);
+      
+      setPhone(`${contact.country_code || ""}${contact.mobile_no || ""}`);
       setOptStatus(contact.is_active ? "Opted In" : "Opted Out");
     }
   }, [contact]);

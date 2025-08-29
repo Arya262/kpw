@@ -9,7 +9,17 @@ const getAvatarColor = (name = "User") => {
 };
 
 const ChatHeader = forwardRef(
-  ({ selectedContact, onProfileClick, isMobile, onBack, onDeleteChat, authCustomerId }, profileButtonRef) => {
+  (
+    {
+      selectedContact,
+      onProfileClick,
+      isMobile,
+      onBack,
+      onDeleteChat,
+      authCustomerId,
+    },
+    profileButtonRef
+  ) => {
     const [deleting, setDeleting] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -25,7 +35,8 @@ const ChatHeader = forwardRef(
         }
       };
       document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
     if (!selectedContact) return null;
@@ -37,7 +48,11 @@ const ChatHeader = forwardRef(
       setDeleting(true);
       try {
         console.log(
-          `Delete confirmed at: ${new Date().toISOString()} | Contact: ${selectedContact?.name} | Conversation ID: ${selectedContact?.conversation_id} | Customer ID (from auth): ${authCustomerId}`
+          `Delete confirmed at: ${new Date().toISOString()} | Contact: ${
+            selectedContact?.name
+          } | Conversation ID: ${
+            selectedContact?.conversation_id
+          } | Customer ID (from auth): ${authCustomerId}`
         );
         if (onDeleteChat) {
           await onDeleteChat(selectedContact, authCustomerId);
@@ -55,40 +70,40 @@ const ChatHeader = forwardRef(
       setShowDeleteDialog(false);
     };
 
-const renderAvatar = (contact) => {
-  if (contact.image) {
-    return (
-      <img
-        src={contact.image}
-        alt="User Avatar"
-        className="w-10 h-10 rounded-full object-cover"
-      />
-    );
-  }
+    const renderAvatar = (contact) => {
+      if (contact.image) {
+        return (
+          <img
+            src={contact.image}
+            alt="User Avatar"
+            className="w-10 h-10 rounded-full object-cover"
+          />
+        );
+      }
 
-  const name = contact.name || "User";
-  const parts = name.trim().split(/\s+/);
-  let initials = "U";
+      const name = contact.name || "User";
+      const parts = name.trim().split(/\s+/);
+      let initials = "U";
 
-  if (parts.length === 1) {
-    initials = parts[0][0]?.toUpperCase() || "U";
-  } else if (parts.length > 1) {
-    const firstInitial = parts[0][0]?.toUpperCase() || "";
-    const lastInitial = parts[parts.length - 1][0]?.toUpperCase() || "";
-    initials = firstInitial + lastInitial;
-  }
+      if (parts.length === 1) {
+        initials = parts[0][0]?.toUpperCase() || "U";
+      } else if (parts.length > 1) {
+        const firstInitial = parts[0][0]?.toUpperCase() || "";
+        const lastInitial = parts[parts.length - 1][0]?.toUpperCase() || "";
+        initials = firstInitial + lastInitial;
+      }
 
-  const bgColor = getAvatarColor(name);
+      const bgColor = getAvatarColor(name);
 
-  return (
-    <div
-      className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold"
-      style={{ backgroundColor: bgColor }}
-    >
-      {initials}
-    </div>
-  );
-};
+      return (
+        <div
+          className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold"
+          style={{ backgroundColor: bgColor }}
+        >
+          {initials}
+        </div>
+      );
+    };
 
     return (
       <div className="chat-header relative flex justify-between items-center px-4 py-2 border-b border-gray-200 bg-white">
@@ -126,10 +141,6 @@ const renderAvatar = (contact) => {
         <div className="relative flex items-center space-x-2" ref={dropdownRef}>
           {!isMobile ? (
             <>
-              <button className="text-sm text-gray-600 hover:text-blue-600 flex items-center space-x-1">
-                <BellOff className="w-4 h-4" />
-                <span>Hide Notification</span>
-              </button>
               <button
                 className="p-1 rounded hover:bg-red-100"
                 onClick={handleDelete}

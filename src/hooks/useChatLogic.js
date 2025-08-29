@@ -115,7 +115,7 @@ export const useChatLogic = ({
         setMessages(messages || []);
 
         await markAllAsRead(conversationId);
-         markConversationAsRead(conversationId);
+        markConversationAsRead(conversationId);
 
         const latest = messages?.[messages.length - 1] || {};
 
@@ -123,12 +123,12 @@ export const useChatLogic = ({
           prev.map((c) =>
             c.conversation_id === conversationId
               ? {
-                  ...c,
-                  lastMessage: latest.content || latest.element_name || c.lastMessage,
-                  lastMessageType: latest.message_type || c.lastMessageType,
-                  lastMessageTime: latest.sent_at || c.lastMessageTime,
-                  unreadCount: 0,
-                }
+                ...c,
+                lastMessage: latest.content || latest.element_name || c.lastMessage,
+                lastMessageType: latest.message_type || c.lastMessageType,
+                lastMessageTime: latest.sent_at || c.lastMessageTime,
+                unreadCount: 0,
+              }
               : c
           )
         );
@@ -136,7 +136,7 @@ export const useChatLogic = ({
         console.error("❌ Failed to fetch messages:", err);
       }
     },
-    [setMessages, setContacts, markAllAsRead,markConversationAsRead]
+    [setMessages, setContacts, markAllAsRead, markConversationAsRead]
   );
 
   const selectContact = useCallback(
@@ -144,16 +144,16 @@ export const useChatLogic = ({
       if (!contact) return;
 
       const currentConversationId = selectedContactRef.current?.conversation_id;
-      
+
       // Prevent redundant re-selection
       if (currentConversationId === contact.conversation_id) {
         return;
       }
 
-      
+
       // Update local state first
       setSelectedContact(contact);
-      
+
       // Update notification context
       if (setSelectedConversationId) {
         // Use a small timeout to ensure state updates are processed
@@ -185,7 +185,7 @@ export const useChatLogic = ({
   const handleIncomingMessage = useCallback(
     (msg) => {
       const isFromSelectedChat = selectedContact?.conversation_id === msg.conversation_id;
-      
+
       // Only show toast for messages not from the currently selected chat
       if (!isFromSelectedChat) {
         // Find the contact to get their name for the notification
@@ -226,6 +226,7 @@ export const useChatLogic = ({
   }, [socket, handleIncomingMessage]);
 
   const sendMessage = useCallback(
+
     async (input) => {
       if (permissions && !permissions.canSendMessages) return;
       if (!selectedContact?.conversation_id) return;
@@ -241,34 +242,56 @@ export const useChatLogic = ({
         if (Array.isArray(input.parameters)) {
           newMessage.parameters = input.parameters;
         }
+        // Add headerType and headerValue for media
+        if (input.headerType && input.headerValue) {
+          newMessage.headerType = input.headerType;
+          newMessage.headerValue = input.headerValue;
+        } else if (Array.isArray(input.parameters) && input.parameters.length > 0) {
+          // Search all parameters for a media URL
+          const mediaUrl = input.parameters.find((url) =>
+            url.match(/\.jpg|\.jpeg|\.png|\.gif|\.mp4|\.mov|\.avi|\.pdf|\.doc|\.docx/i)
+          );
+          if (mediaUrl) {
+            if (mediaUrl.match(/\.jpg|\.jpeg|\.png|\.gif/i)) {
+              newMessage.headerType = "image";
+              newMessage.headerValue = mediaUrl;
+            } else if (mediaUrl.match(/\.mp4|\.mov|\.avi/i)) {
+              newMessage.headerType = "video";
+              newMessage.headerValue = mediaUrl;
+            } else if (mediaUrl.match(/\.pdf|\.doc|\.docx/i)) {
+              newMessage.headerType = "document";
+              newMessage.headerValue = mediaUrl;
+            }
+            // Remove the media URL from parameters to avoid duplication
+            newMessage.parameters = input.parameters.filter((p) => p !== mediaUrl);
+          }
+        }
       } else {
         console.warn("Invalid message input");
         return;
       }
 
       try {
-        await axios.post(`${API_BASE}/sendmessage`, {
+        const response = await axios.post(`${API_BASE}/sendmessage`, {
           ...newMessage,
           message_type: messageType,
         });
-
-
+        // console.log('Sending message payload:', newMessage);
         fetchMessagesForContact(selectedContact.conversation_id);
-
         setContacts((prev) =>
           prev
             .map((c) =>
               c.conversation_id === selectedContact.conversation_id
                 ? {
-                    ...c,
-                    lastMessage:
-                      typeof input === "string"
-                        ? input
-                        : input.template_name,
-                    lastMessageType: messageType,
-                    lastMessageTime: new Date().toISOString(),
-                    unreadCount: 0,
-                  }
+                  ...c,
+                  lastMessage:
+                    typeof input === "string"
+                      ? input
+                      : input.template_name,
+                  lastMessageType: messageType,
+                  lastMessageTime: new Date().toISOString(),
+                  unreadCount: 0,
+                }
                 : c
             )
             .sort(
@@ -277,8 +300,11 @@ export const useChatLogic = ({
                 new Date(a.lastMessageTime || a.updated_at || 0)
             )
         );
+
+        toast.success("Message sent successfully");
       } catch (err) {
         console.error("❌ Error sending message:", err);
+        toast.error("Failed to send message");
       }
     },
     [selectedContact, setContacts, fetchMessagesForContact, permissions]
@@ -291,42 +317,42 @@ export const useChatLogic = ({
       const customerId = user?.customer_id;
 
       if (!conversationId || !customerId) return;
-      
+
       // Clear selected conversation if we're deleting the current one
       if (selectedContact?.conversation_id === conversationId) {
         setSelectedConversationId(null);
       }
 
-        try {
-          const response = await axios.delete(
-            API_ENDPOINTS.CHAT.DELETE_CONVERSATION,
-            {
-              data: {
-                conversation_ids: [conversationId],
-                customer_id: customerId,
-              },
-              headers: {
-                "Content-Type": "application/json",
-              },
-              withCredentials: true,
-            }
-          );
-
-          const result = response.data;
-          if (response.status === 200 && result.success) {
-            setContacts((prev) =>
-              prev.filter((c) => c.conversation_id !== conversationId)
-            );
-            setSelectedContact(null);
-            setMessages([]);
-          } else {
-            toast.error("Failed to delete chat: " + result.message);
+      try {
+        const response = await axios.delete(
+          API_ENDPOINTS.CHAT.DELETE_CONVERSATION,
+          {
+            data: {
+              conversation_ids: [conversationId],
+              customer_id: customerId,
+            },
+            headers: {
+              "Content-Type": "application/json",
+            },
+            withCredentials: true,
           }
-        } catch (err) {
-          console.error("❌ Error deleting chat:", err);
-          toast.error("Something went wrong while deleting the chat.");
+        );
+
+        const result = response.data;
+        if (response.status === 200 && result.success) {
+          setContacts((prev) =>
+            prev.filter((c) => c.conversation_id !== conversationId)
+          );
+          setSelectedContact(null);
+          setMessages([]);
+        } else {
+          toast.error("Failed to delete chat: " + result.message);
         }
-      
+      } catch (err) {
+        console.error("❌ Error deleting chat:", err);
+        toast.error("Something went wrong while deleting the chat.");
+      }
+
     },
     [user?.customer_id, setContacts, setMessages, setSelectedContact, permissions]
   );
