@@ -107,23 +107,7 @@ const SendTemplate = ({ onSelect, onClose, returnFullTemplate = false }) => {
     return fieldArray;
   };
 
-  const uploadToCloudinary = async (file, folder = "test-uploads") => {
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("upload_preset", "dynamic-templates");
-    formData.append("folder", "dynamic-templates"); // optional
 
-    const res = await fetch(
-      "https://api.cloudinary.com/v1_1/dv20lztwm/upload",
-      {
-        method: "POST",
-        body: formData,
-      }
-    );
-
-    const data = await res.json();
-    return data.secure_url; // ✅ Public URL
-  };
 
   const handleTemplateClick = (template) => {
     if (onSelect) {
@@ -143,27 +127,22 @@ const SendTemplate = ({ onSelect, onClose, returnFullTemplate = false }) => {
         setPreviewTemplate({
           ...template,
           dynamicFields: dynamicFields,
+          language_Code: template.language_Code || "en",
         });
       } else {
-        onSelect(returnFullTemplate ? template : template.element_name);
+        onSelect(
+      returnFullTemplate
+        ? {
+            ...template,
+            language_Code: template.language_Code || "en", 
+          }
+        : template.element_name
+    );
       }
     }
   };
 
-  const handleMediaUpload = async (file, templateType) => {
-    try {
-      const mediaUrl = await uploadToCloudinary(file);
-      setDynamicFields((prev) => ({
-        ...prev,
-        headerType: templateType.toLowerCase(),
-        headerValue: mediaUrl,
-      }));
-      return mediaUrl;
-    } catch (error) {
-      console.error("Error uploading media:", error);
-      throw error;
-    }
-  };
+
 
   const handleSendTemplate = () => {
     if (!previewTemplate) return;
@@ -183,6 +162,7 @@ const SendTemplate = ({ onSelect, onClose, returnFullTemplate = false }) => {
     // Prepare the template data with correct structure
     const templateData = {
       ...previewTemplate,
+      language_Code: previewTemplate.language_Code || "en",
       headerType: headerType || undefined,
       headerValue: headerValue || undefined,
       parameters: parameters.length > 0 ? parameters : undefined,
@@ -196,6 +176,7 @@ const SendTemplate = ({ onSelect, onClose, returnFullTemplate = false }) => {
     }
 
     onSelect(returnFullTemplate ? templateData : templateData.element_name);
+    
   };
 
   const handlePreviewClick = (template, e) => {
@@ -210,6 +191,7 @@ const SendTemplate = ({ onSelect, onClose, returnFullTemplate = false }) => {
       setPreviewTemplate({
         ...template,
         dynamicFields: dynamicFields,
+        language_Code: template.language_Code || "en",
       });
     } else {
       setPreviewTemplate(template);
@@ -354,47 +336,6 @@ const SendTemplate = ({ onSelect, onClose, returnFullTemplate = false }) => {
                         field.type === "document" ||
                         field.type === "video" ? (
                           <div className="space-y-2">
-                            {/* File Upload */}
-                            <input
-                              type="file"
-                              accept={
-                                field.type === "image"
-                                  ? "image/*"
-                                  : field.type === "video"
-                                  ? "video/*"
-                                  : ".pdf,.doc,.docx"
-                              }
-                              onChange={async (e) => {
-                                const file = e.target.files[0];
-                                if (file) {
-                                  try {
-                                    const url = await handleMediaUpload(
-                                      file,
-                                      field.type
-                                    );
-                                    setDynamicFields((prev) => ({
-                                      ...prev,
-                                      [field.placeholder]: url,
-                                      headerType: field.type,
-                                      headerValue: url,
-                                    }));
-                                  } catch (error) {
-                                    console.error(
-                                      "Error uploading media:",
-                                      error
-                                    );
-                                    toast.error(
-                                      "Failed to upload media. Please try again."
-                                    );
-                                  }
-                                }
-                              }}
-                              className="border border-gray-300 rounded px-3 py-2 text-sm w-full"
-                            />
-
-                            <div className="text-center text-gray-400">OR</div>
-
-                            {/* Direct URL Input */}
                             <input
                               type="url"
                               placeholder="Enter public media link"

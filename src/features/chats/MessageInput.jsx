@@ -282,6 +282,7 @@ const MessageInput = ({ onSendMessage, selectedContact, canSendMessage }) => {
                   parameters,
                   headerType: filledTemplate.headerType,
                   headerValue: filledTemplate.headerValue,
+                  language_Code: filledTemplate.language_Code || "en",
                 });
                 setShowTemplates(false);
               }}

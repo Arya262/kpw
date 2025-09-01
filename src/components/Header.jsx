@@ -14,6 +14,7 @@ import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import NotificationBell from "./NotificationBell";
 import { useAuth } from "../context/AuthContext";
+import { useLocation as useLocationContext } from "../context/LocationContext";
 import {
   Dialog,
   DialogTitle,
@@ -32,6 +33,7 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
   const userMenuRef = useRef(null);
   const navigate = useNavigate();
   const { logout, user } = useAuth();
+  const { location } = useLocationContext();
 
   const [onboardingData, setOnboardingData] = useState(null);
   const avatarSrc = user?.avatar || "/default-avatar.jpeg";
@@ -288,6 +290,17 @@ export default function Header({ isMenuOpen, onToggleSidebar }) {
                     <div className="text-sm text-gray-500 mt-1">
                       {user?.role ?? "Merchant"}
                     </div>
+                    {location?.loaded && !location?.error && location?.address?.state && (
+                      <div className="mt-2 text-xs text-gray-500 flex items-center justify-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-red-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span className="truncate max-w-[120px]" title={location.address.state}>
+                          {location.address.state}
+                        </span>
+                      </div>
+                    )}
                   </div>
                   <div className="w-full flex flex-col gap-1">
                     <Link

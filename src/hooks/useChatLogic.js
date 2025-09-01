@@ -2,6 +2,8 @@ import { useCallback, useRef, useEffect } from "react";
 import axios from "axios";
 import { API_BASE, API_ENDPOINTS } from "../config/api";
 import { useNotifications } from "../context/NotificationContext";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 export const useChatLogic = ({
   user,
   socket,
@@ -246,26 +248,43 @@ export const useChatLogic = ({
         if (input.headerType && input.headerValue) {
           newMessage.headerType = input.headerType;
           newMessage.headerValue = input.headerValue;
-        } else if (Array.isArray(input.parameters) && input.parameters.length > 0) {
-          // Search all parameters for a media URL
-          const mediaUrl = input.parameters.find((url) =>
-            url.match(/\.jpg|\.jpeg|\.png|\.gif|\.mp4|\.mov|\.avi|\.pdf|\.doc|\.docx/i)
-          );
-          if (mediaUrl) {
-            if (mediaUrl.match(/\.jpg|\.jpeg|\.png|\.gif/i)) {
-              newMessage.headerType = "image";
-              newMessage.headerValue = mediaUrl;
-            } else if (mediaUrl.match(/\.mp4|\.mov|\.avi/i)) {
-              newMessage.headerType = "video";
-              newMessage.headerValue = mediaUrl;
-            } else if (mediaUrl.match(/\.pdf|\.doc|\.docx/i)) {
-              newMessage.headerType = "document";
-              newMessage.headerValue = mediaUrl;
-            }
-            // Remove the media URL from parameters to avoid duplication
-            newMessage.parameters = input.parameters.filter((p) => p !== mediaUrl);
-          }
-        }
+        } else if (input.template_name) {
+  newMessage.element_name = input.template_name;
+  messageType = "template";
+
+  if (Array.isArray(input.parameters)) {
+    newMessage.parameters = input.parameters;
+  }
+
+  // Add headerType and headerValue for media
+  if (input.headerType && input.headerValue) {
+    newMessage.headerType = input.headerType;
+    newMessage.headerValue = input.headerValue;
+  } else if (Array.isArray(input.parameters) && input.parameters.length > 0) {
+    const mediaUrl = input.parameters.find((url) =>
+      url.match(/\.jpg|\.jpeg|\.png|\.gif|\.mp4|\.mov|\.avi|\.pdf|\.doc|\.docx/i)
+    );
+    if (mediaUrl) {
+      if (mediaUrl.match(/\.jpg|\.jpeg|\.png|\.gif/i)) {
+        newMessage.headerType = "image";
+        newMessage.headerValue = mediaUrl;
+      } else if (mediaUrl.match(/\.mp4|\.mov|\.avi/i)) {
+        newMessage.headerType = "video";
+        newMessage.headerValue = mediaUrl;
+      } else if (mediaUrl.match(/\.pdf|\.doc|\.docx/i)) {
+        newMessage.headerType = "document";
+        newMessage.headerValue = mediaUrl;
+      }
+      // Remove media URL from parameters to avoid duplication
+      newMessage.parameters = input.parameters.filter((p) => p !== mediaUrl);
+    }
+  }
+
+  // ✅ Add language_Code if present
+  if (input.language_Code) {
+    newMessage.language_Code = input.language_Code;
+  }
+}
       } else {
         console.warn("Invalid message input");
         return;
@@ -276,7 +295,7 @@ export const useChatLogic = ({
           ...newMessage,
           message_type: messageType,
         });
-        // console.log('Sending message payload:', newMessage);
+        console.log('Sending message payload:', newMessage);
         fetchMessagesForContact(selectedContact.conversation_id);
         setContacts((prev) =>
           prev

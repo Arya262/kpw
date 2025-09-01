@@ -56,9 +56,12 @@ const ExploreTemplates = () => {
   const handleConfirmDelete = async () => {
     if (!templateToDelete) return;
     setIsDeleting(true);
-    const success = await deleteTemplate(templateToDelete);
+    const success = await deleteTemplate(
+      templateToDelete.element_name,
+      templateToDelete.id,
+      user?.customer_id
+    );
     if (success) {
-      toast.success("Template deleted successfully", defaultToastConfig);
     }
     setIsDeleting(false);
     setShowDeleteDialog(false);
@@ -81,10 +84,10 @@ const ExploreTemplates = () => {
       {/* Header */}
       <div className="flex justify-between items-center mb-8 sticky top-0 bg-gray-50/90 backdrop-blur-md z-20 py-3 shadow-sm">
         <h2 className="text-3xl font-bold tracking-tight text-gray-800 flex items-center gap-2">
-          ✨ Explore <span className="text-cyan-600">Templates</span>
+           Explore <span className="text-[#0AA89E]">Templates</span>
         </h2>
         <button
-          className="bg-gradient-to-r from-teal-500 to-cyan-500 text-white flex items-center gap-2 px-5 py-2.5 rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all"
+          className="bg-gradient-to-r from-[#0AA89E] to-cyan-500 text-white flex items-center gap-2 px-5 py-2.5 rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all"
           onClick={() => setIsModalOpen(true)}
         >
           <img src={vendor} alt="plus sign" className="w-5 h-5" />
@@ -142,6 +145,7 @@ const ExploreTemplates = () => {
                 </div>
               )}
 
+              {/* Content */}
               <div className="p-4 flex-1 flex flex-col justify-between">
                 <div className="flex justify-between items-start">
                   <div>
@@ -161,7 +165,7 @@ const ExploreTemplates = () => {
                     </span>
                   </div>
 
-
+                  {/* Actions */}
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => {
@@ -190,6 +194,7 @@ const ExploreTemplates = () => {
                 </p>
               </div>
 
+              {/* Bottom CTA */}
               <div className="flex">
                 <button
                   disabled={template?.status?.toLowerCase() !== "approved"}
@@ -198,7 +203,7 @@ const ExploreTemplates = () => {
                       state: { selectedTemplate: template, openForm: true },
                     })
                   }
-                  className={`flex-1 px-4 py-3 font-semibold rounded-b-2xl transition-all cursor-pointer ${
+                  className={`flex-1 px-4 py-3 font-semibold rounded-b-2xl transition-all ${
                     template?.status?.toLowerCase() === "approved"
                       ? "bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:brightness-110"
                       : "bg-gray-200 text-gray-500 cursor-not-allowed"
@@ -218,6 +223,7 @@ const ExploreTemplates = () => {
         </div>
       )}
 
+      {/* Modal */}
       <AnimatePresence>
         {isModalOpen && (
           <>
@@ -248,6 +254,7 @@ const ExploreTemplates = () => {
         )}
       </AnimatePresence>
 
+      {/* Delete Dialog */}
       <SingleDeleteDialog
         showDialog={showDeleteDialog}
         contactName={templateToDelete?.element_name || "this template"}
@@ -256,7 +263,7 @@ const ExploreTemplates = () => {
         isDeleting={isDeleting}
       />
 
-  
+      {/* Drawer */}
       <TemplateDrawer
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}

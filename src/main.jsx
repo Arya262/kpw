@@ -6,7 +6,7 @@ import './index.css';
 import { SocketProvider } from './context/SocketContext';
 import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext'; 
-
+import { LocationProvider } from './context/LocationContext';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import.meta.env.VITE_GOOGLE_CLIENT_ID
 
@@ -15,9 +15,11 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <BrowserRouter>
       <AuthProvider>
         <NotificationProvider> 
-          <SocketProvider>
-            <App />
-          </SocketProvider>
+          <LocationProvider>
+            <SocketProvider>
+              <App />
+            </SocketProvider>
+          </LocationProvider>
         </NotificationProvider>
       </AuthProvider>
     </BrowserRouter>

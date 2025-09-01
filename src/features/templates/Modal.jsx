@@ -1144,7 +1144,7 @@ const TemplateModal = ({
                             label: "Call to action",
                           },
                           { value: "Quick Replies", label: "Quick reply" },
-                          { value: "All", label: "All" },
+                          
                         ]}
                         value={selectedAction}
                         onChange={setSelectedAction}

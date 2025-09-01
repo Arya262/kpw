@@ -1,7 +1,6 @@
 import MessageStatusIcon from "./MessageStatusIcon";
 
 const TemplateMessage = ({ msg, sent }) => {
-  // console.log("🧾 Full Message Object:", msg);
   const meta = msg.container_meta;
 
   const bubbleBg = sent ? "rgba(220, 248, 198, 0.5)" : "rgba(240, 240, 240, 0.5)";
@@ -20,7 +19,6 @@ const TemplateMessage = ({ msg, sent }) => {
     });
   };
 
-
   const headerComponent = msg?.template_data?.template?.components?.find(
     (component) => component.type === "header"
   );
@@ -28,6 +26,11 @@ const TemplateMessage = ({ msg, sent }) => {
   const imageUrl = templateParam.image?.link || meta?.mediaUrl || meta?.headerValue;
   const videoUrl = templateParam.video?.link || meta?.videoUrl;
   const docUrl = templateParam.document?.link || meta?.documentUrl;
+
+  // File metadata
+  const fileName = meta?.fileName || (docUrl ? docUrl.split("/").pop() : "");
+  const fileSize = meta?.fileSize || "Unknown size";
+  const fileType = meta?.fileType || "Document";
 
   return (
     <div className={`relative flex ${sent ? "justify-end" : "justify-start"} px-2 mb-2`}>
@@ -40,11 +43,7 @@ const TemplateMessage = ({ msg, sent }) => {
           height="20"
           viewBox="0 0 20 20"
         >
-          <path
-            d={tailPath}
-            fill="currentColor"
-            className="text-transparent"
-          />
+          <path d={tailPath} fill={bubbleBg} />
         </svg>
 
         {/* Template Bubble */}
@@ -74,9 +73,28 @@ const TemplateMessage = ({ msg, sent }) => {
                   href={docUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block w-full text-blue-600 underline p-2"
+                  className="block w-full rounded-md overflow-hidden shadow-md"
                 >
-                  📄 Download Document
+                  {/* Thumbnail preview (blurred page or fallback) */}
+                  <div className="relative w-full h-40 bg-gray-200">
+                    <img
+                      src={meta?.docPreview}
+                      alt="Document Preview"
+                      className="w-full h-full object-cover"
+                      // onError={(e) => {
+                      //   e.target.src = "/fallback-doc-preview.png";
+                      // }}
+                    />
+                    {/* Overlay with file details */}
+                    <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 px-3 py-2">
+                      <p className="text-sm font-medium text-white truncate">
+                        {fileName}
+                      </p>
+                      <p className="text-xs text-gray-300">
+                        {fileSize}, {fileType}
+                      </p>
+                    </div>
+                  </div>
                 </a>
               ) : null}
 
@@ -117,7 +135,6 @@ const TemplateMessage = ({ msg, sent }) => {
               </div>
             </>
           ) : (
-            // Fallback
             <div className="p-3">
               <p className="text-gray-500 italic">No template available.</p>
               {msg.data && (
