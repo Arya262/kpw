@@ -8,40 +8,48 @@ const CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export const LocationProvider = ({ children }) => {
   const [location, setLocation] = useState(() => {
-    // Try to load from cache first
     const cached = localStorage.getItem(LOCATION_CACHE_KEY);
     if (cached) {
       try {
         const parsed = JSON.parse(cached);
-        // Check if cache is still valid
-        if (parsed.timestamp && (Date.now() - parsed.timestamp) < CACHE_EXPIRY_MS) {
+        if (parsed.timestamp && Date.now() - parsed.timestamp < CACHE_EXPIRY_MS) {
           return {
             loaded: true,
             coordinates: parsed.coordinates,
-            address: parsed.address,
-            error: null
+            address: parsed.address, // ✅ always plain string
+            error: null,
           };
         }
       } catch (e) {
         console.error('Failed to parse cached location', e);
       }
     }
-    // Default state if no valid cache
     return {
       loaded: false,
       coordinates: { lat: null, lng: null },
       address: null,
-      error: null
+      error: null,
     };
   });
 
+  // Reverse geocoding to get state/city
   const getStateFromCoordinates = async (lat, lng) => {
     try {
+      console.log('Fetching state for coords:', lat, lng);
       const response = await fetch(
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`
       );
       const data = await response.json();
-      return data.address?.state || data.address?.county || 'Unknown Location';
+      console.log('Reverse geocode response:', data);
+
+      return (
+        data.address?.state ||
+        data.address?.county ||
+        data.address?.city ||
+        data.address?.town ||
+        data.address?.village ||
+        'Unknown Location'
+      );
     } catch (error) {
       console.error('Error getting location details:', error);
       return 'Location Unavailable';
@@ -52,25 +60,27 @@ export const LocationProvider = ({ children }) => {
     try {
       const coords = {
         lat: position.coords.latitude,
-        lng: position.coords.longitude
+        lng: position.coords.longitude,
       };
+      console.log('Got coordinates:', coords);
 
-      // Check if we have a valid cached state for these coordinates
+      // ✅ Check cache first
       const cached = localStorage.getItem(LOCATION_CACHE_KEY);
       if (cached) {
         try {
           const parsed = JSON.parse(cached);
-          // If we have a recent cache with the same coordinates, use it
-          if (parsed.coordinates && 
-              parsed.coordinates.lat === coords.lat && 
-              parsed.coordinates.lng === coords.lng &&
-              parsed.timestamp && 
-              (Date.now() - parsed.timestamp) < CACHE_EXPIRY_MS) {
+          if (
+            parsed.coordinates?.lat === coords.lat &&
+            parsed.coordinates?.lng === coords.lng &&
+            parsed.timestamp &&
+            Date.now() - parsed.timestamp < CACHE_EXPIRY_MS
+          ) {
+            console.log('Using cached location:', parsed);
             setLocation({
               loaded: true,
               coordinates: coords,
-              address: parsed.address,
-              error: null
+              address: parsed.address, // ✅ plain string
+              error: null,
             });
             return;
           }
@@ -79,29 +89,31 @@ export const LocationProvider = ({ children }) => {
         }
       }
 
-      // If no valid cache, fetch from OpenStreetMap
+      // ✅ Fetch new reverse geocode
       const state = await getStateFromCoordinates(coords.lat, coords.lng);
+
       const locationData = {
         loaded: true,
         coordinates: coords,
-        address: { state },
-        error: null
+        address: state, // ✅ plain string only
+        error: null,
       };
-      
-      // Update state
+
       setLocation(locationData);
-      
-      // Cache the result
-      localStorage.setItem(LOCATION_CACHE_KEY, JSON.stringify({
-        ...locationData,
-        timestamp: Date.now()
-      }));
+
+      localStorage.setItem(
+        LOCATION_CACHE_KEY,
+        JSON.stringify({
+          ...locationData,
+          timestamp: Date.now(),
+        })
+      );
     } catch (error) {
       console.error('Error processing location:', error);
-      setLocation(prev => ({
+      setLocation((prev) => ({
         ...prev,
         loaded: true,
-        error: { message: 'Could not determine location name' }
+        error: { message: 'Could not determine location name' },
       }));
     }
   };
@@ -109,11 +121,11 @@ export const LocationProvider = ({ children }) => {
   const onError = (error) => {
     console.error('Geolocation error:', error);
     let errorMessage = error.message || 'Unknown error';
-    
-    // More specific error messages based on error code
-    switch(error.code) {
+
+    switch (error.code) {
       case error.PERMISSION_DENIED:
-        errorMessage = 'Location access was denied. Please enable location services for this website.';
+        errorMessage =
+          'Location access was denied. Please enable location services for this website.';
         break;
       case error.POSITION_UNAVAILABLE:
         errorMessage = 'Location information is unavailable.';
@@ -121,12 +133,12 @@ export const LocationProvider = ({ children }) => {
       case error.TIMEOUT:
         errorMessage = 'The request to get location timed out.';
         break;
-      case error.UNKNOWN_ERROR:
+      default:
         errorMessage = 'An unknown error occurred while getting location.';
         break;
     }
-    
-    setLocation(prev => ({
+
+    setLocation((prev) => ({
       ...prev,
       loaded: true,
       error: {
@@ -137,9 +149,7 @@ export const LocationProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    console.log('Checking geolocation availability...');
     if (!navigator.geolocation) {
-      console.log('Geolocation is not supported by this browser');
       onError({
         code: 0,
         message: 'Geolocation not supported by your browser',
@@ -147,22 +157,11 @@ export const LocationProvider = ({ children }) => {
       return;
     }
 
-    console.log('Requesting geolocation...');
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        console.log('Got position:', position);
-        onSuccess(position);
-      },
-      (error) => {
-        console.error('Error getting position:', error);
-        onError(error);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000, // 10 seconds
-        maximumAge: 0 // Don't use a cached position
-      }
-    );
+    navigator.geolocation.getCurrentPosition(onSuccess, onError, {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0,
+    });
   }, []);
 
   return (

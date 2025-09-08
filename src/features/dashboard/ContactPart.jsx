@@ -1,55 +1,26 @@
 import React, { useEffect, useState } from "react";
 import { Avatar } from "../chats/chatSiderbar";
-import axios from "axios";
 import { useAuth } from "../../context/AuthContext";
-import { API_ENDPOINTS } from "../../config/api";
+import { useChatLogic } from "../../hooks/useChatLogic"; // adjust path
 
 const ContactPart = () => {
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
+  // Use fetchContacts from your hook
+  const { fetchContacts } = useChatLogic({ user, contacts, setContacts });
+
   useEffect(() => {
-    const fetchContacts = async () => {
+    const loadContacts = async () => {
       if (!user?.customer_id) return;
-
-      try {
-        const response = await axios.get(
-          `${API_ENDPOINTS.CHAT.CONVERSATIONS}?customer_id=${user.customer_id}`,
-          {
-            headers: { "Content-Type": "application/json" },
-            withCredentials: true,
-          }
-        );
-        const enriched = response.data.map((c) => ({
-          id: c.customer_id,
-          conversation_id: c.conversation_id,
-          name: `${c.first_name} ${c.last_name || ""}`.trim(),
-          country_code: c.country_code,
-          mobile_no: c.mobile_no,
-          image: c.profile_image,
-          updated_at: c.updated_at,
-          active: false,
-          lastMessageTime: c.updated_at,
-        }));
-        const topUsers = enriched
-          .sort(
-            (a, b) =>
-              new Date(b.lastMessageTime || b.updated_at || 0) -
-              new Date(a.lastMessageTime || a.updated_at || 0)
-          )
-          .slice(0, 5);
-
-        setContacts(topUsers);
-      } catch (error) {
-        console.error("❌ Failed to fetch contacts:", error);
-      } finally {
-        setLoading(false);
-      }
+      setLoading(true);
+      await fetchContacts(); // fetch contacts via hook
+      setLoading(false);
     };
 
-    fetchContacts();
-  }, [user?.customer_id]);
+    loadContacts();
+  }, [user?.customer_id, fetchContacts]);
 
   return (
     <div className="col-span-1 rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-lg hover:scale-105 transition-transform duration-200 h-80">
@@ -63,7 +34,7 @@ const ContactPart = () => {
           ) : contacts.length > 0 ? (
             contacts.map((contact) => (
               <div
-                key={contact.conversation_id}
+                key={contact.contact_id}
                 role="listitem"
                 tabIndex={0}
                 className="flex items-center px-2 py-1 w-full max-w-full border-b border-gray-200"

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useMemo } from "react";
+import React, { useEffect, useRef, useMemo, useCallback } from "react";
 import TextMessage from "./chatfeautures/TextMessage";
 import ImageMessage from "./chatfeautures/ImageMessage";
 import VideoMessage from "./chatfeautures/VideoMessage";
@@ -10,9 +10,16 @@ import ContactMessage from "./chatfeautures/ContactMessage";
 import DocumentMessage from "./chatfeautures/DocumentMessage";
 import { format, isToday, isYesterday } from "date-fns";
 
-const ChatMessages = ({ selectedContact, messages = [], isTyping }) => {
+const ChatMessages = ({
+  selectedContact,
+  messages = [],
+  isTyping,
+  fetchMessagesForContact, // 👈 pass your fetch function as prop
+}) => {
   const messagesEndRef = useRef(null);
+  const chatContainerRef = useRef(null);
 
+  // 🔹 Scroll to bottom when new messages arrive
   useEffect(() => {
     scrollToBottom();
   }, [messages, isTyping]);
@@ -21,27 +28,52 @@ const ChatMessages = ({ selectedContact, messages = [], isTyping }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  // 🔹 Load older messages when user scrolls to top
+  const handleScroll = useCallback(async () => {
+    const container = chatContainerRef.current;
+    if (!container || !selectedContact?.contact_id) return;
+
+    if (container.scrollTop === 0) {
+      const oldestMessage = messages[0];
+      if (!oldestMessage) return;
+
+      await fetchMessagesForContact(selectedContact.contact_id, {
+        limit: 20,
+        cursor: oldestMessage.sent_at,
+      });
+    }
+  }, [messages, selectedContact, fetchMessagesForContact]);
+
+  useEffect(() => {
+    const container = chatContainerRef.current;
+    if (!container) return;
+
+    container.addEventListener("scroll", handleScroll);
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, [handleScroll]);
+
+  // 🔹 Group messages by date
   const getDateLabel = (date) => {
     if (isToday(date)) return "Today";
     if (isYesterday(date)) return "Yesterday";
     return format(date, "MMMM d, yyyy");
   };
 
-  const groupMessagesByDate = (msgs) => {
-    return msgs.reduce((acc, msg) => {
+  const groupMessagesByDate = (msgs) =>
+    msgs.reduce((acc, msg) => {
       const rawDate = msg.sent_at ? new Date(msg.sent_at) : new Date();
       const label = getDateLabel(rawDate);
       if (!acc[label]) acc[label] = [];
       acc[label].push(msg);
       return acc;
     }, {});
-  };
 
-  const groupedMessages = useMemo(() => groupMessagesByDate(messages), [messages]);
+  const groupedMessages = useMemo(
+    () => groupMessagesByDate(messages),
+    [messages]
+  );
 
-  const isSentByUser = (msg) => {
-    return msg.status !== "received";
-  };
+  const isSentByUser = (msg) => msg.status !== "received";
 
   const renderMessage = (msg, index) => {
     const sent = isSentByUser(msg);
@@ -74,7 +106,7 @@ const ChatMessages = ({ selectedContact, messages = [], isTyping }) => {
       case "document":
         return <DocumentMessage msg={message} sent={sent} />;
       default:
-        console.warn("Unknown type:", msg.message_type);
+         console.warn("Unknown type:", msg.message_type);
         return (
           <div className="text-red-500 text-sm italic">
             Unsupported message type: {msg.message_type}
@@ -85,7 +117,8 @@ const ChatMessages = ({ selectedContact, messages = [], isTyping }) => {
 
   return (
     <div
-      className="flex flex-col min-h-0 h-full overflow-y-auto  scrollbar-hide 
+      ref={chatContainerRef}
+      className="flex flex-col min-h-0 h-full overflow-y-auto scrollbar-hide 
                  bg-[url('/light.png')]
                  bg-repeat transition-colors duration-300 ease-in-out"
       aria-live="polite"

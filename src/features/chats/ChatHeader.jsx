@@ -48,12 +48,10 @@ const ChatHeader = forwardRef(
       setDeleting(true);
       try {
         console.log(
-          `Delete confirmed at: ${new Date().toISOString()} | Contact: ${
-            selectedContact?.name
-          } | Conversation ID: ${
-            selectedContact?.conversation_id
-          } | Customer ID (from auth): ${authCustomerId}`
-        );
+   `Delete confirmed at: ${new Date().toISOString()} | Contact: ${
+     selectedContact?.name
+   } | Customer ID (from auth): ${authCustomerId}`
+ );
         if (onDeleteChat) {
           await onDeleteChat(selectedContact, authCustomerId);
         }

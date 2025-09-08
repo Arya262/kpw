@@ -4,6 +4,7 @@ import { API_BASE, API_ENDPOINTS } from "../config/api";
 import { useNotifications } from "../context/NotificationContext";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+
 export const useChatLogic = ({
   user,
   socket,
@@ -14,126 +15,135 @@ export const useChatLogic = ({
   contacts,
   permissions,
 }) => {
-  const { markConversationAsRead, setSelectedConversationId } = useNotifications();
+  const { markConversationAsRead, setSelectedConversationId } =
+    useNotifications();
   const selectedContactRef = useRef(selectedContact);
+  const fetchedConversations = useRef(new Set());
 
-  // Keep ref in sync with selectedContact
+  
   useEffect(() => {
     selectedContactRef.current = selectedContact;
   }, [selectedContact]);
-  const markAllAsRead = useCallback(async (conversationId) => {
+
+  // WebSocket cleanup
+  useEffect(() => {
+    if (!socket) return;
+    return () => {
+      socket.disconnect();
+    };
+  }, [socket]);
+
+  const markAllAsRead = useCallback(async (contact_id) => {
     try {
       await axios.post(API_ENDPOINTS.CHAT.MARK_AS_READ, {
-        conversation_id: conversationId,
+        contact_id: contact_id,
       });
     } catch (err) {
       console.error("❌ Failed to mark messages as read:", err);
+      toast.error("Failed to mark messages as read.");
     }
   }, []);
 
-  const fetchContacts = useCallback(async () => {
-    if (!user?.customer_id) return;
+  // ===== Fetch Contacts with Cursor Pagination =====
+  const fetchContacts = useCallback(
+    async ({ cursor = null, limit = 10 } = {}) => {
+      if (!user?.customer_id) return;
 
-    try {
-      const response = await axios.get(
-        `${API_ENDPOINTS.CHAT.CONVERSATIONS}?customer_id=${user.customer_id}`,
-        {
+      try {
+        const url = new URL(`${API_BASE}/conversations`);
+        url.searchParams.append("customer_id", user.customer_id);
+        url.searchParams.append("limit", limit);
+        if (cursor) url.searchParams.append("cursor", cursor);
+
+        const response = await axios.get(url.toString(), {
           headers: { "Content-Type": "application/json" },
           withCredentials: true,
-        }
-      );
+        });
 
-      const enriched = await Promise.all(
-        response.data.map(async (c) => {
-          let lastMessage = null;
-          let lastMessageType = null;
-          let lastMessageTime = c.updated_at;
+        const { data = [], nextCursor, hasMore } = response.data;
 
-          if (c.conversation_id) {
-            try {
-              const messagesResponse = await axios.get(
-                `${API_ENDPOINTS.CHAT.MESSAGES}?conversation_id=${c.conversation_id}`,
-                {
-                  headers: { "Content-Type": "application/json" },
-                  withCredentials: true,
-                }
-              );
+        const enriched = data.map((c) => ({
+          contact_id: c.contact_id,
+          name: `${c.first_name} ${c.last_name || ""}`.trim(),
+          country_code: c.country_code,
+          mobile_no: c.mobile_no,
+          image: c.profile_image,
+          updated_at: c.updated_at,
+          active: false,
+          lastMessage: c.last_message,
+          lastMessageType: c.last_message_type,
+          lastMessageTime: c.last_message_time,
+          unreadCount: c.unread_count || 0,
+        }));
 
-              const messages = messagesResponse.data;
-              if (messages?.length > 0) {
-                const latest = messages[messages.length - 1];
-                lastMessage = latest.content || latest.element_name;
-                lastMessageType = latest.message_type;
-                lastMessageTime = latest.sent_at;
-              }
-            } catch (err) {
-              console.error("❌ Error fetching messages:", err);
-            }
-          }
+        setContacts((prev) =>
+          cursor
+            ? [
+                ...prev,
+                ...enriched.filter(
+                  (newC) => !prev.some((p) => p.contact_id === newC.contact_id)
+                ),
+              ]
+            : enriched
+        );
 
-          return {
-            id: c.customer_id,
-            conversation_id: c.conversation_id,
-            name: `${c.first_name} ${c.last_name || ""}`.trim(),
-            country_code: c.country_code,
-            mobile_no: c.mobile_no,
-            image: c.profile_image,
-            updated_at: c.updated_at,
-            active: false,
-            lastMessage,
-            lastMessageType,
-            lastMessageTime,
-            unreadCount: c.unread_count || 0,
-          };
-        })
-      );
-
-      const sorted = enriched.sort(
-        (a, b) =>
-          new Date(b.lastMessageTime || b.updated_at || 0) -
-          new Date(a.lastMessageTime || a.updated_at || 0)
-      );
-
-      setContacts(sorted);
-    } catch (error) {
-      console.error("❌ Failed to fetch contacts:", error);
-    }
-  }, [user?.customer_id, setContacts]);
+        return { nextCursor, hasMore };
+      } catch (error) {
+        console.error("❌ Failed to fetch contacts:", error);
+        return { nextCursor: null, hasMore: false };
+      }
+    },
+    [user?.customer_id, setContacts]
+  );
 
   const fetchMessagesForContact = useCallback(
-    async (conversationId) => {
-      if (!conversationId) return;
+    async (contact_id, { limit = 10, cursor = null } = {}) => {
+      if (!contact_id) return;
 
       try {
         const response = await axios.get(
-          `${API_ENDPOINTS.CHAT.MESSAGES}?conversation_id=${conversationId}`,
+          `${
+            API_ENDPOINTS.CHAT.MESSAGES
+          }?contact_id=${contact_id}&limit=${limit}${
+            cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""
+          }&includeTemplate=true`,
           {
             headers: { "Content-Type": "application/json" },
             withCredentials: true,
           }
         );
 
-        const messages = response.data;
-        setMessages(messages || []);
+        const { messages = [], pagination } = response.data;
+        console.log(messages);
 
-        await markAllAsRead(conversationId);
-        markConversationAsRead(conversationId);
+        if (!cursor) {
+          // 🔹 First load → replace messages
+          setMessages(messages);
+          await markAllAsRead(contact_id);
+          markConversationAsRead(contact_id);
 
-        const latest = messages?.[messages.length - 1] || {};
+          // Update contact last message preview
+          const latest = messages?.[messages.length - 1] || {};
+          setContacts((prev) =>
+            prev.map((c) =>
+              c.contact_id === contact_id
+                ? {
+                    ...c,
+                    lastMessage:
+                      latest.content || latest.element_name || c.lastMessage,
+                    lastMessageType: latest.message_type || c.lastMessageType,
+                    lastMessageTime: latest.sent_at || c.lastMessageTime,
+                    unreadCount: 0,
+                  }
+                : c
+            )
+          );
+        } else {
+          // 🔹 Pagination (scroll up) → prepend older messages
+          setMessages((prev) => [...messages, ...prev]);
+        }
 
-        setContacts((prev) =>
-          prev.map((c) =>
-            c.conversation_id === conversationId
-              ? {
-                ...c,
-                lastMessage: latest.content || latest.element_name || c.lastMessage,
-                lastMessageType: latest.message_type || c.lastMessageType,
-                lastMessageTime: latest.sent_at || c.lastMessageTime,
-                unreadCount: 0,
-              }
-              : c
-          )
-        );
+        return pagination; // return cursor info for next fetch
       } catch (err) {
         console.error("❌ Failed to fetch messages:", err);
       }
@@ -142,82 +152,119 @@ export const useChatLogic = ({
   );
 
   const selectContact = useCallback(
-    (contact) => {
-      if (!contact) return;
+  (contact) => {
+    if (!contact) {
+      console.error("No contact provided to selectContact");
+      return;
+    }
 
-      const currentConversationId = selectedContactRef.current?.conversation_id;
+    console.log("Selecting contact:", {
+      name: contact.name,
+      contact_id: contact.contact_id,
+      mobile_no: contact.mobile_no,
+      currentContact: selectedContactRef.current,
+    });
 
-      // Prevent redundant re-selection
-      if (currentConversationId === contact.conversation_id) {
-        return;
-      }
-
-
-      // Update local state first
+    if (!contact.contact_id) {
+      console.log(`👆 New chat started with ${contact.name}`);
       setSelectedContact(contact);
+      setMessages([]);
+      return;
+    }
 
-      // Update notification context
-      if (setSelectedConversationId) {
-        // Use a small timeout to ensure state updates are processed
-        setTimeout(() => {
-          setSelectedConversationId(contact.conversation_id);
-        }, 0);
-      } else {
-        console.error('setSelectedConversationId is not available');
-      }
+    const currentContact = selectedContactRef.current;
 
-      setContacts((prev) =>
-        prev.map((c) =>
-          c.conversation_id === contact.conversation_id
-            ? { ...c, active: true, unreadCount: 0 }
-            : { ...c, active: false }
-        )
+    // Prevent re-selecting the same contact
+    const isSameContact =
+      currentContact &&
+      ((currentContact.contact_id &&
+        currentContact.contact_id === contact.contact_id) ||
+        (currentContact.mobile_no &&
+          contact.mobile_no &&
+          currentContact.mobile_no === contact.mobile_no));
+
+    if (isSameContact) {
+      console.log(
+        `⚠️ Contact ${contact.name} already selected, no new fetch.`
       );
+      return;
+    }
 
-      if (contact.conversation_id) {
-        fetchMessagesForContact(contact.conversation_id);
-        socket?.emit("join_conversation", String(contact.conversation_id));
-      } else {
-        setMessages([]);
+    console.log(
+      `👆 New contact selected: ${contact.name} (ID: ${
+        contact.contact_id || "new"
+      }, Phone: ${contact.mobile_no || "none"})`
+    );
+
+    setSelectedContact(contact);
+
+    setContacts((prev) =>
+      prev.map((c) => ({
+        ...c,
+        active:
+          (c.contact_id && c.contact_id === contact.contact_id) ||
+          (c.mobile_no &&
+            contact.mobile_no &&
+            c.mobile_no === contact.mobile_no),
+        unreadCount:
+          (c.contact_id && c.contact_id === contact.contact_id) ||
+          (c.mobile_no &&
+            contact.mobile_no &&
+            c.mobile_no === contact.mobile_no)
+            ? 0
+            : c.unreadCount || 0,
+      }))
+    );
+
+    if (contact.contact_id) {
+      console.log("Fetching messages for contact:", contact.contact_id);
+      fetchMessagesForContact(contact.contact_id);
+      socket?.emit("join_contact", String(contact.contact_id)); // renamed for clarity
+    }
+  },
+  [
+    socket,
+    fetchMessagesForContact,
+    setSelectedContact,
+    setContacts,
+    setMessages,
+  ]
+);
+
+const handleIncomingMessage = useCallback(
+  (msg) => {
+    const isFromSelectedChat =
+      selectedContact?.contact_id === msg.contact_id;
+
+    if (!isFromSelectedChat) {
+      const contact = contacts.find((c) => c.contact_id === msg.contact_id);
+      if (contact) {
+        toast.info(`New message from ${contact.name}`);
       }
-    },
-    [socket, fetchMessagesForContact, setSelectedContact, setContacts, setMessages, selectedContact]
-  );
+    }
 
-  const handleIncomingMessage = useCallback(
-    (msg) => {
-      const isFromSelectedChat = selectedContact?.conversation_id === msg.conversation_id;
-
-      // Only show toast for messages not from the currently selected chat
-      if (!isFromSelectedChat) {
-        // Find the contact to get their name for the notification
-        const contact = contacts.find(c => c.conversation_id === msg.conversation_id);
-        if (contact) {
-          toast.info(`New message from ${contact.name}`);
+    setContacts((prev) =>
+      prev.map((c) => {
+        if (c.contact_id === msg.contact_id) {
+          return {
+            ...c,
+            lastMessage: msg.content || msg.element_name,
+            lastMessageType: msg.message_type,
+            lastMessageTime: msg.sent_at,
+            unreadCount: isFromSelectedChat ? 0 : (c.unreadCount || 0) + 1,
+          };
         }
-      }
+        return c;
+      })
+    );
 
-      setContacts((prev) =>
-        prev.map((c) => {
-          if (c.conversation_id === msg.conversation_id) {
-            return {
-              ...c,
-              lastMessage: msg.content || msg.element_name,
-              lastMessageType: msg.message_type,
-              lastMessageTime: msg.sent_at,
-              unreadCount: isFromSelectedChat ? 0 : (c.unreadCount || 0) + 1,
-            };
-          }
-          return c;
-        })
-      );
-
-      if (isFromSelectedChat) {
-        setMessages((prev) => [...prev, msg]);
-      }
-    },
-    [setContacts, setMessages, selectedContact, contacts]
-  );
+    if (isFromSelectedChat) {
+      setMessages((prev) => [...prev, msg]);
+      fetchedConversations.current.delete(msg.contact_id);
+    }
+  },
+  [setContacts, setMessages, selectedContact, contacts]
+);
 
   const setupSocketListener = useCallback(() => {
     if (!socket) return;
@@ -227,90 +274,94 @@ export const useChatLogic = ({
     };
   }, [socket, handleIncomingMessage]);
 
-  const sendMessage = useCallback(
 
+
+  
+
+  const sendMessage = useCallback(
     async (input) => {
       if (permissions && !permissions.canSendMessages) return;
-      if (!selectedContact?.conversation_id) return;
+      if (!selectedContact) return;
 
-      const newMessage = { conversation_id: selectedContact.conversation_id };
+      let contact_id = selectedContact.contact_id;
+      let customer_id = user.customer_id;
+      let phoneNumber = `${selectedContact.country_code}${selectedContact.mobile_no}`;
+
+      const newMessage = {
+        contact_id,
+        customer_id,
+        phoneNumber,
+      };
       let messageType = "text";
 
       if (typeof input === "string") {
+        // Free-form text
         newMessage.message = input;
       } else if (input.template_name) {
-        newMessage.element_name = input.template_name;
+        // Template message
         messageType = "template";
-        if (Array.isArray(input.parameters)) {
+        newMessage.element_name = input.template_name;
+
+        // Add parameters
+        if (Array.isArray(input.parameters) && input.parameters.length > 0) {
           newMessage.parameters = input.parameters;
         }
-        // Add headerType and headerValue for media
+
+        // Handle header (image, video, document, or text)
         if (input.headerType && input.headerValue) {
           newMessage.headerType = input.headerType;
           newMessage.headerValue = input.headerValue;
-        } else if (input.template_name) {
-  newMessage.element_name = input.template_name;
-  messageType = "template";
+          newMessage.headerIsId = input.headerIsId;
+        } else {
+          // Try to auto-detect from parameters if no header is set
+          const mediaUrl = input.parameters?.find((url) =>
+            url.match(/\.(jpeg|png|mp4|pdf|docx?)$/i)
+          );
 
-  if (Array.isArray(input.parameters)) {
-    newMessage.parameters = input.parameters;
-  }
-
-  // Add headerType and headerValue for media
-  if (input.headerType && input.headerValue) {
-    newMessage.headerType = input.headerType;
-    newMessage.headerValue = input.headerValue;
-  } else if (Array.isArray(input.parameters) && input.parameters.length > 0) {
-    const mediaUrl = input.parameters.find((url) =>
-      url.match(/\.jpg|\.jpeg|\.png|\.gif|\.mp4|\.mov|\.avi|\.pdf|\.doc|\.docx/i)
-    );
-    if (mediaUrl) {
-      if (mediaUrl.match(/\.jpg|\.jpeg|\.png|\.gif/i)) {
-        newMessage.headerType = "image";
-        newMessage.headerValue = mediaUrl;
-      } else if (mediaUrl.match(/\.mp4|\.mov|\.avi/i)) {
-        newMessage.headerType = "video";
-        newMessage.headerValue = mediaUrl;
-      } else if (mediaUrl.match(/\.pdf|\.doc|\.docx/i)) {
-        newMessage.headerType = "document";
-        newMessage.headerValue = mediaUrl;
-      }
-      // Remove media URL from parameters to avoid duplication
-      newMessage.parameters = input.parameters.filter((p) => p !== mediaUrl);
-    }
-  }
-
-  // ✅ Add language_Code if present
-  if (input.language_Code) {
-    newMessage.language_Code = input.language_Code;
-  }
-}
+          if (mediaUrl) {
+            if (/\.(jpeg|png)$/i.test(mediaUrl)) {
+              newMessage.headerType = "image";
+            } else if (/\.(mp4)$/i.test(mediaUrl)) {
+              newMessage.headerType = "video";
+            } else if (/\.(pdf|docx?)$/i.test(mediaUrl)) {
+              newMessage.headerType = "document";
+            }
+            newMessage.headerValue = mediaUrl;
+            newMessage.headerIsId = input.headerIsId; 
+            newMessage.parameters = input.parameters.filter(
+              (p) => p !== mediaUrl
+            );
+          }
+        }        
+        if (input.language_code) {
+          newMessage.language_code = input.language_code;
+        }
       } else {
         console.warn("Invalid message input");
         return;
       }
 
       try {
+        console.log("🚀 Sending message payload:", newMessage);
         const response = await axios.post(`${API_BASE}/sendmessage`, {
           ...newMessage,
           message_type: messageType,
         });
-        console.log('Sending message payload:', newMessage);
-        fetchMessagesForContact(selectedContact.conversation_id);
+
+        // Update contact list preview
+        fetchMessagesForContact(selectedContact.contact_id);
         setContacts((prev) =>
           prev
             .map((c) =>
-              c.conversation_id === selectedContact.conversation_id
+                 c.contact_id === selectedContact.contact_id
                 ? {
-                  ...c,
-                  lastMessage:
-                    typeof input === "string"
-                      ? input
-                      : input.template_name,
-                  lastMessageType: messageType,
-                  lastMessageTime: new Date().toISOString(),
-                  unreadCount: 0,
-                }
+                    ...c,
+                    lastMessage:
+                      typeof input === "string" ? input : input.template_name,
+                    lastMessageType: messageType,
+                    lastMessageTime: new Date().toISOString(),
+                    unreadCount: 0,
+                  }
                 : c
             )
             .sort(
@@ -320,61 +371,74 @@ export const useChatLogic = ({
             )
         );
 
-        toast.success("Message sent successfully");
+        // toast.success("Message sent successfully");
       } catch (err) {
-        console.error("❌ Error sending message:", err);
+        console.error("❌ Error sending message:", err.response?.data || err);
         toast.error("Failed to send message");
       }
     },
     [selectedContact, setContacts, fetchMessagesForContact, permissions]
   );
 
-  const deleteChat = useCallback(
-    async (contact) => {
-      if (permissions && !permissions.canDeleteChats) return;
-      const conversationId = contact.conversation_id;
-      const customerId = user?.customer_id;
+ const deleteChat = useCallback(
+  async (contact) => {
+    if (!permissions?.canDeleteChats) {
+      toast.error("You do not have permission to delete chats.");
+      return;
+    }
 
-      if (!conversationId || !customerId) return;
+    const contactId = contact.contact_id;
+    const customerId = user?.customer_id;
 
-      // Clear selected conversation if we're deleting the current one
-      if (selectedContact?.conversation_id === conversationId) {
-        setSelectedConversationId(null);
-      }
+    if (!contactId || !customerId) {
+      toast.error("Invalid contact or user data.");
+      return;
+    }
 
-      try {
-        const response = await axios.delete(
-          API_ENDPOINTS.CHAT.DELETE_CONVERSATION,
-          {
-            data: {
-              conversation_ids: [conversationId],
-              customer_id: customerId,
-            },
-            headers: {
-              "Content-Type": "application/json",
-            },
-            withCredentials: true,
-          }
-        );
+    if (selectedContact?.contact_id === contactId) {
+      setSelectedConversationId(null);
+    }
 
-        const result = response.data;
-        if (response.status === 200 && result.success) {
-          setContacts((prev) =>
-            prev.filter((c) => c.conversation_id !== conversationId)
-          );
-          setSelectedContact(null);
-          setMessages([]);
-        } else {
-          toast.error("Failed to delete chat: " + result.message);
+    try {
+      const response = await axios.delete(
+        API_ENDPOINTS.CHAT.DELETE_CONVERSATION,
+        {
+          data: {
+            contact_ids: [contactId],   // ✅ correct field
+            customer_id: customerId,
+          },
+          headers: { "Content-Type": "application/json" },
+          withCredentials: true,
         }
-      } catch (err) {
-        console.error("❌ Error deleting chat:", err);
-        toast.error("Something went wrong while deleting the chat.");
-      }
+      );
 
-    },
-    [user?.customer_id, setContacts, setMessages, setSelectedContact, permissions]
-  );
+      if (response.status === 200 && response.data.success) {
+        fetchedConversations.current.delete(contactId);
+        setContacts((prev) =>
+          prev.filter((c) => c.contact_id !== contactId)  // ✅ use contact_id
+        );
+        setSelectedContact(null);
+        setMessages([]);
+        fetchContacts();
+        toast.success("Chat deleted successfully");
+      } else {
+        toast.error("Failed to delete chat: " + response.data.message);
+      }
+    } catch (err) {
+      console.error("❌ Error deleting chat:", err);
+      toast.error("Something went wrong while deleting the chat.");
+    }
+  },
+  [
+    user?.customer_id,
+    setContacts,
+    setMessages,
+    setSelectedContact,
+    permissions,
+    fetchContacts,
+  ]
+);
+
 
   return {
     fetchContacts,

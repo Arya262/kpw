@@ -14,6 +14,7 @@ import { useTemplates } from "../../hooks/useTemplates";
 import { AnimatePresence, motion } from "framer-motion";
 import SkeletonCard from "../../components/SkeletonCard";
 import TemplateDrawer from "../../components/TemplateDrawer";
+import SearchInput from "../shared/SearchInput";
 
 const ExploreTemplates = () => {
   const navigate = useNavigate();
@@ -28,6 +29,15 @@ const ExploreTemplates = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Filter templates based on search term
+  const filteredTemplates = templates.filter(
+    (template) =>
+      template.element_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      template.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      template.language?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const handleAddTemplate = async (newTemplate) => {
     if (!permissions.canAddTemplate) {
@@ -78,21 +88,31 @@ const ExploreTemplates = () => {
     template.container_meta.mediaUrl.trim() !== "";
 
   return (
-    <div className="p-6 min-h-screen bg-gray-50">
+    
+    <div className="p-0 sm:p-6 min-h-screen bg-gray-50">
       <ToastContainer position="top-right" autoClose={3000} />
-
-      {/* Header */}
-      <div className="flex justify-between items-center mb-8 sticky top-0 bg-gray-50/90 backdrop-blur-md z-20 py-3 shadow-sm">
-        <h2 className="text-3xl font-bold tracking-tight text-gray-800 flex items-center gap-2">
-           Explore <span className="text-[#0AA89E]">Templates</span>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8 sticky top-0 bg-gray-50/90 backdrop-blur-md z-20 py-3 shadow-sm">
+        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-800 flex items-center gap-2">
+          Explore <span className="text-[#0AA89E]">Templates</span>
         </h2>
-        <button
-          className="bg-gradient-to-r from-[#0AA89E] to-cyan-500 text-white flex items-center gap-2 px-5 py-2.5 rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all"
-          onClick={() => setIsModalOpen(true)}
-        >
-          <img src={vendor} alt="plus sign" className="w-5 h-5" />
-          Add Template
-        </button>
+
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+          <div className="w-full sm:w-64">
+            <SearchInput
+              placeholder="Search templates..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          <button
+            className="bg-gradient-to-r from-[#0AA89E] to-cyan-500 text-white flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all"
+            onClick={() => setIsModalOpen(true)}
+          >
+            <img src={vendor} alt="plus sign" className="w-5 h-5" />
+            Add Template
+          </button>
+        </div>
       </div>
 
       {/* Content */}
@@ -104,7 +124,7 @@ const ExploreTemplates = () => {
         </div>
       ) : error ? (
         <p className="text-red-500">{error}</p>
-      ) : templates.length === 0 ? (
+      ) : templates.length === 0 || filteredTemplates.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center text-gray-500">
           <img
             src="/illustrations/empty.svg"
@@ -121,7 +141,7 @@ const ExploreTemplates = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {templates.map((template) => (
+          {filteredTemplates.map((template) => (
             <motion.div
               key={template.id}
               whileHover={{ y: -8, scale: 1.02 }}
@@ -161,7 +181,7 @@ const ExploreTemplates = () => {
                           : "bg-gray-100 text-gray-600"
                       }`}
                     >
-                       {template.category}
+                      {template.category}
                     </span>
                   </div>
 
@@ -227,6 +247,7 @@ const ExploreTemplates = () => {
       <AnimatePresence>
         {isModalOpen && (
           <>
+            {/* Backdrop */}
             <motion.div
               key="backdrop"
               initial={{ opacity: 0 }}
@@ -235,12 +256,14 @@ const ExploreTemplates = () => {
               className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
               onClick={() => setIsModalOpen(false)}
             />
+
+            {/* Modal sliding in from right */}
             <motion.div
               key="modal"
-              initial={{ y: "-100vh", opacity: 0 }}
-              animate={{ y: "0", opacity: 1 }}
-              exit={{ y: "-100vh", opacity: 0 }}
-              transition={{ type: "spring", stiffness: 120 }}
+              initial={{ x: "100%", opacity: 0 }}
+              animate={{ x: "0%", opacity: 1 }}
+              exit={{ x: "100%", opacity: 0 }}
+              transition={{ type: "spring", stiffness: 120, damping: 20 }}
               className="fixed inset-0 flex items-center justify-center z-50"
               onClick={(e) => e.stopPropagation()}
             >

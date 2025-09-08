@@ -132,11 +132,6 @@ export default function MessagingAnalytics({ usageHistory }) {
         const data = await response.json();
         setBroadcasts(Array.isArray(data.broadcasts) ? data.broadcasts : []);
       } catch (err) {
-        // console.error("Error fetching broadcasts:", err);
-        // toast.error("Failed to load broadcast data. Please try again.", {
-        //   position: "top-right",
-        //   autoClose: 5000,
-        // });
       }
     };
     fetchBroadcasts();
@@ -529,169 +524,173 @@ export default function MessagingAnalytics({ usageHistory }) {
           </p>
         ) : (
           <>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
-              <ChartBlock
-                title="Total Messaging Volume"
-                dataKey="total_messages"
-                stroke="#8884d8"
-                data={filteredData}
+<div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+  <ChartBlock
+    title="Total Messaging Volume"
+    dataKey="total_messages"
+    stroke="#8884d8"
+    data={filteredData}
+  />
+
+  {/* Cost Distribution */}
+  <div className="rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 hover:shadow-lg hover:scale-[1.02] transition">
+    <h2 className="text-lg sm:text-xl font-semibold border-b pb-3 border-gray-300 mb-4">
+      Cost Distribution
+    </h2>
+    <div className="flex flex-col sm:flex-row items-center gap-4">
+      <ResponsiveContainer width="100%" height={200}>
+        <PieChart>
+          <Pie
+            data={costPieData}
+            dataKey="value"
+            nameKey="name"
+            cx="50%"
+            cy="50%"
+            outerRadius={60}
+            label
+          >
+            {costPieData.map((_, index) => (
+              <Cell
+                key={index}
+                fill={COST_COLORS[index % COST_COLORS.length]}
               />
-              <div className="rounded-lg shadow-sm hover:shadow-lg hover:scale-103 border border-gray-200  px-3">
-                <h2 className="text-xl font-semibold mb-4 px-4">
-                  Cost Distribution
-                </h2>
-                <div className="flex items-center">
-                  <ResponsiveContainer width="100%" height={200}>
-                    <PieChart>
-                      <Pie
-                        data={costPieData}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={60}
-                        label
-                      >
-                        {costPieData.map((_, index) => (
-                          <Cell
-                            key={index}
-                            fill={COST_COLORS[index % COST_COLORS.length]}
-                          />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        formatter={(value, name) => [`₹${value}`, name]}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div>
-                    {costPieData.map((costPieData, index) => (
-                      <div key={costPieData.name} className="text-sm">
-                        <span
-                          style={{
-                            color: COST_COLORS[index % COST_COLORS.length],
-                          }}
-                        >
-                          {costPieData.name} :{" "}
-                        </span>
-                        <span>{costPieData.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <div className="rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-lg hover:scale-103">
-                <h2 className="text-xl font-semibold border-b pb-4 border-gray-300 px-4 mb-3">
-                  Campaign Details
-                </h2>
-                <div className="grid grid-cols-1 gap-4">
-                  {campData.map((camp) => (
-                    <div
-                      key={camp.label}
-                      className="flex items-center justify-between p-4 border-b border-gray-200"
-                    >
-                      <div className="flex items-center gap-3">
-                        <camp.icon className={`${camp.color} w-5 h-5`} />
-                        <h3 className="text-md font-medium text-gray-700">
-                          {camp.label}
-                        </h3>
-                      </div>
-                      <p className={`text-md ${camp.color}`}>{camp.count}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="mb-10">
-              <div className="rounded-lg shadow-sm hover:shadow-lg hover:scale-103 border border-gray-200 p-6">
-                <h2 className="text-xl font-semibold mb-4">
-                  Messaging & Fees Overview
-                </h2>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart
-                    data={filteredData}
-                    className="text-xs"
-                    margin={{ top: 5, right: 30, left: 0, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="1 2" />
-                    <XAxis dataKey="usage_date" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Line
-                      type="natural"
-                      dataKey="gupshup_fees"
-                      stroke="#82ca9d"
-                      name="Gupshup Fees"
-                      strokeWidth={1}
-                    />
-                    <Line
-                      type="natural"
-                      dataKey="meta_fees"
-                      stroke="#ffc658"
-                      name="Meta Fees"
-                      strokeWidth={1}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="rounded-lg shadow-sm hover:shadow-lg hover:scale-103 border border-gray-200 py-6 px-3">
-                <h2 className="text-xl font-semibold mb-4 px-4">
-                  Message Distribution
-                </h2>
-                <div className="flex items-center">
-                  <ResponsiveContainer width="100%" height={200}>
-                    <PieChart>
-                      <Pie
-                        data={messagePieData}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={30}
-                        outerRadius={60}
-                        label
-                      >
-                        {messagePieData.map((_, index) => (
-                          <Cell
-                            key={index}
-                            fill={MESSAGE_COLORS[index % MESSAGE_COLORS.length]}
-                          />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        formatter={(value, name) => [`${value} messages`, name]}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div>
-                    {messagePieData.map((messagePieData, index) => (
-                      <div
-                        key={messagePieData.name}
-                        className="text-sm border p-3 mb-3 text-center rounded-md"
-                        style={{
-                          borderColor:
-                            MESSAGE_COLORS[index % MESSAGE_COLORS.length],
-                        }}
-                      >
-                        <span
-                          style={{
-                            color:
-                              MESSAGE_COLORS[index % MESSAGE_COLORS.length],
-                          }}
-                        >
-                          {messagePieData.name} :
-                        </span>
-                        <span>{messagePieData.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <ContactPart />
-            </div>
+            ))}
+          </Pie>
+          <Tooltip formatter={(value, name) => [`₹${value}`, name]} />
+        </PieChart>
+      </ResponsiveContainer>
+      <div className="flex flex-col gap-2">
+        {costPieData.map((cost, index) => (
+          <div key={cost.name} className="text-sm">
+            <span
+              style={{
+                color: COST_COLORS[index % COST_COLORS.length],
+              }}
+            >
+              {cost.name} :
+            </span>{" "}
+            <span>{cost.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+
+  {/* Campaign Details */}
+  <div className="rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 hover:shadow-lg hover:scale-[1.02] transition">
+    <h2 className="text-lg sm:text-xl font-semibold border-b pb-3 border-gray-300 mb-4">
+      Campaign Details
+    </h2>
+    <div className="grid grid-cols-1 gap-3">
+      {campData.map((camp) => (
+        <div
+          key={camp.label}
+          className="flex items-center justify-between p-3 border-b border-gray-200 last:border-none"
+        >
+          <div className="flex items-center gap-3">
+            <camp.icon className={`${camp.color} w-5 h-5`} />
+            <h3 className="text-sm sm:text-base font-medium text-gray-700">
+              {camp.label}
+            </h3>
+          </div>
+          <p className={`text-sm sm:text-base ${camp.color}`}>{camp.count}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+</div>
+
+{/* Messaging & Fees Overview */}
+<div className="mb-8">
+  <div className="rounded-xl shadow-sm hover:shadow-lg hover:scale-[1.02] transition border border-gray-200 p-4 sm:p-6">
+    <h2 className="text-lg sm:text-xl font-semibold mb-4">
+      Messaging & Fees Overview
+    </h2>
+    <ResponsiveContainer width="100%" height={300}>
+      <LineChart
+        data={filteredData}
+        className="text-xs"
+        margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+      >
+        <CartesianGrid strokeDasharray="1 2" />
+        <XAxis dataKey="usage_date" />
+        <YAxis />
+        <Tooltip />
+        <Legend />
+        <Line
+          type="natural"
+          dataKey="gupshup_fees"
+          stroke="#82ca9d"
+          name="Gupshup Fees"
+          strokeWidth={1}
+        />
+        <Line
+          type="natural"
+          dataKey="meta_fees"
+          stroke="#ffc658"
+          name="Meta Fees"
+          strokeWidth={1}
+        />
+      </LineChart>
+    </ResponsiveContainer>
+  </div>
+</div>
+
+{/* Message Distribution + Contact */}
+<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div className="rounded-xl shadow-sm hover:shadow-lg hover:scale-[1.02] transition border border-gray-200 p-4 sm:p-6">
+    <h2 className="text-lg sm:text-xl font-semibold mb-4">
+      Message Distribution
+    </h2>
+    <div className="flex flex-col sm:flex-row items-center gap-4">
+      <ResponsiveContainer width="100%" height={200}>
+        <PieChart>
+          <Pie
+            data={messagePieData}
+            dataKey="value"
+            nameKey="name"
+            cx="50%"
+            cy="50%"
+            innerRadius={30}
+            outerRadius={60}
+            label
+          >
+            {messagePieData.map((_, index) => (
+              <Cell
+                key={index}
+                fill={MESSAGE_COLORS[index % MESSAGE_COLORS.length]}
+              />
+            ))}
+          </Pie>
+          <Tooltip
+            formatter={(value, name) => [`${value} messages`, name]}
+          />
+        </PieChart>
+      </ResponsiveContainer>
+      <div className="flex flex-col gap-2">
+        {messagePieData.map((msg, index) => (
+          <div
+            key={msg.name}
+            className="text-sm border px-3 py-2 rounded-md text-center"
+            style={{
+              borderColor: MESSAGE_COLORS[index % MESSAGE_COLORS.length],
+            }}
+          >
+            <span
+              style={{
+                color: MESSAGE_COLORS[index % MESSAGE_COLORS.length],
+              }}
+            >
+              {msg.name} :
+            </span>{" "}
+            <span>{msg.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+  <ContactPart />
+</div>
           </>
         )}
       </div>
@@ -703,29 +702,35 @@ function ChartBlock({ title, dataKey, stroke, data }) {
   const isCurrency = dataKey.includes("fees");
 
   return (
-    <div className="rounded-lg shadow-sm hover:shadow-lg hover:scale-103 border border-gray-200 p-5 text-xs">
-      <h2 className="text-xl font-semibold mb-4">{title}</h2>
-      <ResponsiveContainer width="100%" height={250}>
-        <LineChart
-          data={data}
-          margin={{ top: 5, right: 30, left: 0, bottom: 5 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="usage_date" />
-          <YAxis tickFormatter={(val) => (isCurrency ? `₹${val}` : val)} />
-          <Tooltip
-            formatter={(value) =>
-              typeof value === "number"
-                ? isCurrency
-                  ? `₹${value}`
-                  : value
-                : value
-            }
-          />
-          <Legend />
-          <Line type="natural" dataKey={dataKey} stroke={stroke} name={title} />
-        </LineChart>
-      </ResponsiveContainer>
-    </div>
+<div className="rounded-xl shadow-sm hover:shadow-lg hover:scale-[1.02] transition border border-gray-200 p-4 sm:p-6">
+  <h2 className="text-lg sm:text-xl font-semibold mb-4">{title}</h2>
+  <ResponsiveContainer width="100%" height={250}>
+    <LineChart
+      data={data}
+      margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+    >
+      <CartesianGrid strokeDasharray="3 3" />
+      <XAxis dataKey="usage_date" />
+      <YAxis tickFormatter={(val) => (isCurrency ? `₹${val}` : val)} />
+      <Tooltip
+        formatter={(value) =>
+          typeof value === "number"
+            ? isCurrency
+              ? `₹${value}`
+              : value
+            : value
+        }
+      />
+      <Legend />
+      <Line
+        type="natural"
+        dataKey={dataKey}
+        stroke={stroke}
+        strokeWidth={1.5}
+        name={title}
+      />
+    </LineChart>
+  </ResponsiveContainer>
+</div>
   );
 }

@@ -10,8 +10,8 @@ import "react-toastify/dist/ReactToastify.css";
 import EditContact from "./EditContact";
 import SingleDeleteDialog from "./SingleDeleteDialog";
 import { getPermissions } from "../../utils/getPermissions";
-import Loader from "../../components/Loader"; // Import the Loader component
-
+import Loader from "../../components/Loader";
+import Pagination from "../shared/Pagination";
 const formatDate = (dateString) => {
   if (!dateString) return "N/A";
 
@@ -232,11 +232,18 @@ export default function ContactList() {
   const [editContact, setEditContact] = useState(null);
   const [deleteContact, setDeleteContact] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+    itemsPerPage: 10,
+  });
 
-  const fetchContacts = async () => {
+  const fetchContacts = async (page = 1, limit = 10) => {
     try {
+      setLoading(true);
       const response = await fetch(
-        `${API_ENDPOINTS.CONTACTS.GET_ALL}?customer_id=${user?.customer_id}`,
+        `${API_ENDPOINTS.CONTACTS.GET_ALL}?customer_id=${user?.customer_id}&page=${page}&limit=${limit}`,
         {
           method: "GET",
           credentials: "include",
@@ -247,32 +254,41 @@ export default function ContactList() {
         throw new Error("Unauthorized or failed to fetch");
       }
 
-      const data = await response.json();
-
-      const transformed = data.map((item) => ({
+      const result = await response.json();
+      const contacts = result.data || [];
+      const transformed = contacts.map((item) => ({
         ...item,
-        status: "Opted-in", // Default status for all contacts
-        contact_id: item.contact_id,
-        customer_id: item.customer_id,
+        status: "Opted-in",
+        customer_id: user?.customer_id,
         date: formatDate(item.created_at),
         number: `${item.country_code || ""} ${item.mobile_no}`,
         fullName: `${item.first_name} ${item.last_name || ""}`.trim(),
       }));
 
       setContacts(transformed);
-      setLoading(false);
+
+      // Use backend pagination values
+      if (result.pagination) {
+        setPagination({
+          currentPage: result.pagination.page || page,
+          totalPages: result.pagination.totalPages,
+          totalItems: result.pagination.total,
+          itemsPerPage: limit,
+        });
+      }
     } catch (err) {
-      console.error("Failed to fetch contacts:", err);
+      handleApiError(err, "Failed to fetch contacts");
+    } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchContacts();
+    fetchContacts(1, 10);
   }, []);
 
   const filterCounts = {
-    All: contacts.length,
+    All: pagination.totalItems,
     "Opted-in": contacts.filter((c) => c.status === "Opted-in").length,
     "Opted-Out": contacts.filter((c) => c.status === "Opted-Out").length,
   };
@@ -282,18 +298,32 @@ export default function ContactList() {
     return c.status === filter;
   });
 
-  // Filtered contacts based on search term
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= pagination.totalPages) {
+      setPagination((prev) => ({ ...prev, currentPage: newPage }));
+      fetchContacts(newPage, pagination.itemsPerPage);
+    }
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage) => {
+    setPagination((prev) => ({
+      ...prev,
+      itemsPerPage: newItemsPerPage,
+      currentPage: 1,
+    }));
+    fetchContacts(1, newItemsPerPage);
+  };
+
   const displayedContacts = filteredContacts.filter(
     (c) =>
       c.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.number.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // For 'User' role, only allow edit/delete for own contacts
   const canEditContact = (contact) => {
     if (!permissions.canEdit) return false;
     if (user?.role?.toLowerCase?.() === "user") {
-      return contact.created_by === user?.id; 
+      return contact.created_by === user?.id;
     }
     return true;
   };
@@ -306,8 +336,6 @@ export default function ContactList() {
   };
 
   const filterButtons = ["All", "Opted-in", "Opted-Out"];
-
-  // Handle Select All checkbox change
   const handleSelectAllChange = (event) => {
     if (!permissions.canDelete) return;
     const checked = event.target.checked;
@@ -323,7 +351,6 @@ export default function ContactList() {
     setSelectedRows(newSelected);
   };
 
-  // Handle individual checkbox change
   const handleCheckboxChange = (idx, event) => {
     if (!canDeleteContact(displayedContacts[idx])) return;
     setSelectedRows((prev) => ({
@@ -414,7 +441,6 @@ export default function ContactList() {
         return contact?.contact_id;
       });
 
-
     try {
       setIsDeleting(true);
       setError(null);
@@ -436,13 +462,9 @@ export default function ContactList() {
         throw new Error(errorData.message || "Failed to delete contacts");
       }
 
-      // Refresh the contacts list
       await fetchContacts();
-      // Reset selection
       setSelectedRows({});
       setSelectAll(false);
-
-      // Show success toast
       const deletedCount = selectedIds.length;
       toast.success(
         `${deletedCount} contact${
@@ -461,8 +483,6 @@ export default function ContactList() {
     } catch (error) {
       console.error("Error deleting contacts:", error);
       setError(error.message || "Failed to delete contacts. Please try again.");
-
-      // Show error toast
       toast.error(
         error.message || "Failed to delete contacts. Please try again.",
         {
@@ -582,72 +602,82 @@ export default function ContactList() {
   };
 
   return (
-    <div className="flex-1">
-      {error && (
-        <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
-          {error}
-          <button
-            onClick={() => setError(null)}
-            className="float-right font-bold"
-          >
-            ×
-          </button>
-        </div>
-      )}
-      <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
-        <div className="flex items-center gap-4 flex-wrap">
-          <h2 className="text-xl font-bold">Contacts</h2>
-          {permissions.canSeeFilters && (
-            <div className="flex gap-2 flex-wrap">
-              {filterButtons.map((btn) => (
-                <button
-                  key={btn}
-                  onClick={() => setFilter(btn)}
-                  className={`px-4 py-2 min-h-[40px] rounded-md text-sm font-medium transition cursor-pointer 
-                    ${
-                      filter === btn
-                        ? "bg-[#0AA89E] text-white"
-                        : "text-gray-700 hover:text-[#0AA89E]"
-                    }`}
-                >
-                  {btn} ({filterCounts[btn]})
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-        {permissions.canSeeFilters && (
-          <div className="relative max-w-xs ml-auto">
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by name or number..."
-              aria-label="Search"
-              className="pl-3 pr-10 py-2 border border-gray-300 text-sm rounded-md w-full focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400"
-            />
-            <svg
-              className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              strokeWidth="2"
+    <>
+      <div className="flex-1">
+        {error && (
+          <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded relative">
+            {error}
+            <button
+              onClick={() => setError(null)}
+              className="absolute right-3 top-3 font-bold"
             >
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
+              ×
+            </button>
           </div>
         )}
-        {/* Always show Add Contact button, enforce permission in handler */}
-        <button
-          className="bg-[#0AA89E] hover:bg-[#0AA89E] text-white flex items-center gap-2 px-4 py-2 rounded cursor-pointer"
-          onClick={permissions.canAdd && permissions.canAccessModals ? openPopup : handleUnauthorizedAdd}
-        >
-          <img src={vendor} alt="plus sign" className="w-5 h-5" />
-          Add Contact
-        </button>
-      </div>
 
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
+          {/* Left Section: Title + Filters */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-wrap">
+            <h2 className="text-lg sm:text-xl font-bold">Contacts</h2>
+
+            {permissions.canSeeFilters && (
+              <div className="flex gap-2 flex-wrap">
+                {filterButtons.map((btn) => (
+                  <button
+                    key={btn}
+                    onClick={() => setFilter(btn)}
+                    className={`px-3 sm:px-4 py-2 min-h-[38px] rounded-md text-sm font-medium transition cursor-pointer 
+                ${
+                  filter === btn
+                    ? "bg-[#0AA89E] text-white"
+                    : "text-gray-700 hover:text-[#0AA89E]"
+                }`}
+                  >
+                    {btn} ({filterCounts[btn]})
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+            {permissions.canSeeFilters && (
+              <div className="relative w-full sm:w-64">
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search by name or number..."
+                  aria-label="Search"
+                  className="pl-3 pr-10 py-2 border border-gray-300 text-sm rounded-md w-full focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400"
+                />
+                <svg
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  strokeWidth="2"
+                >
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+              </div>
+            )}
+
+            <button
+              className="bg-[#0AA89E] hover:bg-[#0AA89E]/90 text-white flex items-center justify-center gap-2 px-4 py-2 rounded-md transition w-full sm:w-auto"
+              onClick={
+                permissions.canAdd && permissions.canAccessModals
+                  ? openPopup
+                  : handleUnauthorizedAdd
+              }
+            >
+              <img src={vendor} alt="plus sign" className="w-5 h-5" />
+              Add Contact
+            </button>
+          </div>
+        </div>
+      </div>
       <div className="overflow-x-auto">
         <div className="min-w-[900px] bg-white rounded-2xl shadow-[0px_-0.91px_3.66px_0px_#00000042] overflow-hidden ">
           <table className="w-full text-sm text-center overflow-hidden table-auto">
@@ -667,19 +697,20 @@ export default function ContactList() {
                 ) : (
                   <th className="px-2 py-3 sm:px-6"></th>
                 )}
-                {permissions.canDelete && Object.values(selectedRows).some(Boolean) && (
-                  <th colSpan="6" className="px-2 py-3 sm:px-6">
-                    <div className="flex justify-center">
-                      <button
-                        onClick={handleDeleteClick}
-                        disabled={isDeleting}
-                        className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200"
-                      >
-                        Delete Selected
-                      </button>
-                    </div>
-                  </th>
-                )}
+                {permissions.canDelete &&
+                  Object.values(selectedRows).some(Boolean) && (
+                    <th colSpan="6" className="px-2 py-3 sm:px-6">
+                      <div className="flex justify-center">
+                        <button
+                          onClick={handleDeleteClick}
+                          disabled={isDeleting}
+                          className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200"
+                        >
+                          Delete Selected
+                        </button>
+                      </div>
+                    </th>
+                  )}
                 {!Object.values(selectedRows).some(Boolean) && (
                   <>
                     <th className="px-2 py-3 sm:px-6 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">
@@ -713,8 +744,11 @@ export default function ContactList() {
                 </tr>
               ) : displayedContacts.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="text-center py-4 text-gray-500 font-medium">
-                     {/* <img
+                  <td
+                    colSpan="7"
+                    className="text-center py-4 text-gray-500 font-medium"
+                  >
+                    {/* <img
                         src="/no_data.14591486.svg"
                         alt="No data available"
                         className="w-full h-72 mb-4 opacity-80"
@@ -729,8 +763,16 @@ export default function ContactList() {
                     contact={contact}
                     isChecked={!!selectedRows[idx]}
                     onCheckboxChange={(e) => handleCheckboxChange(idx, e)}
-                    onEditClick={permissions.canEdit && canEditContact(contact) ? setEditContact : handleUnauthorizedEdit}
-                    onDeleteClick={permissions.canDelete && canDeleteContact(contact) ? setDeleteContact : handleUnauthorizedDelete}
+                    onEditClick={
+                      permissions.canEdit && canEditContact(contact)
+                        ? setEditContact
+                        : handleUnauthorizedEdit
+                    }
+                    onDeleteClick={
+                      permissions.canDelete && canDeleteContact(contact)
+                        ? setDeleteContact
+                        : handleUnauthorizedDelete
+                    }
                     canEdit={true}
                     canDelete={true}
                     userId={user?.id}
@@ -740,6 +782,18 @@ export default function ContactList() {
               )}
             </tbody>
           </table>
+                                {pagination.totalItems > 0 && (
+            <div className="px-4 py-2">
+              <Pagination
+                currentPage={pagination.currentPage}
+                totalPages={pagination.totalPages}
+                totalItems={pagination.totalItems}
+                itemsPerPage={pagination.itemsPerPage}
+                onPageChange={handlePageChange}
+                onItemsPerPageChange={handleItemsPerPageChange}
+              />
+            </div>
+          )}
         </div>
       </div>
       {isPopupOpen && permissions.canAdd && permissions.canAccessModals && (
@@ -815,15 +869,19 @@ export default function ContactList() {
           </div>
         </div>
       )}
-      {deleteContact && permissions.canDelete && permissions.canAccessModals && (
-        <SingleDeleteDialog
-          showDialog={!!deleteContact}
-          contactName={deleteContact.fullName}
-          onCancel={() => setDeleteContact(null)}
-          onConfirm={() => handleSingleContactDelete(deleteContact.contact_id)}
-          isDeleting={isDeleting}
-        />
-      )}
-    </div>
+      {deleteContact &&
+        permissions.canDelete &&
+        permissions.canAccessModals && (
+          <SingleDeleteDialog
+            showDialog={!!deleteContact}
+            contactName={deleteContact.fullName}
+            onCancel={() => setDeleteContact(null)}
+            onConfirm={() =>
+              handleSingleContactDelete(deleteContact.contact_id)
+            }
+            isDeleting={isDeleting}
+          />
+        )}
+    </>
   );
 }

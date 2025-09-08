@@ -8,7 +8,7 @@ const SampleValuesSection = ({
 }) => {
   if (!variables.length) return null;
   return (
-    <div className="border border-[#CACACA] rounded p-4 mb-4">
+    <div className="border border-[#CACACA] rounded p-4 mt-4">
       <div className="font-semibold mb-2 border-b border-[#CACACA] pb-2">
         Sample Values
       </div>
@@ -24,7 +24,7 @@ const SampleValuesSection = ({
             <input
               type="text"
               value={`{{${variable}}}`}
-              className="border rounded p-2 w-full bg-gray-100"
+              className=" rounded p-2 w-full bg-gray-100 focus:outline-none focus:border-teal-500"
               readOnly
             />
             <p className="text-xs text-gray-500 mt-1">
@@ -42,7 +42,7 @@ const SampleValuesSection = ({
               onChange={(e) =>
                 handleSampleValueChange(variable, e.target.value)
               }
-              className={`border rounded p-2 w-full ${
+              className={`border rounded p-2 w-full  focus:outline-none focus:border-teal-500 ${
                 errors.sampleValues?.[variable]
                   ? "border-red-500"
                   : "border-gray-300"

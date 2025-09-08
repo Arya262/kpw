@@ -1,5 +1,5 @@
 import { IoSearchOutline } from "react-icons/io5";
-import { useMemo } from "react";
+import { useMemo, useRef, useEffect, useCallback, useState } from "react";
 
 // Utility: Generate avatar background color based on name
 const getAvatarColor = (name = "User") => {
@@ -100,12 +100,42 @@ const ChatSidebar = ({
   searchQuery,
   onSearchChange,
   onSelectContact,
+  fetchContacts, 
 }) => {
+  const listRef = useRef(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [nextCursor, setNextCursor] = useState(null);
+  const [hasMore, setHasMore] = useState(true);
+
   const filteredContacts = useMemo(() => {
     return (contacts || []).filter((c) =>
       c.name?.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [contacts, searchQuery]);
+
+
+  const handleScroll = useCallback(async () => {
+    const container = listRef.current;
+    if (!container || isLoading || !hasMore) return;
+
+    if (container.scrollTop + container.clientHeight >= container.scrollHeight - 10) {
+      setIsLoading(true);
+
+      const { nextCursor: newCursor, hasMore: more } =
+        await fetchContacts({ cursor: nextCursor, limit: 10 });
+      setNextCursor(newCursor);
+      setHasMore(more);
+      setIsLoading(false);
+    }
+  }, [isLoading, hasMore, nextCursor, fetchContacts]);
+
+  useEffect(() => {
+    const container = listRef.current;
+    if (!container) return;
+
+    container.addEventListener("scroll", handleScroll);
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, [handleScroll]);
 
   return (
     <div className="w-full h-full flex flex-col bg-white border-r border-gray-200 p-4">
@@ -124,16 +154,19 @@ const ChatSidebar = ({
         <IoSearchOutline className="absolute right-4 top-1/2 transform -translate-y-1/2 text-xl text-gray-500" />
       </div>
 
-      {/* Contacts List */}
-      <div className="space-y-2 overflow-y-auto flex-1 scrollbar-hide">
+      {/* Contacts List with infinite scroll */}
+      <div
+        ref={listRef}
+        className="space-y-2 overflow-y-auto flex-1 scrollbar-hide"
+      >
         {filteredContacts.length > 0 ? (
           filteredContacts.map((contact, index) => {
             const isSelected =
-              selectedContact?.conversation_id === contact.conversation_id;
+              selectedContact?.contact_id === contact.contact_id;
 
             return (
               <div
-                key={contact.conversation_id ?? `contact-${index}`}
+                key={contact.contact_id ?? `contact-${index}`}
                 role="listitem"
                 aria-selected={isSelected}
                 tabIndex={0}
@@ -167,7 +200,7 @@ const ChatSidebar = ({
                         {formatLastMessageTime(contact.lastMessageTime)}
                       </p>
                       {contact.unreadCount > 0 && (
-                        <span className="mt-1 inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold leading-none text-white bg-[#24AEAE] rounded-full transition-transform transform duration-200 scale-100">
+                        <span className="mt-1 inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold leading-none text-white bg-[#24AEAE] rounded-full">
                           {contact.unreadCount}
                         </span>
                       )}
@@ -193,10 +226,16 @@ const ChatSidebar = ({
             No contacts found.
           </p>
         )}
+
+        {/* Loader indicator */}
+        {isLoading && (
+          <div className="flex justify-center py-3 text-gray-400 text-sm">
+            Loading more contacts...
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
-// ✅ Default export
 export default ChatSidebar;

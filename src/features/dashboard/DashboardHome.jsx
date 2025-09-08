@@ -200,23 +200,28 @@ const DashboardHome = () => {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6 gap-4 px-4 pt-2">
-        <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-3 px-4 pt-2">
+        <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800">
           Dashboard
         </h2>
-        <button
-          className="bg-[#0AA89E] hover:bg-[#0AA89E] text-white flex items-center gap-2 px-4 py-2 rounded cursor-pointer"
-          onClick={
-            permissions.canAddCredits
-              ? () => setShowAddCredit(true)
-              : handleUnauthorizedAddCredit
-          }
-        >
-          <img src={vendor} alt="plus sign" className="w-5 h-5" />
-          Add Credit
-        </button>
+
+        {/* Button wrapper prevents full width */}
+        <div className="w-full sm:w-auto">
+          <button
+            className="bg-[#0AA89E] hover:bg-[#0AA89E]/90 text-white flex items-center justify-center gap-2 px-4 py-2 rounded-lg cursor-pointer w-full sm:w-auto"
+            onClick={
+              permissions.canAddCredits
+                ? () => setShowAddCredit(true)
+                : handleUnauthorizedAddCredit
+            }
+          >
+            <img src={vendor} alt="plus sign" className="w-4 h-4" />
+            Add Credit
+          </button>
+        </div>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-6 mx-7">
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-6 lg:mx-7">
         {stats.map(({ title, icon: Icon, value, gradient }, i) => (
           <motion.div
             key={title}
@@ -241,32 +246,29 @@ const DashboardHome = () => {
       </div>
       {/* Wallet Balance Card */}
       <motion.div
-        className="p-6 rounded-xl bg-white shadow-md flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 col-span-1 sm:col-span-2 lg:col-span-4 mt-6 mx-7"
+        className="rounded-xl bg-white shadow-md flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 
+             mt-4 sm:mt-6 px-4 sm:px-6 py-4 sm:py-6 w-full lg:mx-7"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
         {/* Wallet Info */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-          <p className="text-lg font-semibold">
+        <div className="flex flex-col gap-3 flex-1">
+          <p className="text-base sm:text-lg font-semibold">
             Wallet balance:{" "}
             <span className="font-bold text-green-600">
               ₹{summary.total_credit_remaining.toLocaleString()}
             </span>
           </p>
-          <span className="flex items-center text-sm text-gray-600">
-            <FaWhatsapp className="text-green-500 mr-1" />
-            Good for{" "}
-            <strong>
-              {/* {Math.floor(summary.total_credit_remaining / 1.038)} */}
-            </strong>{" "}
-            marketing messages.{" "}
+          <span className="flex flex-wrap items-center text-sm text-gray-600 gap-1">
+            <FaWhatsapp className="text-green-500 shrink-0" />
+            <span className="truncate">Good for marketing messages.</span>
             <button
               onClick={(e) => {
                 e.preventDefault();
                 setShowWalletDetails(true);
               }}
-              className="text-blue-500 hover:underline"
+              className="text-blue-500 hover:underline ml-2 whitespace-nowrap"
             >
               View details
             </button>
@@ -274,20 +276,20 @@ const DashboardHome = () => {
         </div>
 
         {/* Buttons */}
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto">
           <button
             onClick={
               permissions.canAddCredits
                 ? () => setShowAddCredit(true)
                 : handleUnauthorizedAddCredit
             }
-            className="px-4 py-2 border border-blue-500 text-blue-600 rounded-lg hover:bg-blue-50 transition"
+            className="px-4 py-2 border border-blue-500 text-blue-600 rounded-lg hover:bg-blue-50 transition w-full sm:w-auto"
           >
             ₹ Top–up
           </button>
-          <button 
+          <button
             onClick={() => setShowTransactionHistory(true)}
-            className="px-4 py-2 border border-gray-400 text-gray-600 rounded-lg hover:bg-gray-100 transition"
+            className="px-4 py-2 border border-gray-400 text-gray-600 rounded-lg hover:bg-gray-100 transition w-full sm:w-auto"
           >
             ⟳ History
           </button>

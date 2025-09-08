@@ -109,7 +109,7 @@ export const NotificationProvider = ({ children }) => {
       });
     }
 
-    // Update unread count (global and per conversation)
+   
     setUnreadCount((prev) => prev + 1);
     setUnreadConversations((prev) => ({
       ...prev,
@@ -160,44 +160,44 @@ export const NotificationProvider = ({ children }) => {
     };
   }, [socket]);
 
-  useEffect(() => {
-    const onFocus = () => {
-      if (!document.hidden) setUnreadCount(0);
-    };
-    document.addEventListener("visibilitychange", onFocus);
-    return () => document.removeEventListener("visibilitychange", onFocus);
-  }, []);
+  // useEffect(() => {
+  //   const onFocus = () => {
+  //     if (!document.hidden) setUnreadCount(0);
+  //   };
+  //   document.addEventListener("visibilitychange", onFocus);
+  //   return () => document.removeEventListener("visibilitychange", onFocus);
+  // }, []);
 
-  useEffect(() => {
-    if (!user?.customer_id) return; 
+  // useEffect(() => {
+  //   if (!user?.customer_id) return; 
 
-    const fetchUnreadCount = async () => {
-      try {
-        const response = await axios.get(
-          `${API_ENDPOINTS.CHAT.CONVERSATIONS}?customer_id=${user.customer_id}`,
-          {
-            headers: { "Content-Type": "application/json" },
-            withCredentials: true,
-          }
-        );
-        const totalUnread = response.data.reduce(
-          (sum, c) => sum + (c.unread_count || 0),
-          0
-        );
-        setUnreadCount(totalUnread);
+  //   const fetchUnreadCount = async () => {
+  //     try {
+  //       const response = await axios.get(
+  //         `${API_ENDPOINTS.CHAT.CONVERSATIONS}?customer_id=${user.customer_id}`,
+  //         {
+  //           headers: { "Content-Type": "application/json" },
+  //           withCredentials: true,
+  //         }
+  //       );
+  //       const totalUnread = response.data.reduce(
+  //         (sum, c) => sum + (c.unread_count || 0),
+  //         0
+  //       );
+  //       setUnreadCount(totalUnread);
 
-        const unreadMap = {};
-        response.data.forEach(c => {
-          if (c.unread_count > 0 && c.conversation_id) unreadMap[c.conversation_id] = c.unread_count;
-        });
-        setUnreadConversations(unreadMap);
-      } catch (error) {
-        console.error("Failed to fetch contacts for unread count:", error);
-      }
-    };
+  //       const unreadMap = {};
+  //       response.data.forEach(c => {
+  //         if (c.unread_count > 0 && c.conversation_id) unreadMap[c.conversation_id] = c.unread_count;
+  //       });
+  //       setUnreadConversations(unreadMap);
+  //     } catch (error) {
+  //       console.error("Failed to fetch contacts for unread count:", error);
+  //     }
+  //   };
 
-    fetchUnreadCount();
-  }, [user?.customer_id]);
+  //   fetchUnreadCount();
+  // }, [user?.customer_id]);
 
   const markNotificationAsRead = (id) => {
     setNotifications((prev) =>

@@ -1,6 +1,5 @@
 import React, { useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { API_ENDPOINTS } from "../../config/api";
 import OptionsDropdown from "../shared/OptionsDropdown";
 
 export default function ContactRow({
@@ -13,47 +12,26 @@ export default function ContactRow({
   const rowRef = useRef(null);
   const navigate = useNavigate();
 
-  const handleChat = async () => {
-    try {
-      const response = await fetch(
-        API_ENDPOINTS.CONTACTS.GET_CONVERSATION_ID(contact.contact_id),
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-        }
-      );
-
-      const data = await response.json();
-
-      if (!data?.conversation_id) {
-        console.error(
-          "No conversation_id found for contact",
-          contact.customer_id
-        );
-        return;
-      }
-
-      const contactForChat = {
-        id: contact.customer_id,
-        conversation_id: data.conversation_id,
-        name: contact.fullName,
-        mobile_no: contact.number,
-        updated_at: contact.created_at,
-        image: null,
-        active: false,
-        lastMessage: null,
-        lastMessageType: null,
-        lastMessageTime: contact.created_at,
-      };
-
-      navigate("/chats", {
-        state: { contact: contactForChat },
-      });
-    } catch (error) {
-      console.error("Failed to fetch conversation ID", error);
-    }
+  const handleChat = () => {
+    const contactForChat = {
+      id: contact.customer_id,
+      contact_id: contact.contact_id || contact.id, 
+      conversation_id: null,
+      name: contact.fullName,
+      mobile_no: contact.number,
+      updated_at: new Date().toISOString(),
+      image: null,
+      active: contact.is_active === 1,
+      lastMessage: null,
+      lastMessageType: null,
+      lastMessageTime: contact.updated_at,
+      isWithin24Hours: contact.is_within_24h,
+      isNewChat: true
+    };
+  
+    navigate("/chats", {
+      state: { contact: contactForChat },
+    });
   };
 
   const handleDeleteClick = (e) => {

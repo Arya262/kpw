@@ -13,7 +13,8 @@ import approvedIcon from "../../assets/Approve.png";
 import pendingIcon from "../../assets/Pending.png";
 import rejectedIcon from "../../assets/Rejected.png";
 import { defaultToastConfig, createToastConfig } from "../../utils/toastConfig";
-import { useTemplates } from "../../hooks/useTemplates"; // ✅ our hook
+import { useTemplates } from "../../hooks/useTemplates";
+import { AnimatePresence, motion } from "framer-motion";
 
 const Templates = () => {
   const { user } = useAuth();
@@ -155,35 +156,62 @@ const Templates = () => {
         )}
       </ErrorBoundary>
 
-      {/* ✅ Add modal */}
-      {isModalOpen && (
-        <Modal
-          isOpen={isModalOpen}
-          onClose={() => {
-            setIsModalOpen(false);
-            setEditingTemplate(null);
-          }}
-          isSubmitting={isSubmitting}
-          onSubmit={handleAddTemplate}
-          mode="add"
-          initialValues={{
-            elementName: "",
-            category: "",
-            templateType: "Text",
-            languageCode: "en",
-            content: "",
-            header: "",
-            footer: "",
-            buttons: [],
-            example: {
-              header: [],
-              body: [],
-              buttons: [],
-            },
-            exampleHeader: [],
-          }}
-        />
-      )}
+      {/* Animated Modal */}
+      <AnimatePresence>
+        {isModalOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.6 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+              onClick={() => {
+                setIsModalOpen(false);
+                setEditingTemplate(null);
+              }}
+            />
+
+            {/* Modal sliding in from right */}
+            <motion.div
+              key="modal"
+              initial={{ x: "100%", opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: "100%", opacity: 0 }}
+              transition={{ type: "spring", stiffness: 120, damping: 20 }}
+              className="fixed inset-0 flex items-center justify-center z-50"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Modal
+                isOpen={isModalOpen}
+                onClose={() => {
+                  setIsModalOpen(false);
+                  setEditingTemplate(null);
+                }}
+                isSubmitting={isSubmitting}
+                onSubmit={handleAddTemplate}
+                mode="add"
+                initialValues={{
+                  elementName: "",
+                  category: "",
+                  templateType: "Text",
+                  languageCode: "en",
+                  content: "",
+                  header: "",
+                  footer: "",
+                  buttons: [],
+                  example: {
+                    header: [],
+                    body: [],
+                    buttons: [],
+                  },
+                  exampleHeader: [],
+                }}
+              />
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

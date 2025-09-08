@@ -88,17 +88,22 @@ const PhoneCta = ({ phoneCta = {} }) => {
 
 const TemplateDrawer = ({ isOpen, onClose, template }) => {
   const navigate = useNavigate();
-  if (!template) return null;
+  if (!template || !template.container_meta) return null;
 
   const meta = template.container_meta || {};
-  const quickReplies = meta.quickReplies || [];
-  const urlCtas = meta.urlCtas || [];
-  const offerCode = meta.offerCode || null;
-  const phoneCta = meta.phoneCta || {};
-
   const normalizedTemplateType = meta.templateType
     ? meta.templateType.trim()
     : template.template_type || "Text";
+
+  // Map buttons to quickReplies, urlCtas, offerCode, and phoneCta
+  const quickReplies = (meta.buttons || [])
+    .filter((button) => button.type === "QUICK_REPLY")
+    .map((button) => button.text);
+  const urlCtas = (meta.buttons || [])
+    .filter((button) => button.type === "URL")
+    .map((button) => ({ title: button.text, url: button.url }));
+  const offerCode = (meta.buttons || []).find((button) => button.type === "OTP" && button.otp_type === "COPY_CODE")?.text || null;
+  const phoneCta = (meta.buttons || []).find((button) => button.type === "PHONE_NUMBER") || {};
 
   const renderMediaPreview = () => {
     switch (normalizedTemplateType) {
@@ -106,27 +111,27 @@ const TemplateDrawer = ({ isOpen, onClose, template }) => {
       case "Image":
         return (
           <img
-            src={meta.mediaUrl || "/placeholder-image.png"}
+            src={meta.sampleMedia ? `data:image/jpeg;base64,${meta.sampleMedia.split("::")[1]}` : "/placeholder-image.png"}
             alt="Image preview"
             className="max-w-full max-h-[300px] object-contain rounded-lg"
             onError={(e) => {
               e.target.style.display = "none";
               e.target.parentElement.innerHTML =
-                '<div class="text-red-500 text-sm">Failed to load image</div>';
+                '<div className="text-red-500 text-sm">Failed to load image</div>';
             }}
           />
         );
       case "VIDEO":
       case "Video":
-        return meta.mediaUrl ? (
+        return meta.sampleMedia ? (
           <video
-            src={meta.mediaUrl}
+            src={meta.sampleMedia}
             controls
             className="max-w-full max-h-[300px] object-contain rounded-lg"
             onError={(e) => {
               e.target.style.display = "none";
               e.target.parentElement.innerHTML =
-                '<div class="text-red-500 text-sm">Failed to load video</div>';
+                '<div className="text-red-500 text-sm">Failed to load video</div>';
             }}
           >
             Your browser does not support the video tag.
@@ -136,10 +141,10 @@ const TemplateDrawer = ({ isOpen, onClose, template }) => {
         );
       case "DOCUMENT":
       case "Document":
-        return meta.mediaUrl ? (
+        return meta.sampleMedia ? (
           <div className="flex items-center gap-2 p-2 bg-gray-100 rounded-lg">
             <a
-              href={meta.mediaUrl}
+              href={meta.sampleMedia}
               target="_blank"
               rel="noopener noreferrer"
               className="text-blue-500 underline text-sm"
@@ -155,7 +160,6 @@ const TemplateDrawer = ({ isOpen, onClose, template }) => {
         return null;
     }
   };
-
   const hasCtas =
     urlCtas.some((cta) => cta.title && cta.url) || offerCode || (phoneCta?.title && phoneCta?.number);
 
