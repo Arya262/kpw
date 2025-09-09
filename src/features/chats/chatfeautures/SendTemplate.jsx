@@ -39,7 +39,7 @@ const SendTemplate = ({ onSelect, onClose, returnFullTemplate = false }) => {
           const approvedTemplates = response.data.templates.filter(
             (t) => t.status?.toLowerCase() === "approved"
           );
-          console.log("Fetched templates:", approvedTemplates);
+          // console.log("Fetched templates:", approvedTemplates);
           setTemplates(approvedTemplates);
           setFilteredTemplates(approvedTemplates);
         } else {
@@ -47,7 +47,9 @@ const SendTemplate = ({ onSelect, onClose, returnFullTemplate = false }) => {
         }
       } catch (err) {
         console.error("Template fetch error:", err);
-        setError(`Failed to load templates. Please try again. Error: ${err.message}`);
+        setError(
+          `Failed to load templates. Please try again. Error: ${err.message}`
+        );
       } finally {
         setLoading(false);
       }
@@ -105,7 +107,7 @@ const SendTemplate = ({ onSelect, onClose, returnFullTemplate = false }) => {
         templateType: templateType,
       });
     } else if (templateType === "TEXT") {
-      const hasHeader = template.container_meta?.components?.some( 
+      const hasHeader = template.container_meta?.components?.some(
         (component) => component.type === "HEADER"
       );
       if (hasHeader) {
@@ -119,44 +121,50 @@ const SendTemplate = ({ onSelect, onClose, returnFullTemplate = false }) => {
       }
     }
 
-    console.log("Extracted dynamic fields for template:", template.element_name, fieldArray);
+    // console.log(
+    //   "Extracted dynamic fields for template:",
+    //   template.element_name,
+    //   fieldArray
+    // );
     return fieldArray;
   };
 
-const uploadToBackend = async (file) => {
-  if (!user?.customer_id) {
-    throw new Error("User authentication required.");
-  }
-
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("customer_id", user.customer_id);
-
-  // send actual MIME type
-  formData.append("fileType", file.type);
-
-  try {
-    const response = await axios.post(
-      "http://localhost:60000/sendMedia",
-      formData,
-      { withCredentials: true }
-    );
-
-    if (!response.data.success) {
-      throw new Error(response.data.message || "Failed to upload media.");
+  const uploadToBackend = async (file) => {
+    if (!user?.customer_id) {
+      throw new Error("User authentication required.");
     }
 
-    return response.data.mediaId;
-  } catch (error) {
-    console.error("Error uploading to backend:", error.response?.data || error.message);
-    throw new Error(
-      error.response?.data?.message ||
-      error.message ||
-      "Failed to upload media."
-    );
-  }
-};
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("customer_id", user.customer_id);
 
+    // send actual MIME type
+    formData.append("fileType", file.type);
+
+    try {
+      const response = await axios.post(
+        "http://localhost:60000/sendMedia",
+        formData,
+        { withCredentials: true }
+      );
+
+      if (!response.data.success) {
+        throw new Error(response.data.message || "Failed to upload media.");
+      }
+
+      return response.data.mediaId;
+    } catch (error) {
+      console.error(
+        "Error uploading to backend:",
+        error.response?.data || error.message
+      );
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to upload media."
+      );
+    }
+  };
 
   const handleMediaUpload = async (file, templateType) => {
     setUploading(true);
@@ -181,50 +189,64 @@ const uploadToBackend = async (file) => {
 
   const handleSendTemplate = () => {
     if (!previewTemplate) return;
-  
+
     const parameters = [];
     const dynamicFieldsCopy = { ...dynamicFields };
-    const { headerType, headerValue, headerIsId, ...restFields } = dynamicFieldsCopy;
-  
-    console.log("Dynamic fields in handleSendTemplate:", dynamicFields);
-    console.log("Rest fields:", restFields);
-  
+    const { headerType, headerValue, headerIsId, ...restFields } =
+      dynamicFieldsCopy;
+
+    // console.log("Dynamic fields in handleSendTemplate:", dynamicFields);
+    // console.log("Rest fields:", restFields);
+
     let finalHeaderType = headerType;
     let finalHeaderValue = headerValue;
     let finalHeaderIsId = headerIsId;
-  
+
     // Handle media field for IMAGE, VIDEO, DOCUMENT templates
-    if (restFields["media"] && ["IMAGE", "VIDEO", "DOCUMENT"].includes(previewTemplate.template_type?.toUpperCase())) {
+    if (
+      restFields["media"] &&
+      ["IMAGE", "VIDEO", "DOCUMENT"].includes(
+        previewTemplate.template_type?.toUpperCase()
+      )
+    ) {
       finalHeaderType = previewTemplate.template_type.toLowerCase();
       finalHeaderValue = restFields["media"];
-      finalHeaderIsId = !/^https?:\/\/[^\s/$.?#].[^\s]*$/.test(restFields["media"]); // Set to false for URLs
+      finalHeaderIsId = !/^https?:\/\/[^\s/$.?#].[^\s]*$/.test(
+        restFields["media"]
+      ); // Set to false for URLs
     }
-  
+
     // Add non-media fields to parameters
     Object.entries(restFields).forEach(([key, value]) => {
       if (key !== "media" && value && value.trim()) {
         parameters.push(value.trim());
       }
     });
-  
-    console.log("Parameters before validation:", parameters);
-  
+
+    // console.log("Parameters before validation:", parameters);
+
     // Validate parameter count
-    const expectedParamCount = (previewTemplate.container_meta?.data?.match(/\{\{\d+\}\}/g) || []).length;
+    const expectedParamCount = (
+      previewTemplate.container_meta?.data?.match(/\{\{\d+\}\}/g) || []
+    ).length;
     if (parameters.length !== expectedParamCount) {
-      toast.error(`Template requires exactly ${expectedParamCount} parameters, but ${parameters.length} provided.`);
+      toast.error(
+        `Template requires exactly ${expectedParamCount} parameters, but ${parameters.length} provided.`
+      );
       return;
     }
-  
+
     // Validate header requirement
     const requiresHeader = ["IMAGE", "VIDEO", "DOCUMENT"].includes(
       previewTemplate.template_type?.toUpperCase()
     );
     if (requiresHeader && !finalHeaderValue) {
-      toast.error(`Template ${previewTemplate.element_name} requires a media header.`);
+      toast.error(
+        `Template ${previewTemplate.element_name} requires a media header.`
+      );
       return;
     }
-  
+
     // Validate URL if provided
     if (requiresHeader && finalHeaderValue && !finalHeaderIsId) {
       if (!/^https?:\/\/[^\s/$.?#].[^\s]*$/.test(finalHeaderValue)) {
@@ -232,13 +254,16 @@ const uploadToBackend = async (file) => {
         return;
       }
     }
-  
+
     // Update dynamicFields with filled values
     const filledDynamicFields = previewTemplate.dynamicFields.map((field) => ({
       ...field,
-      value: field.placeholder === "media" ? finalHeaderValue : restFields[field.placeholder]?.trim() || "",
+      value:
+        field.placeholder === "media"
+          ? finalHeaderValue
+          : restFields[field.placeholder]?.trim() || "",
     }));
-  
+
     const templateData = {
       ...previewTemplate,
       language_code: previewTemplate.language_code || "en",
@@ -248,8 +273,8 @@ const uploadToBackend = async (file) => {
       parameters: parameters.length > 0 ? parameters : undefined,
       dynamicFields: filledDynamicFields,
     };
-  
-    console.log("Sending template data:", templateData);
+
+    // console.log("Sending template data:", templateData);
     onSelect(returnFullTemplate ? templateData : templateData.element_name);
   };
 
@@ -435,76 +460,94 @@ const uploadToBackend = async (file) => {
               <div className="flex-1 text-gray-800 text-sm">
                 {previewTemplate.dynamicFields?.length > 0 ? (
                   <div className="space-y-3">
-                    {console.log("Current dynamicFields:", dynamicFields)}
+                    {/* {console.log("Current dynamicFields:", dynamicFields)} */}
                     {previewTemplate.dynamicFields?.map((field, index) => (
                       <div key={index} className="flex flex-col">
                         <label className="text-sm font-medium text-gray-700 mb-1">
                           {field.label || field.name}:
                         </label>
-                        {field.type === "image" || field.type === "video" || field.type === "document" ? (
-  <div className="space-y-2">
-    <input
-      type="file"
-      accept={
-        field.type === "image"
-          ? "image/*"
-          : field.type === "video"
-          ? "video/*"
-          : ".pdf,.doc,.docx"
-      }
-      disabled={uploading}
-      onChange={async (e) => {
-        const file = e.target.files[0];
-        if (file) {
-          try {
-            const mediaId = await handleMediaUpload(file, field.templateType);
-            setDynamicFields((prev) => ({
-              ...prev,
-              [field.placeholder]: mediaId,
-              headerType: field.type,
-              headerValue: mediaId,
-              headerIsId: true,
-            }));
-          } catch (error) {
-            console.error("Error uploading media:", error);
-          }
-        }
-      }}
-      className="border border-gray-300 rounded px-3 py-2 text-sm w-full"
-    />
-    {uploading && (
-      <p className="text-sm text-gray-500">Uploading...</p>
-    )}
-    <div className="text-center text-gray-400">OR</div>
-    <input
-      type="text"
-      placeholder={`Enter ${field.type} URL or media ID`}
-      value={dynamicFields[field.placeholder] || ""}
-      onChange={(e) => {
-        const value = e.target.value;
-        const isUrl = /^https?:\/\/[^\s/$.?#].[^\s]*$/.test(value);
-        setDynamicFields((prev) => ({
-          ...prev,
-          [field.placeholder]: value,
-          headerType: field.type,
-          headerValue: value,
-          headerIsId: !isUrl, // Set headerIsId to false for URLs
-        }));
-      }}
-      className="border border-gray-300 rounded px-3 py-2 text-sm w-full"
-      aria-describedby="media-input-description"
-    />
-    <p id="media-input-description" className="text-xs text-gray-500">
-      Enter a public URL (e.g., https://example.com/image.jpg) or a media ID.
-    </p>
-  </div>
-) : (
+                        {field.type === "image" ||
+                        field.type === "video" ||
+                        field.type === "document" ? (
+                          <div className="space-y-2">
+                            <input
+                              type="file"
+                              accept={
+                                field.type === "image"
+                                  ? "image/*"
+                                  : field.type === "video"
+                                  ? "video/*"
+                                  : ".pdf,.doc,.docx"
+                              }
+                              disabled={uploading}
+                              onChange={async (e) => {
+                                const file = e.target.files[0];
+                                if (file) {
+                                  try {
+                                    const mediaId = await handleMediaUpload(
+                                      file,
+                                      field.templateType
+                                    );
+                                    setDynamicFields((prev) => ({
+                                      ...prev,
+                                      [field.placeholder]: mediaId,
+                                      headerType: field.type,
+                                      headerValue: mediaId,
+                                      headerIsId: true,
+                                    }));
+                                  } catch (error) {
+                                    console.error(
+                                      "Error uploading media:",
+                                      error
+                                    );
+                                  }
+                                }
+                              }}
+                              className="border border-gray-300 rounded px-3 py-2 text-sm w-full"
+                            />
+                            {uploading && (
+                              <p className="text-sm text-gray-500">
+                                Uploading...
+                              </p>
+                            )}
+                            <div className="text-center text-gray-400">OR</div>
+                            <input
+                              type="text"
+                              placeholder={`Enter ${field.type} URL or media ID`}
+                              value={dynamicFields[field.placeholder] || ""}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                const isUrl =
+                                  /^https?:\/\/[^\s/$.?#].[^\s]*$/.test(value);
+                                setDynamicFields((prev) => ({
+                                  ...prev,
+                                  [field.placeholder]: value,
+                                  headerType: field.type,
+                                  headerValue: value,
+                                  headerIsId: !isUrl, // Set headerIsId to false for URLs
+                                }));
+                              }}
+                              className="border border-gray-300 rounded px-3 py-2 text-sm w-full"
+                              aria-describedby="media-input-description"
+                            />
+                            <p
+                              id="media-input-description"
+                              className="text-xs text-gray-500"
+                            >
+                              Enter a public URL (e.g.,
+                              https://example.com/image.jpg) or a media ID.
+                            </p>
+                          </div>
+                        ) : (
                           <input
                             type="text"
                             value={dynamicFields[field.placeholder] || ""}
                             onChange={(e) => {
                               const value = e.target.value;
-                              console.log(`Updating ${field.placeholder}:`, value);
+                              // console.log(
+                              //   `Updating ${field.placeholder}:`,
+                              //   value
+                              // );
                               setDynamicFields((prev) => ({
                                 ...prev,
                                 [field.placeholder]: value,
@@ -571,43 +614,56 @@ const uploadToBackend = async (file) => {
                           {previewTemplate.container_meta.header}
                         </div>
                       )}
-{["IMAGE", "VIDEO", "DOCUMENT"].includes(previewTemplate.template_type?.toUpperCase()) &&
-  dynamicFields["media"] && (
-    <div className="mb-2">
-      {/^https?:\/\/[^\s/$.?#].[^\s]*$/.test(dynamicFields["media"]) ? (
-        <>
-          {previewTemplate.template_type.toUpperCase() === "IMAGE" && (
-            <img
-              src={dynamicFields["media"]}
-              alt="Template media"
-              className="max-w-full h-auto rounded"
-              onError={() => toast.error("Failed to load image URL.")}
-            />
-          )}
-          {previewTemplate.template_type.toUpperCase() === "VIDEO" && (
-            <video
-              src={dynamicFields["media"]}
-              controls
-              className="max-w-full h-auto rounded"
-              onError={() => toast.error("Failed to load video URL.")}
-            />
-          )}
-          {previewTemplate.template_type.toUpperCase() === "DOCUMENT" && (
-            <a
-              href={dynamicFields["media"]}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-500 underline"
-            >
-              View Document
-            </a>
-          )}
-        </>
-      ) : (
-        <p className="text-sm text-gray-600">Media ID: {dynamicFields["media"]}</p>
-      )}
-    </div>
-  )}
+                      {["IMAGE", "VIDEO", "DOCUMENT"].includes(
+                        previewTemplate.template_type?.toUpperCase()
+                      ) &&
+                        dynamicFields["media"] && (
+                          <div className="mb-2">
+                            {/^https?:\/\/[^\s/$.?#].[^\s]*$/.test(
+                              dynamicFields["media"]
+                            ) ? (
+                              <>
+                                {previewTemplate.template_type.toUpperCase() ===
+                                  "IMAGE" && (
+                                  <img
+                                    src={dynamicFields["media"]}
+                                    alt="Template media"
+                                    className="max-w-full h-auto rounded"
+                                    onError={() =>
+                                      toast.error("Failed to load image URL.")
+                                    }
+                                  />
+                                )}
+                                {previewTemplate.template_type.toUpperCase() ===
+                                  "VIDEO" && (
+                                  <video
+                                    src={dynamicFields["media"]}
+                                    controls
+                                    className="max-w-full h-auto rounded"
+                                    onError={() =>
+                                      toast.error("Failed to load video URL.")
+                                    }
+                                  />
+                                )}
+                                {previewTemplate.template_type.toUpperCase() ===
+                                  "DOCUMENT" && (
+                                  <a
+                                    href={dynamicFields["media"]}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-500 underline"
+                                  >
+                                    View Document
+                                  </a>
+                                )}
+                              </>
+                            ) : (
+                              <p className="text-sm text-gray-600">
+                                Media ID: {dynamicFields["media"]}
+                              </p>
+                            )}
+                          </div>
+                        )}
                       <div className="whitespace-pre-wrap break-words mb-1">
                         {(() => {
                           let message =

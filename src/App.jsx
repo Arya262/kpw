@@ -17,24 +17,17 @@ const Broadcast = lazy(() => import("./features/broadcast/Broadcast"));
 const NotFound = lazy(() => import("./components/NotFound"));
 const NotAuthorized = lazy(() => import("./components/NotAuthorized"));
 const DashboardHome = lazy(() => import("./features/dashboard/DashboardHome"));
-const ExploreTemplates = lazy(() =>
-  import("./features/templates/ExploreTemplates")
-);
+const ExploreTemplates = lazy(() => import("./features/templates/ExploreTemplates"));
 const LoginRedirectHandler = lazy(() => import("./LoginRedirectHandler"));
 const ForgotPassword = lazy(() => import("./ForgotPassword"));
 const RegisterPage = lazy(() => import("./RegisterPage"));
-const GroupManagement = lazy(() =>
-  import("./features/contacts/GroupManagement")
-);
+const GroupManagement = lazy(() => import("./features/contacts/GroupManagement"));
 const UserSetting = lazy(() => import("./features/flow/UserSetting"));
-const OnboardingGuide = lazy(() =>
-  import("./features/onboard/OnboardingGuide")
-);
+const OnboardingGuide = lazy(() => import("./features/onboard/OnboardingGuide"));
 
 function App() {
   return (
     <>
-      {/* ✅ ToastContainer moved outside Suspense for persistent rendering */}
       <ToastContainer
         position="top-right"
         autoClose={5000}
@@ -47,7 +40,7 @@ function App() {
         pauseOnHover
         theme="light"
         style={{
-          zIndex: 999999, // Very high z-index to ensure it's above all other elements
+          zIndex: 999999, 
           position: 'fixed',
           top: '1rem',
           right: '1rem'

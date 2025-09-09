@@ -43,7 +43,7 @@ const renderAvatar = (contact) => {
 };
 
 const UserDetails = ({ isExpanded, setIsExpanded, selectedContact }) => {
-  console.log("Selected Contact:", selectedContact);
+  // console.log("Selected Contact:", selectedContact);
   if (!selectedContact) return null;
 
   // Check if user is active within last 24 hours

@@ -58,79 +58,97 @@ export const NotificationProvider = ({ children }) => {
     });
   };
 
-  const handleIncomingMessage = async (data) => {
-    if (!data) return;
+const handleIncomingMessage = async (data) => {
+  console.log("📩 Raw incoming data:", data);
+  if (!data) return;
 
-    let message = data?.message || data?.data || data;
-    if (typeof message === "string") {
-      try {
-        message = JSON.parse(message);
-      } catch {
-        return;
-      }
-    }
-
-    const conversationId = message.conversation_id || message.chat_id || "unknown";
-    if (conversationId === "unknown") return;
-
-    // Skip notification if this is the currently selected conversation
-    const currentSelectedId = selectedConversationIdRef.current;
-    console.log('Incoming message - Conversation ID:', conversationId, 'Selected ID (ref):', currentSelectedId);
-    if (conversationId === currentSelectedId) {
-      console.log('Skipping notification for selected conversation');
+  let message = data?.message || data?.data || data;
+  if (typeof message === "string") {
+    try {
+      message = JSON.parse(message);
+    } catch {
       return;
     }
+  }
 
-    const contactName =
-      message.contact_name ||
-      message.sender_name ||
-      message.name ||
-      message.from ||
-      "Unknown";
+  console.log("📩 Parsed message:", message);
 
-    const messageText =
-      message.content ||
-      message.element_name ||
-      message.message ||
-      message.text ||
-      `New message from ${contactName}`;
+  // ✅ Normalize conversationId (accepts conversation_id, chat_id, or contact_id)
+  const conversationId =
+    message.conversation_id ||
+    message.chat_id ||
+    message.contact_id ||
+    "unknown";
 
-    const now = Date.now();
-    if (now - (lastNotificationTime.current[conversationId] || 0) < 2000) return;
-    lastNotificationTime.current[conversationId] = now;
+  if (conversationId === "unknown") {
+    console.warn("⚠️ No conversation_id/chat_id/contact_id in message:", message);
+    return;
+  }
 
-    await playSound();
+  // Skip notification if this is the currently selected conversation
+  const currentSelectedId = selectedConversationIdRef.current;
+  console.log(
+    "Incoming message - Conversation ID:",
+    conversationId,
+    "Selected ID (ref):",
+    currentSelectedId
+  );
+  if (conversationId === currentSelectedId) {
+    console.log("Skipping notification for selected conversation");
+    return;
+  }
 
-    notificationService.showInAppNotification(messageText, "info");
+  const contactName =
+    message.contact_name ||
+    message.sender_name ||
+    message.name ||
+    message.from ||
+    message.customerName || 
+    "Unknown";
 
-    if (!notificationService.isPageFocused()) {
-      notificationService.showBrowserNotification(`💬 ${contactName}`, {
-        body: messageText,
-      });
-    }
+  const messageText =
+    message.content ||
+    message.element_name ||
+    message.message ||
+    message.text ||
+    `New message from ${contactName}`;
 
-   
-    setUnreadCount((prev) => prev + 1);
-    setUnreadConversations((prev) => ({
-      ...prev,
-      [conversationId]: (prev[conversationId] || 0) + 1,
-    }));
+  const now = Date.now();
+  if (now - (lastNotificationTime.current[conversationId] || 0) < 2000) return;
+  lastNotificationTime.current[conversationId] = now;
 
-    const newNotification = {
-      id: now,
-      type: "message",
-      title: `New message from ${contactName}`,
-      message: messageText,
-      conversationId,
-      contactName,
-      timestamp: new Date().toISOString(),
-      read: false,
-    };
+  await playSound();
 
-    setNotifications((prev) => [newNotification, ...prev].slice(0, 10));
+  notificationService.showInAppNotification(messageText, "info");
 
-    window.dispatchEvent(new CustomEvent("message_received", { detail: data }));
+  if (!notificationService.isPageFocused()) {
+    notificationService.showBrowserNotification(`💬 ${contactName}`, {
+      body: messageText,
+    });
+  }
+
+  setUnreadCount((prev) => prev + 1);
+  setUnreadConversations((prev) => ({
+    ...prev,
+    [conversationId]: (prev[conversationId] || 0) + 1,
+  }));
+
+  const newNotification = {
+    id: now,
+    type: "message",
+    title: `New message from ${contactName}`,
+    message: messageText,
+    conversationId,
+    contactName,
+    timestamp: new Date().toISOString(),
+    read: false,
   };
+
+  setNotifications((prev) => [newNotification, ...prev].slice(0, 10));
+
+  window.dispatchEvent(new CustomEvent("message_received", { detail: data }));
+};
+
 
   useEffect(() => {
     const preloadSound = () => {
@@ -141,63 +159,94 @@ export const NotificationProvider = ({ children }) => {
     document.addEventListener("click", preloadSound);
   }, []);
 
+useEffect(() => {
+  if (!socket) return;
+
+  // Handler for full chat messages
+  const handleMessage = (data) => {
+    handleIncomingMessage(data);
+  };
+
+  // Handler for lightweight alerts (global notifications)
+  const handleAlert = (alert) => {
+    console.log("🔔 Received alert:", alert);
+    const { contact_id, name, content } = alert;
+
+    const conversationId = String(contact_id);
+
+    // Skip if user is already viewing this conversation
+    if (conversationId === selectedConversationIdRef.current) {
+      console.log("Skipping alert for active conversation");
+      return;
+    }
+
+    handleIncomingMessage({
+      message: {
+        conversation_id: conversationId,
+        contact_name: name,
+        content,
+      },
+    });
+  };
+
+  socket.on("newMessage", handleMessage);      // detailed message payload
+  socket.on("newMessageAlert", handleAlert);   // global lightweight alert
+
+  return () => {
+    socket.off("newMessage", handleMessage);
+    socket.off("newMessageAlert", handleAlert);
+  };
+}, [socket]);
+
   useEffect(() => {
-    if (!socket) return;
-
-    const events = [
-      "newMessage",
-      "message",
-      "chat_message",
-      "incoming_message",
-      "whatsapp_message",
-      "msg",
-      "data",
-    ];
-
-    events.forEach((event) => socket.on(event, handleIncomingMessage));
-    return () => {
-      events.forEach((event) => socket.off(event, handleIncomingMessage));
+    const onFocus = () => {
+      if (!document.hidden) setUnreadCount(0);
     };
-  }, [socket]);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => document.removeEventListener("visibilitychange", onFocus);
+  }, []);
 
-  // useEffect(() => {
-  //   const onFocus = () => {
-  //     if (!document.hidden) setUnreadCount(0);
-  //   };
-  //   document.addEventListener("visibilitychange", onFocus);
-  //   return () => document.removeEventListener("visibilitychange", onFocus);
-  // }, []);
+  useEffect(() => {
+    if (!user?.customer_id) return; 
 
-  // useEffect(() => {
-  //   if (!user?.customer_id) return; 
+const fetchUnreadCount = async () => {
+    try {
+      const response = await axios.get(
+        `${API_ENDPOINTS.CHAT.CONVERSATIONS}?customer_id=${user.customer_id}`,
+        {
+          headers: { "Content-Type": "application/json" },
+          withCredentials: true,
+        }
+      );
 
-  //   const fetchUnreadCount = async () => {
-  //     try {
-  //       const response = await axios.get(
-  //         `${API_ENDPOINTS.CHAT.CONVERSATIONS}?customer_id=${user.customer_id}`,
-  //         {
-  //           headers: { "Content-Type": "application/json" },
-  //           withCredentials: true,
-  //         }
-  //       );
-  //       const totalUnread = response.data.reduce(
-  //         (sum, c) => sum + (c.unread_count || 0),
-  //         0
-  //       );
-  //       setUnreadCount(totalUnread);
+      // Ensure we have an array
+      const conversations = Array.isArray(response.data)
+        ? response.data
+        : Array.isArray(response.data.items)
+        ? response.data.items
+        : [];
 
-  //       const unreadMap = {};
-  //       response.data.forEach(c => {
-  //         if (c.unread_count > 0 && c.conversation_id) unreadMap[c.conversation_id] = c.unread_count;
-  //       });
-  //       setUnreadConversations(unreadMap);
-  //     } catch (error) {
-  //       console.error("Failed to fetch contacts for unread count:", error);
-  //     }
-  //   };
+      // Total unread count
+      const totalUnread = conversations.reduce(
+        (sum, c) => sum + (c.unread_count || 0),
+        0
+      );
+      setUnreadCount(totalUnread);
 
-  //   fetchUnreadCount();
-  // }, [user?.customer_id]);
+      // Map conversationId -> unread count
+      const unreadMap = {};
+      conversations.forEach(c => {
+        if (c.unread_count > 0 && c.conversation_id)
+          unreadMap[c.conversation_id] = c.unread_count;
+      });
+      setUnreadConversations(unreadMap);
+    } catch (error) {
+      console.error("Failed to fetch contacts for unread count:", error);
+    }
+  };
+
+  fetchUnreadCount();
+}, [user?.customer_id]);
 
   const markNotificationAsRead = (id) => {
     setNotifications((prev) =>

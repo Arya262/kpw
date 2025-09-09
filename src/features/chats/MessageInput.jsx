@@ -270,29 +270,27 @@ const MessageInput = ({ onSendMessage, selectedContact, canSendMessage }) => {
             ref={modalRef}
             className="relative bg-white rounded-xl shadow-lg w-full max-w-3xl p-4 sm:p-6"
           >
-<SendTemplate
-  onSelect={(filledTemplate) => {
-    if (!filledTemplate || !filledTemplate.element_name) {
-      console.error("Invalid template data:", filledTemplate);
-      toast.error("Invalid template selected.");
-      return;
-    }
-    console.log("MessageInput payload:", filledTemplate);
-    onSendMessage({
-   
-      template_name: filledTemplate.element_name,
-      parameters: filledTemplate.parameters || [], 
-      headerType: filledTemplate.headerType,
-      headerValue: filledTemplate.headerValue,
-      headerIsId: filledTemplate.headerIsId,
-      language_code: filledTemplate.language_code || "en",
-    });
-    setShowTemplates(false);
-  }}
-  onClose={() => setShowTemplates(false)}
-  returnFullTemplate={true}
-/>
-
+            <SendTemplate
+              onSelect={(filledTemplate) => {
+                if (!filledTemplate || !filledTemplate.element_name) {
+                  console.error("Invalid template data:", filledTemplate);
+                  toast.error("Invalid template selected.");
+                  return;
+                }
+                // console.log("MessageInput payload:", filledTemplate);
+                onSendMessage({
+                  template_name: filledTemplate.element_name,
+                  parameters: filledTemplate.parameters || [],
+                  headerType: filledTemplate.headerType,
+                  headerValue: filledTemplate.headerValue,
+                  headerIsId: filledTemplate.headerIsId,
+                  language_code: filledTemplate.language_code || "en",
+                });
+                setShowTemplates(false);
+              }}
+              onClose={() => setShowTemplates(false)}
+              returnFullTemplate={true}
+            />
           </div>
         </div>
       )}

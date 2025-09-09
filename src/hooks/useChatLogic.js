@@ -59,7 +59,7 @@ export const useChatLogic = ({
           headers: { "Content-Type": "application/json" },
           withCredentials: true,
         });
-
+ console.log('API Response:', response.data); 
         const { data = [], nextCursor, hasMore } = response.data;
 
         const enriched = data.map((c) => ({
@@ -114,7 +114,7 @@ export const useChatLogic = ({
         );
 
         const { messages = [], pagination } = response.data;
-        console.log(messages);
+
 
         if (!cursor) {
           // 🔹 First load → replace messages
@@ -158,15 +158,10 @@ export const useChatLogic = ({
       return;
     }
 
-    console.log("Selecting contact:", {
-      name: contact.name,
-      contact_id: contact.contact_id,
-      mobile_no: contact.mobile_no,
-      currentContact: selectedContactRef.current,
-    });
+   
 
     if (!contact.contact_id) {
-      console.log(`👆 New chat started with ${contact.name}`);
+     
       setSelectedContact(contact);
       setMessages([]);
       return;
@@ -184,17 +179,11 @@ export const useChatLogic = ({
           currentContact.mobile_no === contact.mobile_no));
 
     if (isSameContact) {
-      console.log(
-        `⚠️ Contact ${contact.name} already selected, no new fetch.`
-      );
+      
       return;
     }
 
-    console.log(
-      `👆 New contact selected: ${contact.name} (ID: ${
-        contact.contact_id || "new"
-      }, Phone: ${contact.mobile_no || "none"})`
-    );
+
 
     setSelectedContact(contact);
 
@@ -217,9 +206,9 @@ export const useChatLogic = ({
     );
 
     if (contact.contact_id) {
-      console.log("Fetching messages for contact:", contact.contact_id);
+      
       fetchMessagesForContact(contact.contact_id);
-      socket?.emit("join_contact", String(contact.contact_id)); // renamed for clarity
+      socket?.emit("join_contact", String(contact.contact_id)); 
     }
   },
   [
@@ -233,9 +222,8 @@ export const useChatLogic = ({
 
 const handleIncomingMessage = useCallback(
   (msg) => {
-    const isFromSelectedChat =
-      selectedContact?.contact_id === msg.contact_id;
-
+    const isFromSelectedChat = selectedContactRef.current?.contact_id === msg.contact_id;
+ 
     if (!isFromSelectedChat) {
       const contact = contacts.find((c) => c.contact_id === msg.contact_id);
       if (contact) {
@@ -342,13 +330,13 @@ const handleIncomingMessage = useCallback(
       }
 
       try {
-        console.log("🚀 Sending message payload:", newMessage);
+        // console.log("🚀 Sending message payload:", newMessage);
         const response = await axios.post(`${API_BASE}/sendmessage`, {
           ...newMessage,
           message_type: messageType,
         });
 
-        // Update contact list preview
+      
         fetchMessagesForContact(selectedContact.contact_id);
         setContacts((prev) =>
           prev
@@ -404,7 +392,7 @@ const handleIncomingMessage = useCallback(
         API_ENDPOINTS.CHAT.DELETE_CONVERSATION,
         {
           data: {
-            contact_ids: [contactId],   // ✅ correct field
+            contact_ids: [contactId],   
             customer_id: customerId,
           },
           headers: { "Content-Type": "application/json" },
@@ -415,7 +403,7 @@ const handleIncomingMessage = useCallback(
       if (response.status === 200 && response.data.success) {
         fetchedConversations.current.delete(contactId);
         setContacts((prev) =>
-          prev.filter((c) => c.contact_id !== contactId)  // ✅ use contact_id
+          prev.filter((c) => c.contact_id !== contactId)
         );
         setSelectedContact(null);
         setMessages([]);

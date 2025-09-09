@@ -119,7 +119,5 @@ const deleteTemplate = async (templateName, id, customer_id) => {
     return false;
   }
 };
-
-
   return { templates, loading, error, addTemplate, deleteTemplate };
 };
