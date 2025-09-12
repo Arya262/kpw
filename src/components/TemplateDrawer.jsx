@@ -1,7 +1,16 @@
-
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Paperclip, Camera, FileText, MessageSquare, ExternalLink, Phone, Copy, List } from "lucide-react";
+import {
+  X,
+  Paperclip,
+  Camera,
+  FileText,
+  MessageSquare,
+  ExternalLink,
+  Phone,
+  Copy,
+  List,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const chatBg = "/light.png";
@@ -78,7 +87,11 @@ const PhoneCta = ({ phoneCta = {} }) => {
 
   return (
     <div className="bg-white border-t border-b border-gray-200">
-      <a href={`tel:${number}`} className={buttonClass} aria-label={`Call ${title}`}>
+      <a
+        href={`tel:${number}`}
+        className={buttonClass}
+        aria-label={`Call ${title}`}
+      >
         <Phone className="w-4 h-4" />
         {title}
       </a>
@@ -102,8 +115,12 @@ const TemplateDrawer = ({ isOpen, onClose, template }) => {
   const urlCtas = (meta.buttons || [])
     .filter((button) => button.type === "URL")
     .map((button) => ({ title: button.text, url: button.url }));
-  const offerCode = (meta.buttons || []).find((button) => button.type === "OTP" && button.otp_type === "COPY_CODE")?.text || null;
-  const phoneCta = (meta.buttons || []).find((button) => button.type === "PHONE_NUMBER") || {};
+  const offerCode =
+    (meta.buttons || []).find(
+      (button) => button.type === "OTP" && button.otp_type === "COPY_CODE"
+    )?.text || null;
+  const phoneCta =
+    (meta.buttons || []).find((button) => button.type === "PHONE_NUMBER") || {};
 
   const renderMediaPreview = () => {
     switch (normalizedTemplateType) {
@@ -111,7 +128,11 @@ const TemplateDrawer = ({ isOpen, onClose, template }) => {
       case "Image":
         return (
           <img
-            src={meta.sampleMedia ? `data:image/jpeg;base64,${meta.sampleMedia.split("::")[1]}` : "/placeholder-image.png"}
+            src={
+              meta.sampleMedia
+                ? `data:image/jpeg;base64,${meta.sampleMedia.split("::")[1]}`
+                : "/placeholder-image.png"
+            }
             alt="Image preview"
             className="max-w-full max-h-[300px] object-contain rounded-lg"
             onError={(e) => {
@@ -137,7 +158,9 @@ const TemplateDrawer = ({ isOpen, onClose, template }) => {
             Your browser does not support the video tag.
           </video>
         ) : (
-          <p className="text-gray-500 text-center">Upload a video to see preview</p>
+          <p className="text-gray-500 text-center">
+            Upload a video to see preview
+          </p>
         );
       case "DOCUMENT":
       case "Document":
@@ -161,7 +184,9 @@ const TemplateDrawer = ({ isOpen, onClose, template }) => {
     }
   };
   const hasCtas =
-    urlCtas.some((cta) => cta.title && cta.url) || offerCode || (phoneCta?.title && phoneCta?.number);
+    urlCtas.some((cta) => cta.title && cta.url) ||
+    offerCode ||
+    (phoneCta?.title && phoneCta?.number);
 
   return (
     <AnimatePresence>
@@ -185,11 +210,14 @@ const TemplateDrawer = ({ isOpen, onClose, template }) => {
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
           >
             {/* Header */}
-            {/* <div className="flex justify-between items-center mb-4">
-              <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100">
-                <X size={20} />
+            <div className="flex justify-between items-center mb-4 sm:hidden">
+              <button
+                onClick={onClose}
+                className={`absolute top-2 right-3 text-gray-600 hover:text-black text-2xl font-bold w-8 h-8 flex items-center justify-center rounded-full transition-colors cursor-pointer `}
+              >
+                ×
               </button>
-            </div> */}
+            </div>
 
             {/* Phone Mock-Up */}
             <div className="flex-1 overflow-y-auto flex justify-center">
@@ -206,12 +234,22 @@ const TemplateDrawer = ({ isOpen, onClose, template }) => {
                   }}
                 >
                   <div className="bg-white rounded-lg p-3 text-sm shadow mb-2 max-w-[85%]">
-                    {meta.header && <div className="font-bold mb-1">{meta.header}</div>}
-                    {normalizedTemplateType !== "Text" && <div className="mb-2">{renderMediaPreview()}</div>}
-                    {(normalizedTemplateType === "Text" || meta.sampleText) && (
-                      <div className="whitespace-pre-wrap break-words mb-1">{meta.sampleText || ""}</div>
+                    {meta.header && (
+                      <div className="font-bold mb-1">{meta.header}</div>
                     )}
-                    {meta.footer && <div className="text-xs text-gray-600 mb-2">{meta.footer}</div>}
+                    {normalizedTemplateType !== "Text" && (
+                      <div className="mb-2">{renderMediaPreview()}</div>
+                    )}
+                    {(normalizedTemplateType === "Text" || meta.sampleText) && (
+                      <div className="whitespace-pre-wrap break-words mb-1">
+                        {meta.sampleText || ""}
+                      </div>
+                    )}
+                    {meta.footer && (
+                      <div className="text-xs text-gray-600 mb-2">
+                        {meta.footer}
+                      </div>
+                    )}
                     {/* Actions */}
                     <div className="mt-2 flex flex-col">
                       <QuickReplyList quickReplies={quickReplies} />

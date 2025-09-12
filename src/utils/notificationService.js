@@ -1,4 +1,3 @@
-// --- IMPORTS ---
 import { toast } from 'react-toastify';
 
 const APP_NAME = "My App";
@@ -7,7 +6,7 @@ class NotificationService {
   constructor() {
     this.audioContext = null;
     this.customAudioUrl = null;
-    this.defaultAudioUrl = '/sound/notification.mp3'; // Default notification sound
+    this.defaultAudioUrl = '/sound/notification.mp3';
     this.audioElement = null;
     this.initAudio();
   }
@@ -15,9 +14,9 @@ class NotificationService {
   initAudio() {
     try {
       this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      // Pre-load the default audio file
       this.preloadAudio();
     } catch (error) {
+      console.warn('AudioContext not supported', error);
     }
 
     document.addEventListener("click", this.resumeAudioContextIfNeeded.bind(this), {
@@ -26,23 +25,32 @@ class NotificationService {
     });
   }
 
-  preloadAudio() {
+  async preloadAudio() {
     try {
       this.audioElement = new Audio(this.defaultAudioUrl);
       this.audioElement.preload = 'auto';
       this.audioElement.volume = 0.5;
       
-      // Test if the audio file can be loaded
-      this.audioElement.addEventListener('canplaythrough', () => {
+      await new Promise((resolve, reject) => {
+        const onReady = () => {
+          this.audioElement.removeEventListener('canplaythrough', onReady);
+          this.audioElement.removeEventListener('error', onError);
+          resolve();
+        };
         
-      });
-      
-      this.audioElement.addEventListener('error', (e) => {
-      
-        this.audioElement = null;
+        const onError = (e) => {
+          this.audioElement.removeEventListener('canplaythrough', onReady);
+          this.audioElement.removeEventListener('error', onError);
+          this.audioElement = null;
+          reject(new Error('Failed to load audio file'));
+        };
+        
+        this.audioElement.addEventListener('canplaythrough', onReady, { once: true });
+        this.audioElement.addEventListener('error', onError, { once: true });
       });
     } catch (error) {
-      
+      console.warn('Audio preload failed:', error);
+      this.audioElement = null;
     }
   }
 
@@ -50,16 +58,14 @@ class NotificationService {
     try {
       if (this.audioContext && this.audioContext.state === "suspended") {
         await this.audioContext.resume();
-        
       }
     } catch (e) {
-      
+      console.warn('Failed to resume audio context:', e);
     }
   }
 
   setCustomAudio(url) {
     this.customAudioUrl = url;
-   
   }
 
   async playNotificationSound() {
@@ -69,19 +75,17 @@ class NotificationService {
         const audio = new Audio(this.customAudioUrl);
         audio.volume = 0.5;
         await audio.play();
-        console.log("🎵 Custom notification sound played");
         return;
       }
 
       // Try preloaded default audio
       if (this.audioElement) {
-        this.audioElement.currentTime = 0; // Reset to start
+        this.audioElement.currentTime = 0;
         await this.audioElement.play();
-        console.log("🎵 Default notification sound played");
         return;
       }
 
-      // Fallback to oscillator if no audio files work
+      // Fallback to oscillator
       if (this.audioContext) {
         await this.resumeAudioContextIfNeeded();
         
@@ -97,49 +101,45 @@ class NotificationService {
 
         oscillator.start();
         oscillator.stop(this.audioContext.currentTime + 0.3);
-        
-        console.log("🎵 Fallback oscillator sound played");
-      } else {
-        console.warn("🔇 No audio system available");
       }
     } catch (error) {
-      console.warn("🔇 Error playing sound:", error.message);
-      
-      // Try one more fallback - create a new audio element
-      try {
-        const fallbackAudio = new Audio(this.defaultAudioUrl);
-        fallbackAudio.volume = 0.5;
-        await fallbackAudio.play();
-        console.log("🎵 Fallback audio element played");
-      } catch (fallbackError) {
-        console.warn("🔇 All audio methods failed:", fallbackError.message);
-      }
+      console.warn('Error playing sound:', error);
     }
   }
 
-showBrowserNotification(title, options = {}, onClick) {
-  if (!("Notification" in window)) {
-    console.warn("🚫 Browser notifications not supported");
-    return;
-  }
-
-  if (Notification.permission === "granted") {
-    const notification = new Notification(title, options);
-
-    if (onClick) {
-      notification.onclick = (event) => {
-        event.preventDefault();
-        onClick(options.data);
-        window.focus();
-      };
+  async requestNotificationPermission() {
+    if (!("Notification" in window)) {
+      console.warn("Browser doesn't support notifications");
+      return false;
     }
-  } else {
-    console.warn("🚫 Notification permission not granted");
+
+    if (Notification.permission === 'granted') {
+      return true;
+    }
+
+    if (Notification.permission !== 'denied') {
+      const permission = await Notification.requestPermission();
+      return permission === 'granted';
+    }
+    
+    return false;
   }
-}
+
+  showBrowserNotification(title, options = {}) {
+    if (!("Notification" in window)) {
+      console.warn("Browser doesn't support notifications");
+      return null;
+    }
+
+    if (Notification.permission !== "granted") {
+      console.warn("Notification permission not granted");
+      return null;
+    }
+
+    return new Notification(title, options);
+  }
 
   showInAppNotification(message, type = "info", options = {}) {
-    // ✅ Uses react-toastify for in-app notifications
     if (toast[type]) {
       toast[type](message, options);
     } else {
@@ -147,54 +147,8 @@ showBrowserNotification(title, options = {}, onClick) {
     }
   }
 
-  updateTabTitle(unreadCount, appName = APP_NAME) {
-    document.title = unreadCount > 0
-      ? `(${unreadCount}) New Message`
-      : appName;
-  }
-
-  async requestPermission() {
-    if ("Notification" in window && Notification.permission !== "granted") {
-      try {
-        const permission = await Notification.requestPermission();
-        console.log("🔔 Notification permission:", permission);
-      } catch (e) {
-        console.warn("❌ Notification permission failed:", e.message);
-      }
-    }
-  }
-
   isPageFocused() {
     return document.hasFocus();
-  }
-
-  async showNewMessageNotification(message, contactName, conversationId, onClick) {
-    console.log("🔈 Triggering sound + notification for:", contactName);
-    console.log("🔈 Message content:", message.content);
-    console.log("🔈 Page focused:", this.isPageFocused());
-    console.log("🔈 Notification permission:", Notification.permission);
-    console.log("🔈 Page hidden:", document.hidden);
-    
-    // Always play sound and show in-app notification
-    await this.playNotificationSound();
-    this.showInAppNotification(
-      `${contactName}: ${message.content || "New message"}`,
-      "success"
-    );
-
-    // Show browser notification only if page is not focused
-    if (!this.isPageFocused()) {
-      this.showBrowserNotification(
-        contactName,
-        {
-          body: message.content || "New message",
-          data: { conversationId },
-        },
-        onClick
-      );
-    } else {
-      console.log("🔈 Page is focused, skipping browser notification");
-    }
   }
 }
 

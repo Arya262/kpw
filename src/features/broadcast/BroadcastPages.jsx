@@ -293,19 +293,6 @@ const handleSubmit = async (e) => {
   return (
     <>
       <div className="flex items-center justify-center font-poppins">
-        <div
-          ref={modalRef}
-          className={`w-full max-w-[900px] p-4 bg-white rounded-lg shadow-lg border ${
-            highlightRef.current.border
-              ? "border-teal-500"
-              : "border-transparent"
-          } transition-all duration-300`}
-        >
-          <BroadcastHeader
-            onClose={handleCloseAndNavigate}
-            highlightClose={highlightRef.current.close}
-          />
-          <AlertDialog showAlert={showAlert} message={alertMessage} />
           <BroadcastForm
             formData={formData}
             setFormData={setFormData}
@@ -327,7 +314,6 @@ const handleSubmit = async (e) => {
             isSubmitting={isSubmitting}
             onTemplateSelect={handleTemplateSelect}
           />
-        </div>
       </div>
       <ConfirmationDialog
         showExitDialog={showExitDialog}

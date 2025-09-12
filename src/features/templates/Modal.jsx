@@ -7,7 +7,7 @@ import QuickRepliesSection from "./QuickRepliesSection";
 import CallToActionSection from "./CallToActionSection";
 import OfferCodeSection from "./OfferCodeSection";
 import LivePreview from "./LivePreview";
-import ExitConfirmationDialog from "./ExitConfirmationDialog";
+import ConfirmationDialog from "../shared/ExitConfirmationDialog";
 import { useAuth } from "../../context/AuthContext";
 import { API_ENDPOINTS } from "../../config/api";
 import Dropdown from "../../components/Dropdown";
@@ -1397,12 +1397,12 @@ const TemplateModal = ({
             />
           </div>
         </div>
-        <ExitConfirmationDialog
-          open={showExitDialog}
-          hasUnsavedChanges={hasUnsavedChanges}
-          onCancel={handleCancelClick}
-          onConfirm={confirmExit}
-        />
+<ConfirmationDialog
+  open={showExitDialog}
+  hasUnsavedChanges={hasUnsavedChanges}
+  onCancel={handleCancelClick}
+  onConfirm={confirmExit}
+/>
       </div>
     </div>
   );

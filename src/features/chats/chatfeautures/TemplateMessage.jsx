@@ -35,7 +35,7 @@ const TemplateMessage = ({ msg, sent }) => {
   return (
     <div className={`relative flex ${sent ? "justify-end" : "justify-start"} px-2 mb-2`}>
       {/* ✅ WhatsApp-style width container */}
-      <div className="relative w-fit max-w-[75%] md:max-w-[60%]">
+      <div className="relative w-fit max-w-[75%] md:max-w-[35%]">
         {/* Tail */}
         <svg
           className={`absolute bottom-0 ${tailAlignment}`}

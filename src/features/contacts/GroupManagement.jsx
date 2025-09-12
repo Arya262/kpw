@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Users, Plus, Edit2, Trash2, UserCheck, CloudUpload } from "lucide-react";
 import { API_ENDPOINTS } from "../../config/api";
+import axios from "axios";
 import { useAuth } from "../../context/AuthContext";
-import { ROLE_PERMISSIONS } from "../../context/permissions";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Loader from "../../components/Loader";
 import GroupRow from "./GroupRow";
 import vectorIcon from "../../assets/Vector.png";
 import { getPermissions } from "../../utils/getPermissions";
+import Pagination from "../shared/Pagination";
+import ConfirmationDialog from "../shared/ExitConfirmationDialog";
 
-// Empty State Component (matches ContactListImproved)
 const EmptyState = ({ searchTerm }) => (
   <tr>
     <td colSpan="8" className="text-center py-8">
@@ -23,7 +24,7 @@ const EmptyState = ({ searchTerm }) => (
   </tr>
 );
 
-// Error Display Component (matches ContactListImproved)
+
 const ErrorDisplay = ({ error, setError }) => {
   if (!error) return null;
   return (
@@ -79,11 +80,11 @@ const GroupCard = ({ group, onEdit, onDelete, onViewContacts }) => {
           </button>
         </div>
       </div>
-      
+
       {group.description && (
         <p className="text-sm text-gray-600 mb-4">{group.description}</p>
       )}
-      
+
       <div className="flex items-center justify-between text-xs text-gray-500">
         <span>Created: {new Date(group.created_at).toLocaleDateString()}</span>
         {group.updated_at && (
@@ -165,48 +166,42 @@ const GroupForm = ({ group, onSave, onCancel }) => {
           resolve(false);
           return;
         }
-        
+
         // Check for phone number column
         const phoneColumns = [
-          'phone', 'mobile', 'phone_number', 'mobile_number', 
+          'phone', 'mobile', 'phone_number', 'mobile_number',
           'phone number', 'mobile number', 'contact', 'contact_number',
           'tel', 'telephone', 'cell', 'cellphone', 'number'
         ];
-        
-        const phoneColumnIndex = headers.findIndex(header => 
+
+        const phoneColumnIndex = headers.findIndex(header =>
           phoneColumns.some(phoneCol => header.includes(phoneCol))
         );
-        
+
         if (phoneColumnIndex === -1) {
           setFileError("CSV file must contain a phone number column. Accepted column names include: phone, mobile, phone_number, mobile_number, contact, telephone, etc.");
           resolve(false);
           return;
         }
-        
-        // Check if phone column has actual phone numbers
-        const phoneColumnHasData = lines.slice(1) // Skip header row
-          .filter(line => line.trim()) // Skip empty lines
+
+
+        const phoneColumnHasData = lines.slice(1)
+          .filter(line => line.trim())
           .some(line => {
             const columns = line.split(',');
-            const phoneValue = columns[phoneColumnIndex]?.trim().replace(/["\']/g, ''); // Remove quotes
-            
-            // Check if the value looks like a phone number
+            const phoneValue = columns[phoneColumnIndex]?.trim().replace(/["\']/g, '');
             if (!phoneValue) return false;
-            
-            // Remove common phone number formatting characters
             const cleanPhone = phoneValue.replace(/[\s\-\(\)\+\.]/g, '');
-            
-            // Check if it contains at least 7 digits (minimum phone number length)
             const digitCount = (cleanPhone.match(/\d/g) || []).length;
             return digitCount >= 7;
           });
-        
+
         if (!phoneColumnHasData) {
           setFileError("The phone number column exists but appears to be empty or contains invalid phone numbers. Please ensure the phone column has valid phone numbers.");
           resolve(false);
           return;
         }
-        
+
         setCsvHeaders(headers);
         resolve(true);
       };
@@ -255,6 +250,19 @@ const GroupForm = ({ group, onSave, onCancel }) => {
     }
   };
 
+
+  const confirmExit = () => {
+    setIsPopupOpen(false);
+    setShowExitDialog(false);
+    setIsCrossHighlighted(false);
+  };
+
+  const cancelExit = () => {
+    setShowExitDialog(false);
+    setShowForm(false);
+    setEditingGroup(null);
+  };
+
   return (
     <form onSubmit={handleSubmit}>
       <div className="mb-4">
@@ -290,9 +298,8 @@ const GroupForm = ({ group, onSave, onCancel }) => {
           Upload File (.csv or .docx)
         </label>
         <div
-          className={`mb-2 border-2 rounded-md p-4 text-center transition-all duration-200 ${
-            isDragging ? "border-[#0AA89E] bg-blue-50" : "border-dashed border-gray-300"
-          }`}
+          className={`mb-2 border-2 rounded-md p-4 text-center transition-all duration-200 ${isDragging ? "border-[#0AA89E] bg-blue-50" : "border-dashed border-gray-300"
+            }`}
           onDragOver={(e) => {
             e.preventDefault();
             setIsDragging(true);
@@ -338,8 +345,8 @@ const GroupForm = ({ group, onSave, onCancel }) => {
                 type="button"
                 onClick={() => {
                   setFile(null);
-                  setFileError(""); // Clear file error when removing file
-                  setCsvHeaders([]); // Clear CSV headers
+                  setFileError("");
+                  setCsvHeaders([]);
                 }}
                 className="text-red-600 text-sm underline hover:text-red-800"
               >
@@ -397,79 +404,6 @@ const GroupForm = ({ group, onSave, onCancel }) => {
   );
 };
 
-// ConfirmationDialog component (copy from ContactList)
-const ConfirmationDialog = ({ showExitDialog, cancelExit, confirmExit }) => {
-  const dialogRef = useRef(null);
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === "Escape") {
-        cancelExit();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [cancelExit]);
-  useEffect(() => {
-    dialogRef.current?.focus();
-  }, []);
-  if (!showExitDialog) return null;
-  return (
-    <div
-      className="fixed inset-0 bg-[#000]/50 flex items-center justify-center z-50 transition-opacity duration-300"
-      onMouseDown={(e) => e.stopPropagation()}
-    >
-      <div
-        ref={dialogRef}
-        className="bg-white rounded-xl p-6 w-full max-w-sm shadow-lg transform transition-all duration-300 scale-100"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="dialog-title"
-        aria-describedby="dialog-message"
-        tabIndex="-1"
-      >
-        <div className="flex items-center gap-3 mb-4">
-          <svg
-            className="w-6 h-6 text-teal-500"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            ></path>
-          </svg>
-          <h3 id="dialog-title" className="text-lg font-semibold text-gray-800">
-            Exit Confirmation
-          </h3>
-        </div>
-        <p id="dialog-message" className="text-gray-600 mb-6">
-          Are you sure you want to exit?
-        </p>
-        <div className="flex justify-end gap-3">
-          <button
-            onClick={cancelExit}
-            className="px-3 py-2 w-[70px] bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
-            aria-label="Cancel"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={confirmExit}
-            className="px-3 py-2 w-[70px] bg-[#0AA89E] text-white rounded-md hover:bg-[#0AA89E] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
-            aria-label="Confirm"
-          >
-            OK
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 export default function GroupManagement() {
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -491,39 +425,98 @@ export default function GroupManagement() {
   const [isModalGlow, setIsModalGlow] = useState(false);
   const [showExitDialog, setShowExitDialog] = useState(false);
 
-  const fetchGroups = async () => {
+  const cancelExit = () => {
+    setShowExitDialog(false);
+    setShowForm(false);
+    setEditingGroup(null);
+  };
+
+  // Pagination state
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+    itemsPerPage: 10,
+  });
+
+  const fetchGroups = async (page = 1, limit = 10, search = "") => {
     try {
       setLoading(true);
-      const response = await fetch(
-        `${API_ENDPOINTS.GROUPS.GET_ALL}?customer_id=${user?.customer_id}`,
-        {
-          method: "GET",
-          credentials: "include",
-        }
-      );
+      setError(null);
 
-      if (!response.ok) {
-        // throw new Error("Failed to fetch groups");
+      console.log("📤 Fetching groups with params:", {
+        customer_id: user?.customer_id,
+        page,
+        limit,
+        search,
+      });
+
+      const response = await axios.get(API_ENDPOINTS.GROUPS.GET_ALL, {
+        params: {
+          customer_id: user?.customer_id,
+          page,
+          limit,
+          ...(search ? { search } : {}),
+        },
+        withCredentials: true,
+        validateStatus: (status) => status < 500, // Don't throw for 4xx errors
+      });
+
+      console.log("✅ API Response Status:", response.status);
+      console.log("📄 API Response Data:", response.data);
+
+      if (response.status >= 400) {
+        throw new Error(response.data?.message || 'Failed to fetch groups');
       }
 
-      const data = await response.json();
-      const groupsData = data.data || data || [];
-      // Transform backend format (group_id, group_name) to frontend format (id, name)
-      const transformedGroups = groupsData.map(group => ({
+      const result = response.data;
+      const groupsData = Array.isArray(result.data) ? result.data : [];
+
+      console.log("📦 Groups Data from API:", groupsData);
+
+      if (groupsData.length === 0) {
+        console.log("ℹ️ No groups found for the current customer");
+      }
+
+      const transformedGroups = groupsData.map((group) => ({
         id: group.group_id,
         name: group.group_name,
         total_contacts: group.total_contacts || 0,
-        description: group.description || '',
-        category: group.category || '',
-        store_mapped: group.store_mapped || '',
+        description: group.description || "",
+        category: group.category || "",
+        store_mapped: group.store_mapped || "",
         created_at: group.created_at,
         updated_at: group.updated_at,
-        file_name: group.file_name, // Add file_name to the transformed data
+        file_name: group.file_name,
       }));
+
+      console.log("🔄 Transformed Groups:", transformedGroups);
+
       setGroups(transformedGroups);
-    } catch (error) {
-      // console.error("Error fetching groups:", error);
-      // toast.error("Failed to fetch groups");
+
+      setPagination((prev) => {
+        const newPagination = {
+          currentPage: result.current_page || result.page || page,
+          totalPages:
+            result.last_page ||
+            result.totalPages ||
+            (result.total ? Math.ceil(result.total / limit) : 1) ||
+            1,
+          totalItems: result.total || groupsData.length || 0,
+          itemsPerPage: result.per_page || result.limit || limit,
+        };
+        console.log("📊 Updated Pagination:", newPagination);
+        return newPagination;
+      });
+    } catch (err) {
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to fetch groups';
+      console.error("❌ Error fetching groups:", {
+        error: err,
+        response: err.response?.data,
+        status: err.response?.status,
+      });
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -533,6 +526,22 @@ export default function GroupManagement() {
     fetchGroups();
   }, [user?.customer_id]);
 
+  // Pagination handlers
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= pagination.totalPages) {
+      setPagination((prev) => ({ ...prev, currentPage: newPage }));
+      fetchGroups(newPage, pagination.itemsPerPage);
+    }
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage) => {
+    setPagination((prev) => ({
+      ...prev,
+      itemsPerPage: newItemsPerPage,
+      currentPage: 1,
+    }));
+    fetchGroups(1, newItemsPerPage);
+  };
   // In all handlers, check permissions.canManageGroups before proceeding
   const handleCreateGroup = async (groupData) => {
     if (!permissions.canManageGroups) return;
@@ -541,7 +550,7 @@ export default function GroupManagement() {
       const customerId = user?.customer_id;
       const groupName = groupData.name;
       const file = groupData.file;
-      const fileRemoved = groupData.fileRemoved; 
+      const fileRemoved = groupData.fileRemoved;
       formData.append('customer_id', customerId);
       formData.append('group_name', groupName);
       formData.append('description', groupData.description || '');
@@ -549,14 +558,13 @@ export default function GroupManagement() {
         formData.append('file', file);
       }
       if (fileRemoved) {
-        formData.append('remove_file', 'true'); 
+        formData.append('remove_file', 'true');
       }
 
       const response = await fetch(`${API_ENDPOINTS.GROUPS.CREATE}`, {
         method: "POST",
         credentials: "include",
         body: formData,
-        // Do NOT set headers!
       });
 
       if (response.ok) {
@@ -585,7 +593,7 @@ export default function GroupManagement() {
         formData.append('file', groupData.file);
       }
       if (groupData.fileRemoved) {
-        formData.append('remove_file', 'true'); 
+        formData.append('remove_file', 'true');
       }
 
       const response = await fetch(`${API_ENDPOINTS.GROUPS.UPDATE}`, {
@@ -651,6 +659,11 @@ export default function GroupManagement() {
     }
   };
 
+  const confirmExit = () => {
+    setShowForm(false);
+    setShowExitDialog(false);
+    setEditingGroup(null);
+  };
 
   const displayedGroups = groups.filter(
     (g) =>
@@ -715,10 +728,14 @@ export default function GroupManagement() {
   return (
     <div className="flex-1">
       <ErrorDisplay error={error} setError={setError} />
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+        {/* Title */}
         <h2 className="text-xl font-bold">Groups</h2>
-        <div className="flex items-center gap-2">
-          <div className="relative max-w-xs">
+
+        {/* Search + Add Button */}
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          {/* Search Input */}
+          <div className="relative flex-1 max-w-full sm:max-w-xs">
             <input
               type="text"
               ref={searchInputRef}
@@ -726,34 +743,36 @@ export default function GroupManagement() {
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search by group name or description..."
               aria-label="Search groups"
-              className="pl-3 pr-10 py-2 border border-gray-300 text-sm rounded-md w-full focus:outline-none focus:ring-1 focus:ring-teal-400"
+              className="pl-3 pr-10 py-2 border border-gray-300 text-sm rounded-md w-full focus:outline-none focus:ring-2 focus:ring-teal-400 transition"
             />
+            {/* Magnifying glass icon */}
             <svg
               className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
               strokeWidth="2"
-            >
+              aria-hidden="true">
               <circle cx="11" cy="11" r="8" />
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
           </div>
-          
-            <button
-              className="bg-[#0AA89E] hover:bg-[#0AA89E] text-white flex items-center gap-2 px-4 py-2 rounded cursor-pointer"
-              onClick={() => {
-                if (!permissions.canManageGroups) {
-                  toast.error("You do not have permission to add groups.");
-                  return;
-                }
-                setShowForm(true);
-              }}
-            >
-              <img src={vectorIcon} alt="plus sign" className="w-5 h-5" />
-              Add Group
-            </button>
-          
+          {/* Add Group Button */}
+          <button
+            className={`bg-[#0AA89E] hover:bg-[#0AA89E]/90 text-white flex items-center justify-center gap-2 px-4 py-2 rounded-md transition w-full sm:w-auto`}
+            onClick={() => {
+              if (!permissions.canManageGroups) {
+                toast.error("You do not have permission to add groups.");
+                return;
+              }
+              setShowForm(true);
+            }}
+            aria-disabled={!permissions.canManageGroups}
+          >
+            {/* You can replace img with a Lucide Plus icon if preferred */}
+            <img src={vectorIcon} alt="plus sign" className="w-5 h-5" />
+            Add Group
+          </button>
         </div>
       </div>
       <div className="overflow-x-auto">
@@ -808,7 +827,11 @@ export default function GroupManagement() {
                   </td>
                 </tr>
               ) : displayedGroups.length === 0 ? (
-                <EmptyState searchTerm={searchTerm} />
+                <tr>
+                  <td colSpan="8">
+                    <EmptyState searchTerm={searchTerm} />
+                  </td>
+                </tr>
               ) : (
                 displayedGroups.map((group, idx) => (
                   <GroupRow
@@ -827,6 +850,18 @@ export default function GroupManagement() {
           </table>
         </div>
       </div>
+      {!loading && pagination.totalItems > 0 && (
+        <div className="border-t border-gray-200">
+          <Pagination
+            currentPage={pagination.currentPage}
+            totalPages={pagination.totalPages}
+            itemsPerPage={pagination.itemsPerPage}
+            totalItems={pagination.totalItems}
+            onPageChange={handlePageChange}
+            onItemsPerPageChange={handleItemsPerPageChange}
+          />
+        </div>
+      )}
       {/* Bulk Delete Confirmation Dialog */}
       {showDeleteDialog && (
         <div className="fixed inset-0 bg-[#000]/50 flex items-center justify-center z-50">
@@ -859,7 +894,7 @@ export default function GroupManagement() {
         </div>
       )}
       {/* Group Form Modal */}
-      {(showForm || editingGroup)  && (
+      {(showForm || editingGroup) && (
         <div
           className="fixed inset-0 bg-[#000]/40 flex items-center justify-center z-50 transition-all duration-300"
           onClick={e => {
@@ -869,45 +904,36 @@ export default function GroupManagement() {
             }
           }}
         >
-          <div
-            ref={modalRef}
-            className={`bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto relative sm:animate-slideUp border transition-all duration-300 ${
-              isCrossHighlighted ? 'border-teal-500' : 'border-gray-300'
-            }`}
-            onClick={e => e.stopPropagation()}
-            tabIndex="-1"
-          >
-            <button
-              onClick={() => setShowExitDialog(true)}
-              className={`absolute top-2 right-4 text-gray-600 hover:text-black text-3xl font-bold w-8 h-8 flex items-center justify-center pb-2 rounded-full transition-colors cursor-pointer ${
-                isCrossHighlighted
-                  ? "bg-red-500 text-white hover:text-white"
-                  : "bg-gray-100"
-              }`}
-            >
-              ×
-            </button>
-            <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-xl text-gray-500 p-6">
-              <h2 className="text-xl font-semibold mb-2 text-black">{editingGroup ? "Edit Group" : "Create New Group"}</h2>
-              <GroupForm
-                group={editingGroup}
-                onSave={handleSave}
-                onCancel={() => {
-                  setShowForm(false);
-                  setEditingGroup(null);
-                }}
-              />
-            </div>
-          </div>
+        <div ref={modalRef}
+              className={` bg-white rounded-lg  w-[95%] sm:w-full sm:max-w-4xl max-h-[90vh] overflow-y-auto relative sm:animate-slideUp border transition-all duration-300 
+                ${isCrossHighlighted ? 'border-teal-500' : 'border-gray-300'}`}
+                onClick={e => e.stopPropagation()}
+                tabIndex="-1">
+              <button onClick={() => setShowExitDialog(true)} className={` absolute top-2 right-2 sm:right-4 text-gray-600 hover:text-black text-2xl sm:text-3xl font-bold w-8 h-8 flex items-center justify-center pb-1 sm:pb-2 
+                  rounded-full transition-colors cursor-pointer ${isCrossHighlighted ? "bg-red-500 text-white hover:text-white" : "bg-gray-100"}`}>
+                  ×
+              </button>
+
+              <div className="mx-auto bg-white shadow-lg rounded-xl text-gray-500 p-4 sm:p-6">
+                <h2 className="text-lg sm:text-xl font-semibold mb-2 text-black">
+                  {editingGroup ? "Edit Group" : "Create New Group"}
+                </h2>
+
+                <GroupForm
+                  group={editingGroup}
+                  onSave={handleSave}
+                  onCancel={() => {
+                    setShowForm(false);
+                    setEditingGroup(null);
+                  }}
+                />
+              </div>
+         </div>
           <ConfirmationDialog
-            showExitDialog={showExitDialog}
-            cancelExit={() => setShowExitDialog(false)}
-            confirmExit={() => {
-              setShowForm(false);
-              setEditingGroup(null);
-              setShowExitDialog(false);
-              setIsCrossHighlighted(false);
-            }}
+            open={showExitDialog && permissions.canAccessModals}
+            hasUnsavedChanges={false}
+            onCancel={cancelExit}
+            onConfirm={confirmExit}
           />
         </div>
       )}

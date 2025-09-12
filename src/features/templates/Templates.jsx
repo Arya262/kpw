@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useAuth } from "../../context/AuthContext";
 import Table from "./Table";
 import ErrorBoundary from "../../components/ErrorBoundary";
@@ -15,26 +15,50 @@ import rejectedIcon from "../../assets/Rejected.png";
 import { defaultToastConfig, createToastConfig } from "../../utils/toastConfig";
 import { useTemplates } from "../../hooks/useTemplates";
 import { AnimatePresence, motion } from "framer-motion";
+import Pagination from "../shared/Pagination";
 
 const Templates = () => {
   const { user } = useAuth();
   const permissions = getPermissions(user);
 
-  const { templates, loading, addTemplate, deleteTemplate, updateTemplate } = useTemplates(user?.customer_id);
+  const {
+    templates,
+    loading,
+    addTemplate,
+    deleteTemplate,
+    updateTemplate,
+    currentPage,
+    totalPages,
+    totalItems,
+    itemsPerPage,
+    onPageChange: handlePageChange,
+    onItemsPerPageChange: handleItemsPerPageChange,
+    searchTerm,
+    setSearchTerm
+  } = useTemplates(user?.customer_id);
 
   const [editingTemplate, setEditingTemplate] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // ✅ Summary counts
-  const approvedCount = templates.filter((t) => t.status?.toLowerCase() === "approved").length;
-  const pendingCount = templates.filter((t) => t.status?.toLowerCase() === "pending").length;
-  const failedCount = templates.filter((t) => t.status?.toLowerCase() === "failed").length;
+  const summaryCounts = React.useMemo(() => {
+    let approved = 0, pending = 0, failed = 0;
+    
+    // If we have the full list from the API, use it
+    if (templates) {
+      approved = templates.filter((t) => t.status?.toLowerCase() === "approved").length;
+      pending = templates.filter((t) => t.status?.toLowerCase() === "pending").length;
+      failed = templates.filter((t) => t.status?.toLowerCase() === "failed").length;
+    }
+    
+    return { approved, pending, failed };
+  }, [templates]);
 
   const summaryCards = [
-    { label: "Approved Templates", count: approvedCount, image: approvedIcon, bgColor: "bg-[#D1FADF]" },
-    { label: "Pending Templates", count: pendingCount, image: pendingIcon, bgColor: "bg-[#FEE4E2]" },
-    { label: "Failed Templates", count: failedCount, image: rejectedIcon, bgColor: "bg-[#FECDCA]" },
+    { label: "Approved Templates", count: summaryCounts.approved, image: approvedIcon, bgColor: "bg-[#D1FADF]" },
+    { label: "Pending Templates", count: summaryCounts.pending, image: pendingIcon, bgColor: "bg-[#FEE4E2]" },
+    { label: "Failed Templates", count: summaryCounts.failed, image: rejectedIcon, bgColor: "bg-[#FECDCA]" },
   ];
 
   // ✅ Add template
@@ -83,7 +107,8 @@ const Templates = () => {
     <div className="flex flex-col gap-4 pt-2">
      <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop closeOnClick draggable pauseOnHover theme="light" />
 
-      {/* ✅ Summary cards */}
+
+      {/* Summary cards */}
       <div className="hidden md:flex flex-col md:flex-row justify-start gap-4">
         {summaryCards.map((card, index) => (
           <div
@@ -120,16 +145,14 @@ const Templates = () => {
           onClose={() => setEditingTemplate(null)}
           onSubmit={async (updatedTemplate) => {
             try {
-              setTemplates((prev) =>
-                prev.map((t) =>
-                  t.id === updatedTemplate.id ? { ...t, ...updatedTemplate } : t
-                )
-              );
-              toast.success("Template updated successfully!", defaultToastConfig);
-              setEditingTemplate(null);
+              const success = await updateTemplate(updatedTemplate);
+              if (success) {
+                toast.success("Template updated successfully!", defaultToastConfig);
+                setEditingTemplate(null);
+              }
             } catch (error) {
               toast.error(
-                "Failed to save template. Please try again.",
+                error.message || "Failed to save template. Please try again.",
                 createToastConfig(5000)
               );
             }
@@ -152,6 +175,20 @@ const Templates = () => {
               permissions.canAddTemplate ? () => setIsModalOpen(true) : undefined
             }
             vendorIcon={vendor}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            pagination={
+              <div className="mt-4">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalItems}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={handlePageChange}
+                  onItemsPerPageChange={handleItemsPerPageChange}
+                />
+              </div>
+            }
           />
         )}
       </ErrorBoundary>

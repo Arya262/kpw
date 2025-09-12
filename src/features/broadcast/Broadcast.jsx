@@ -22,7 +22,7 @@ const Broadcast = () => {
   const location = useLocation();
   const { user } = useAuth();
   const permissions = getPermissions(user);
-
+  const [pagination, setPagination] = useState(null);
   const canDeleteBroadcast = (broadcast) => {
     if (!permissions.canDelete) return false;
     if (user?.role?.toLowerCase?.() === "user") {
@@ -92,8 +92,12 @@ const Broadcast = () => {
     setShowPopup(false);
   };
 
-  const handleBroadcastsUpdate = (newBroadcasts) => {
-    setBroadcasts(newBroadcasts);
+  const handleBroadcastsUpdate = ({
+    broadcasts: newBroadcasts,
+    pagination: newPagination,
+  }) => {
+    setBroadcasts(newBroadcasts || []);
+    setPagination(newPagination || null);
   };
 
   const handleAddBroadcast = () => {
@@ -130,8 +134,10 @@ const Broadcast = () => {
         </button>
       </div>
 
-      <BroadcastStats data={broadcasts} />
-
+      <BroadcastStats
+        data={broadcasts}
+        totalRecords={pagination?.totalRecords || 0}
+      />
       <BroadcastDashboard
         ref={broadcastDashboardRef}
         onBroadcastsUpdate={handleBroadcastsUpdate}
@@ -152,20 +158,29 @@ const Broadcast = () => {
           }}
         >
           <div
-            className={`bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-hidden relative sm:animate-slideUp border ${
-              highlightCancel ? "border-teal-500" : "border-gray-300"
-            } transition-all duration-300`}
+            className={`bg-white rounded-lg w-full 
+              max-w-full sm:max-w-4xl 
+              max-h-[85vh] sm:max-h-[90vh]
+              overflow-y-auto relative sm:animate-slideUp 
+              border ${highlightCancel ? "border-teal-500" : "border-gray-300"} 
+              transition-all duration-300
+              mx-2 sm:mx-0`}
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={() => setShowPopup(false)}
-              className={`absolute top-2 right-4 text-gray-600 hover:text-black text-3xl font-bold w-8 h-8 flex items-center justify-center pb-2 rounded-full transition-colors cursor-pointer ${
-                highlightCancel ? "bg-red-500 text-white hover:text-white" : "bg-gray-100"
-              }`}
+              className={`absolute top-2 right-4 text-gray-600 hover:text-black text-3xl font-bold 
+                w-8 h-8 flex items-center justify-center pb-2 rounded-full transition-colors cursor-pointer
+                ${
+                  highlightCancel
+                    ? "bg-red-500 text-white hover:text-white"
+                    : "bg-gray-100"
+                }`}
               aria-label="Close"
             >
               ×
             </button>
+
             <BroadcastPages
               onClose={() => setShowPopup(false)}
               onBroadcastCreated={handleBroadcastCreated}

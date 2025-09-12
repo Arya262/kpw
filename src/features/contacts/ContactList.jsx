@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
+import axios from "axios";
 import { useAuth } from "../../context/AuthContext";
-import { ROLE_PERMISSIONS } from "../../context/permissions";
 import ContactRow from "./ContactRow";
 import AddContact from "./Addcontact";
 import vendor from "../../assets/Vector.png";
@@ -12,115 +12,11 @@ import SingleDeleteDialog from "./SingleDeleteDialog";
 import { getPermissions } from "../../utils/getPermissions";
 import Loader from "../../components/Loader";
 import Pagination from "../shared/Pagination";
-const formatDate = (dateString) => {
-  if (!dateString) return "N/A";
-
-  const date = new Date(dateString);
-  const formattedDate = date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-  });
-
-  const hasTime = date.getHours() !== 0 || date.getMinutes() !== 0;
-  if (hasTime) {
-    const formattedTime = date.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    });
-    return (
-      <div className="flex flex-col">
-        <span>{formattedDate}</span>
-        <span>{formattedTime}</span>
-      </div>
-    );
-  }
-  return <span>{formattedDate}</span>;
-};
-
-const ConfirmationDialog = ({
-  showExitDialog,
-  hasUnsavedChanges,
-  cancelExit,
-  confirmExit,
-}) => {
-  const dialogRef = useRef(null);
-
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === "Escape") {
-        cancelExit();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [cancelExit]);
-
-  useEffect(() => {
-    dialogRef.current?.focus();
-  }, []);
-
-  if (!showExitDialog) return null;
-
-  return (
-    <div
-      className="fixed inset-0 bg-[#000]/50 flex items-center justify-center z-50 "
-      onMouseDown={(e) => e.stopPropagation()}
-    >
-      <div
-        ref={dialogRef}
-        className="bg-white rounded-xl p-6 w-full max-w-sm shadow-lg transform transition-all duration-300 scale-100"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="dialog-title"
-        aria-describedby="dialog-message"
-        tabIndex="-1"
-      >
-        <div className="flex items-center gap-3 mb-4">
-          <svg
-            className="w-6 h-6 text-teal-500"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            ></path>
-          </svg>
-          <h3 id="dialog-title" className="text-lg font-semibold text-gray-800">
-            Exit Confirmation
-          </h3>
-        </div>
-        <p id="dialog-message" className="text-gray-600 mb-6">
-          {hasUnsavedChanges
-            ? "You have unsaved changes. Are you sure you want to exit?"
-            : "Are you sure you want to exit?"}
-        </p>
-        <div className="flex justify-end gap-3">
-          <button
-            onClick={cancelExit}
-            className="px-3 py-2 w-[70px] bg-gray-200 text-gray-700 rounded-md cursor-pointer"
-            aria-label="Cancel"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={confirmExit}
-            className="px-3 py-2 w-[70px] bg-[#0AA89E] text-white rounded-md cursor-pointer"
-            aria-label="Confirm"
-          >
-            OK
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
+import { formatDate } from "../../utils/formatters";
+import ConfirmationDialog from "../shared/ExitConfirmationDialog";
+import { Navigate, useNavigate } from "react-router-dom";
+import BroadcastPages from "../broadcast/BroadcastPages";
+import { Phone } from "lucide-react";
 
 const DeleteConfirmationDialog = ({
   showDeleteDialog,
@@ -215,10 +111,11 @@ const DeleteConfirmationDialog = ({
 };
 
 export default function ContactList() {
+  const navigate = useNavigate();
   const [contacts, setContacts] = useState([]);
   const [filter, setFilter] = useState("All");
   const [loading, setLoading] = useState(true);
-  const [selectedRows, setSelectedRows] = useState({});
+  const [selectedContacts, setSelectedContacts] = useState({});
   const [selectAll, setSelectAll] = useState(false);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [isCrossHighlighted, setIsCrossHighlighted] = useState(false);
@@ -238,25 +135,53 @@ export default function ContactList() {
     totalItems: 0,
     itemsPerPage: 10,
   });
+  const [allContacts, setAllContacts] = useState([]);
+  const handleApiError = (err, fallbackMessage) => {
+    console.error(err);
+    const msg = err?.message || fallbackMessage;
+    setError(msg);
+    showErrorToast(msg);
+  };
 
-  const fetchContacts = async (page = 1, limit = 10) => {
+  // Fetch contacts with server-side search & pagination
+  const fetchContacts = async (page = 1, limit = 10, search = "") => {
+    if (!user?.customer_id) return; 
+
     try {
       setLoading(true);
-      const response = await fetch(
-        `${API_ENDPOINTS.CONTACTS.GET_ALL}?customer_id=${user?.customer_id}&page=${page}&limit=${limit}`,
-        {
-          method: "GET",
-          credentials: "include",
-        }
-      );
+      setError(null);
 
-      if (!response.ok) {
-        throw new Error("Unauthorized or failed to fetch");
+      console.log("📤 Fetching contacts with params:", {
+        customer_id: user?.customer_id,
+        page,
+        limit,
+        search,
+      });
+
+      const response = await axios.get(API_ENDPOINTS.CONTACTS.GET_ALL, {
+        params: {
+          customer_id: user?.customer_id,
+          page,
+          limit,
+          ...(search ? { search } : {}),
+        },
+        withCredentials: true,
+        validateStatus: (status) => status < 500,
+      });
+
+      console.log("✅ API Response Status:", response.status);
+      console.log("📄 API Response Data:", response.data);
+
+      if (response.status >= 400) {
+        throw new Error(response.data?.message || "Failed to fetch contacts");
       }
 
-      const result = await response.json();
-      const contacts = result.data || [];
-      const transformed = contacts.map((item) => ({
+      const result = response.data;
+      const contacts = Array.isArray(result.data) ? result.data : [];
+
+      console.log("📦 Contacts Data from API:", contacts);
+
+      const transformedContacts = contacts.map((item) => ({
         ...item,
         status: "Opted-in",
         customer_id: user?.customer_id,
@@ -265,27 +190,61 @@ export default function ContactList() {
         fullName: `${item.first_name} ${item.last_name || ""}`.trim(),
       }));
 
-      setContacts(transformed);
+      console.log("🔄 Transformed Contacts:", transformedContacts);
 
-      // Use backend pagination values
-      if (result.pagination) {
-        setPagination({
-          currentPage: result.pagination.page || page,
-          totalPages: result.pagination.totalPages,
-          totalItems: result.pagination.total,
-          itemsPerPage: limit,
-        });
-      }
+      // Update displayed contacts for current page
+      setContacts(transformedContacts);
+
+      // Merge into allContacts for multi-page selection
+      setAllContacts((prev) => {
+        const map = new Map(prev.map((c) => [c.contact_id, c]));
+        transformedContacts.forEach((c) => map.set(c.contact_id, c));
+        return Array.from(map.values());
+      });
+
+      // Update pagination
+      setPagination((prev) => {
+        const newPagination = {
+          currentPage: result.pagination?.page || result.current_page || page,
+          totalPages:
+            result.pagination?.totalPages ||
+            result.last_page ||
+            (result.total ? Math.ceil(result.total / limit) : 1) ||
+            1,
+          totalItems:
+            result.pagination?.totalRecords ||
+            result.total ||
+            contacts.length ||
+            0,
+          itemsPerPage: result.pagination?.limit || result.per_page || limit,
+        };
+        console.log("📊 Updated Pagination:", newPagination);
+        return newPagination;
+      });
     } catch (err) {
-      handleApiError(err, "Failed to fetch contacts");
+      const errorMessage =
+        err.response?.data?.message ||
+        err.message ||
+        "Failed to fetch contacts";
+      console.error("❌ Error fetching contacts:", {
+        error: err,
+        response: err.response?.data,
+        status: err.response?.status,
+      });
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
+  // Debounced search using setTimeout
   useEffect(() => {
-    fetchContacts(1, 10);
-  }, []);
+    const timeout = setTimeout(() => {
+      fetchContacts(1, pagination.itemsPerPage, searchTerm);
+    }, 500);
+    return () => clearTimeout(timeout);
+  }, [searchTerm, pagination.itemsPerPage]);
 
   const filterCounts = {
     All: pagination.totalItems,
@@ -336,26 +295,32 @@ export default function ContactList() {
   };
 
   const filterButtons = ["All", "Opted-in", "Opted-Out"];
+
   const handleSelectAllChange = (event) => {
     if (!permissions.canDelete) return;
     const checked = event.target.checked;
     setSelectAll(checked);
-    const newSelected = {};
+
     if (checked) {
-      displayedContacts.forEach((contact, idx) => {
+      const newSelected = {};
+      displayedContacts.forEach((contact) => {
         if (canDeleteContact(contact)) {
-          newSelected[idx] = true;
+          newSelected[contact.contact_id] = true;
         }
       });
+      setSelectedContacts(newSelected);
+    } else {
+      setSelectedContacts({});
     }
-    setSelectedRows(newSelected);
   };
 
-  const handleCheckboxChange = (idx, event) => {
-    if (!canDeleteContact(displayedContacts[idx])) return;
-    setSelectedRows((prev) => ({
+  const handleCheckboxChange = (contactId, isChecked) => {
+    const contact = displayedContacts.find((c) => c.contact_id === contactId);
+    if (!contact || !canDeleteContact(contact)) return;
+
+    setSelectedContacts((prev) => ({
       ...prev,
-      [idx]: event.target.checked,
+      [contactId]: isChecked,
     }));
   };
 
@@ -385,9 +350,9 @@ export default function ContactList() {
 
   useEffect(() => {
     const total = displayedContacts.length;
-    const selected = Object.values(selectedRows).filter(Boolean).length;
+    const selected = Object.keys(selectedContacts).length;
     setSelectAll(selected === total && total > 0);
-  }, [selectedRows, displayedContacts.length]);
+  }, [selectedContacts, displayedContacts.length]);
 
   const handleCloseAndNavigate = () => {
     if (!permissions.canAccessModals) return;
@@ -413,6 +378,82 @@ export default function ContactList() {
     setShowDeleteDialog(true);
   };
 
+  //brodcast button handler
+  const handleAddbroadcast = async () => {
+    const selectedContactIds = Object.entries(selectedContacts)
+      .filter(([contactId, isSelected]) => isSelected)
+      .map(([contactId]) => contactId);
+
+    if (selectedContactIds.length === 0) {
+      toast.error("Please select at least one contact.");
+      return;
+    }
+
+    // Build selected contacts from ALL fetched contacts
+    const selectedContactList = selectedContactIds
+      .map((id) => allContacts.find((c) => c.contact_id == id))
+      .filter(Boolean) // skip any missing contacts
+      .map((contact) => ({
+        contact_id: contact.contact_id,
+        Name: `${contact.first_name || ""} ${contact.last_name || ""}`.trim(),
+        CountryCode: `${contact.country_code || ""}`.trim(),
+        Phone: `${contact.mobile_no || ""}`.trim(),
+      }));
+
+    console.log("Selected contact IDs:", selectedContactIds);
+    console.log("Selected Contacts:", selectedContactList);
+
+    const groupName = prompt("Enter a name for the contact group:");
+    if (!groupName || groupName.trim() === "") {
+      toast.error("Group name is required.");
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append("customer_id", user?.customer_id);
+      formData.append("group_name", groupName.trim());
+
+      let csvContent = "Name,CountryCode,Phone\n";
+      selectedContactList.forEach((contact) => {
+        csvContent += `${contact.Name},${contact.CountryCode},${contact.Phone}\n`;
+      });
+
+      const blob = new Blob([csvContent], { type: "text/csv" });
+      formData.append("file", blob, "contactlist.csv");
+
+      const res = await fetch(`${API_ENDPOINTS.GROUPS.CREATE}`, {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+
+      const data = await res.json();
+      console.log("Group response:", data);
+
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to create group");
+      }
+
+      toast.success("Group created successfully!");
+
+      navigate("/broadcast", {
+        state: {
+          openForm: true,
+          newGroup: {
+            id: data.id,
+            name: data.name,
+            total_contacts: data.total_contacts,
+          },
+          contacts: selectedContactList,
+        },
+      });
+    } catch (err) {
+      console.error("Error creating group:", err);
+      toast.error(err.message || "Could not create group.");
+    }
+  };
+
   const cancelDelete = () => {
     setShowDeleteDialog(false);
   };
@@ -431,15 +472,9 @@ export default function ContactList() {
       toast.error("You do not have permission to delete contacts.");
       return;
     }
-    const selectedIds = Object.entries(selectedRows)
-      .filter(([idx, isSelected]) => {
-        const contact = displayedContacts[idx];
-        return isSelected && canDeleteContact(contact);
-      })
-      .map(([idx]) => {
-        const contact = displayedContacts[idx];
-        return contact?.contact_id;
-      });
+    const selectedIds = Object.entries(selectedContacts)
+      .filter(([contactId, isSelected]) => isSelected)
+      .map(([contactId]) => contactId);
 
     try {
       setIsDeleting(true);
@@ -463,7 +498,7 @@ export default function ContactList() {
       }
 
       await fetchContacts();
-      setSelectedRows({});
+      setSelectedContacts({});
       setSelectAll(false);
       const deletedCount = selectedIds.length;
       toast.success(
@@ -697,21 +732,26 @@ export default function ContactList() {
                 ) : (
                   <th className="px-2 py-3 sm:px-6"></th>
                 )}
-                {permissions.canDelete &&
-                  Object.values(selectedRows).some(Boolean) && (
-                    <th colSpan="6" className="px-2 py-3 sm:px-6">
-                      <div className="flex justify-center">
-                        <button
-                          onClick={handleDeleteClick}
-                          disabled={isDeleting}
-                          className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200"
-                        >
-                          Delete Selected
-                        </button>
-                      </div>
-                    </th>
-                  )}
-                {!Object.values(selectedRows).some(Boolean) && (
+                {permissions.canDelete && 
+                Object.values(selectedContacts).some(Boolean) ? (
+                  <th colSpan="6" className="px-2 py-3 sm:px-6">
+                    <div className="flex justify-end gap-6">
+                      <button
+                        onClick={handleDeleteClick}
+                        disabled={isDeleting}
+                        className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200"
+                      >
+                        Delete
+                      </button>
+                      <button
+                        onClick={handleAddbroadcast}
+                        className="text-white border border-teal-500 bg-teal-500 px-4 py-2 rounded-md text-sm font-medium"
+                      >
+                        Send
+                      </button>
+                    </div>
+                  </th>
+                ) : (
                   <>
                     <th className="px-2 py-3 sm:px-6 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">
                       Created Date
@@ -761,8 +801,8 @@ export default function ContactList() {
                   <ContactRow
                     key={contact.id || idx}
                     contact={contact}
-                    isChecked={!!selectedRows[idx]}
-                    onCheckboxChange={(e) => handleCheckboxChange(idx, e)}
+                    isChecked={!!selectedContacts[contact.contact_id]}
+                    onCheckboxChange={handleCheckboxChange}
                     onEditClick={
                       permissions.canEdit && canEditContact(contact)
                         ? setEditContact
@@ -782,20 +822,20 @@ export default function ContactList() {
               )}
             </tbody>
           </table>
-                                {pagination.totalItems > 0 && (
-            <div className="px-4 py-2">
-              <Pagination
-                currentPage={pagination.currentPage}
-                totalPages={pagination.totalPages}
-                totalItems={pagination.totalItems}
-                itemsPerPage={pagination.itemsPerPage}
-                onPageChange={handlePageChange}
-                onItemsPerPageChange={handleItemsPerPageChange}
-              />
-            </div>
-          )}
         </div>
       </div>
+      {pagination.totalItems > 0 && (
+        <div className="border-t border-gray-200">
+          <Pagination
+            currentPage={pagination.currentPage}
+            totalPages={pagination.totalPages}
+            totalItems={pagination.totalItems}
+            itemsPerPage={pagination.itemsPerPage}
+            onPageChange={handlePageChange}
+            onItemsPerPageChange={handleItemsPerPageChange}
+          />
+        </div>
+      )}
       {isPopupOpen && permissions.canAdd && permissions.canAccessModals && (
         <div
           className="fixed inset-0 bg-[#000]/50  flex items-center justify-center z-50 transition-all duration-300"
@@ -829,16 +869,16 @@ export default function ContactList() {
       )}
       <DeleteConfirmationDialog
         showDeleteDialog={showDeleteDialog && permissions.canDelete}
-        selectedCount={Object.values(selectedRows).filter(Boolean).length}
+        selectedCount={Object.keys(selectedContacts).length}
         cancelDelete={cancelDelete}
         confirmDelete={confirmDelete}
         isDeleting={isDeleting}
       />
       <ConfirmationDialog
-        showExitDialog={showExitDialog && permissions.canAccessModals}
+        open={showExitDialog && permissions.canAccessModals}
         hasUnsavedChanges={false}
-        cancelExit={cancelExit}
-        confirmExit={confirmExit}
+        onCancel={cancelExit}
+        onConfirm={confirmExit}
       />
       <ToastContainer
         position="top-right"

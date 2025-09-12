@@ -195,309 +195,197 @@ const BroadcastForm = ({
   }, [searchTerm, customerLists]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 mt-2">
       {/* Step Indicator */}
-      <div className="flex items-center justify-center mb-8">
-        {[1, 2, 3, 4, 5].map((stepNumber) => (
-          <div key={stepNumber} className="flex items-center">
-            <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                step >= stepNumber
-                  ? "bg-teal-500 text-white"
-                  : "bg-gray-200 text-gray-600"
-              }`}
-            >
+      <div className="flex items-center justify-center mb-8 px-4">
+       {[1, 2, 3, 4, 5].map((stepNumber) => (
+       <div key={stepNumber} className="flex items-center flex-1">
+         <div className={`w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-sm sm:text-base md:text-lg font-medium
+            ${step >= stepNumber ? "bg-teal-500 text-white" : "bg-gray-200 text-gray-600"}`}>
               {stepNumber}
-            </div>
-            {stepNumber < 5 && (
-              <div
-                className={`w-12 h-0.5 ${
-                  step > stepNumber ? "bg-teal-500" : "bg-gray-200"
-                }`}
-              />
-            )}
-          </div>
+         </div>
+          {stepNumber < 5 && (
+          <div className={` h-0.5 sm:h-0.5 md:h-1 flex-1 mx-1 ${step > stepNumber ? "bg-teal-500" : "bg-gray-200"} `}/> )}
+       </div>
         ))}
       </div>
-      <div
-        style={{ minHeight: 500, overflowY: "auto" }}
-        className="scrollbar-hide"
-      >
+      <div style={{ minHeight: 450, overflowY: "auto" }} className="scrollbar-hide">
         {/* Step 1: Campaign Name */}
         {step === 1 && (
-          <Box display="flex" flexDirection="column" gap={3} p={2}>
-            <Typography variant="h6" fontWeight="bold" color="text.primary">
-              Campaign Name
+          <Box display="flex" flexDirection="column" gap={{ xs: 2, sm: 2, md: 3 }} p={{ xs: 1, sm: 2, md: 2 }}>
+            <Typography variant="h6" fontWeight="bold" color="text.primary" fontSize={{ xs: "1rem", sm: "1.125rem", md: "1.25rem" }}>
+                Campaign Name
             </Typography>
-            <TextField
-              name="broadcastName"
-              label="Campaign Name"
-              placeholder="Enter Campaign Name"
-              value={formData.broadcastName}
-              onChange={handleInputChange}
-              error={Boolean(errors.broadcastName)}
-              helperText={errors.broadcastName}
-              fullWidth
-              disabled={isSubmitting}
-              inputProps={{ maxLength: 30 }}
-            />
-            <Box
-              display="flex"
-              justifyContent="flex-end"
-              fontSize="12px"
-              color="text.secondary"
-              mt={-2}
-            >
+            <TextField name="broadcastName" label="Campaign Name" placeholder="Enter Campaign Name" value={formData.broadcastName} onChange={handleInputChange} error={Boolean(errors.broadcastName)} helperText={errors.broadcastName} fullWidth disabled={isSubmitting} inputProps={{ maxLength: 30 }} size="small" />
+            <Box display="flex" justifyContent="flex-end" fontSize={{ xs: "10px", sm: "11px", md: "12px" }} color="text.secondary" mt={-1}>
               {formData.broadcastName.length}/30
             </Box>
-            <Box
-              border="1px dashed #D97706"
-              bgcolor="#FFF7ED"
-              p={2}
-              borderRadius="8px"
-              display="flex"
-              flexDirection="column"
-              gap={1}
-              color="#92400E"
-              fontSize="14px"
-            >
-              <Box fontWeight="bold" display="flex" alignItems="center" gap={1}>
-                <span style={{ color: "#B45309" }}>⚠️</span> IMPORTANT:
+            <Box border="1px dashed #D97706" bgcolor="#FFF7ED" p={{ xs: 1, sm: 1.5, md: 2 }} borderRadius="8px" display="flex" flexDirection="column" gap={0.5} color="#92400E" fontSize={{ xs: "12px", sm: "13px", md: "14px" }} width="100%"
+                  sx={{ wordBreak: "break-word" }}>
+              <Box fontWeight="bold" display="flex" alignItems="center" gap={0.5}>
+                  <span style={{ color: "#B45309" }}>⚠️</span> IMPORTANT:
               </Box>
               <Box>
-                WhatsApp messages can only be sent to customers who have allowed
-                (given consent) to your business to receive messages.
+                  WhatsApp messages can only be sent to customers who have allowed
+                  (given consent) to your business to receive messages.
               </Box>
-              <Box>Messages can be informational ℹ️ or semi-promotional ℹ️</Box>
+                <Box>Messages can be informational ℹ️ or semi-promotional ℹ️</Box>
             </Box>
           </Box>
         )}
-
         {/* Step 2: Select Group */}
-        {step === 2 && (
-          <Box display="flex" gap={6} p={2}>
-            {/* Tier Info */}
-            <Box minWidth="250px" textAlign="center">
-              <Box
-                width={120}
-                height={120}
-                borderRadius="50%"
-                border="8px solid #E5E7EB"
-                display="flex"
-                alignItems="center"
-                justifyContent="center"
-                margin="0 auto"
-                fontWeight="bold"
-                fontSize="18px"
-                color="#10B981"
-              >
+         {step === 2 && (
+          <Box display="flex" gap={6} p={2} flexDirection={{ xs: "column", sm: "column", md: "row" }} >
+            <Box sx={{ display: { xs: "none", sm: "none", md: "block" }, minWidth: { md: "250px" }, textAlign: "center", mb: { xs: 2, sm: 2, md: 0 }, }}>
+              <Box width={120} height={120} borderRadius="50%" border="8px solid #E5E7EB" display="flex" alignItems="center" justifyContent="center" margin="0 auto" fontWeight="bold" fontSize="18px" color="#10B981" mb={8}>
                 1000
               </Box>
               <Typography mt={2} variant="body2" color="textSecondary">
                 TIER #1000
               </Typography>
               <Typography variant="body2" mt={1} color="text.secondary">
-                You can only send up to <br />
-                1000 messages in 24 hrs
+                You can only send up to <br /> 1000 messages in 24 hrs
               </Typography>
             </Box>
-
-            {/* Customer List Selector */}
             <Box flex={1} display="flex" flexDirection="column" gap={2}>
               <Typography variant="h6" fontWeight="bold" color="text.primary">
                 Select List
               </Typography>
-
-              {/* Warning message */}
               {warningMessage && (
-                <Typography color="error" variant="body2">
-                  {warningMessage}
-                </Typography>
+               <Typography color="error" variant="body2">
+                 {warningMessage}
+               </Typography>
               )}
-
               {(() => {
-                const selectedGroups = customerLists.filter((c) =>
-                  formData.group_id.includes(c.group_id)
-                );
-                const selectedCount = selectedGroups.length;
-                const totalContacts = selectedGroups.reduce(
-                  (sum, group) => sum + (group.total_contacts || 0),
+              const selectedGroups = customerLists.filter((c) =>
+                formData.group_id.includes(c.group_id)
+              );
+              const selectedCount = selectedGroups.length;
+              const totalContacts = selectedGroups.reduce(
+                (sum, group) => sum + (group.total_contacts || 0),
                   0
-                );
-
-                return !showList ? (
-                  // Collapsed view
+              );
+                 return !showList ? (
+              <Box onClick={() => setShowList((prev) => !prev)}
+                 sx={{ border: "1px solid #E5E7EB", backgroundColor: "#FAFAFA", borderRadius: "8px", padding: "12px 16px", inHeight: "56px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", "&:hover": { borderColor: "#CBD5E1" }, }}>
+                   <Typography color={ selectedCount > 0 ? "text.primary" : "text.secondary" }>
+                     {selectedCount > 0
+                       ? `${selectedCount} list${
+                       selectedCount > 1 ? "s" : ""
+                      } with < ${totalContacts} customers selected`
+                      : "Select list with < 1000 customers"}
+                   </Typography>
+                  <ArrowDropDownIcon />
+              </Box>
+              ) : (
+              <>
+              <TextField placeholder="Search contact lists" variant="outlined" size="small" fullWidth value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+              <Box border="1px solid #E5E7EB" borderRadius="8px" height="300px" overflow="auto" p={2} display="flex" flexDirection="column" alignItems="center" justifyContent={
+                filteredCustomerLists.length === 0
+                  ? "center"
+                  : "flex-start"
+              }>
+              {filteredCustomerLists.length === 0 ? (
+                <Box textAlign="center" color="text.secondary">
+                  <FolderOffIcon sx={{ fontSize: 48, opacity: 0.5 }} />
+                  <Typography>No results</Typography>
+                </Box>
+              ) : (
+                filteredCustomerLists.map((customer) => (
                   <Box
-                    onClick={() => setShowList((prev) => !prev)}
-                    sx={{
-                      border: "1px solid #E5E7EB",
-                      backgroundColor: "#FAFAFA",
-                      borderRadius: "8px",
-                      padding: "12px 16px",
-                      minHeight: "56px",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      width: "100%",
-                      "&:hover": { borderColor: "#CBD5E1" },
-                    }}
-                  >
-                    <Typography
-                      color={
-                        selectedCount > 0 ? "text.primary" : "text.secondary"
+                    key={customer.group_id}
+                    display="flex"
+                    alignItems="flex-start"
+                    justifyContent="space-between"
+                    py={1}
+                    borderBottom="1px solid #F3F4F6"
+                    width="100%">
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={formData.group_id.includes(
+                            customer.group_id
+                          )}
+                          onChange={(e) => {
+                            const isChecked = e.target.checked;
+                            const selectedGroups =
+                              customerLists.filter((c) =>
+                                formData.group_id.includes(c.group_id)
+                              );
+                            const totalSelectedContacts =
+                              selectedGroups.reduce(
+                                (sum, group) =>
+                                  sum + (group.total_contacts || 0),
+                                0
+                              );
+                            if (
+                              isChecked &&
+                              totalSelectedContacts +
+                                customer.total_contacts >
+                                1000
+                            ) {
+                              setWarningMessage(
+                                `Selecting "${customer.group_name}" would exceed the 1000 contact limit.`
+                              );
+                              setTimeout(
+                                () => setWarningMessage(""),
+                                3000
+                              );
+                              return;
+                            }
+                            setWarningMessage("");
+                            setFormData((prev) => ({
+                              ...prev,
+                              group_id: isChecked
+                                ? [...prev.group_id, customer.group_id]
+                                : prev.group_id.filter(
+                                    (id) => id !== customer.group_id
+                                  ),
+                            }));
+                            setShowList(false);
+                          }}
+                          disabled={isSubmitting || loading}
+                        />
                       }
-                    >
-                      {selectedCount > 0
-                        ? `${selectedCount} list${
-                            selectedCount > 1 ? "s" : ""
-                          } with < ${totalContacts} customers selected`
-                        : "Select list with < 1000 customers"}
-                    </Typography>
-                    <ArrowDropDownIcon />
-                  </Box>
-                ) : (
-                  // Expanded view
-                  <>
-                    <TextField
-                      placeholder="Search contact lists"
-                      variant="outlined"
-                      size="small"
-                      fullWidth
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-
-                    <Box
-                      border="1px solid #E5E7EB"
-                      borderRadius="8px"
-                      height="300px"
-                      overflow="auto"
-                      p={2}
-                      display="flex"
-                      flexDirection="column"
-                      alignItems="center"
-                      justifyContent={
-                        filteredCustomerLists.length === 0
-                          ? "center"
-                          : "flex-start"
-                      }
-                    >
-                      {filteredCustomerLists.length === 0 ? (
-                        <Box textAlign="center" color="text.secondary">
-                          <FolderOffIcon sx={{ fontSize: 48, opacity: 0.5 }} />
-                          <Typography>No results</Typography>
-                        </Box>
-                      ) : (
-                        filteredCustomerLists.map((customer) => {
-                          return (
-                            <Box
-                              key={customer.group_id}
-                              display="flex"
-                              alignItems="flex-start"
-                              justifyContent="space-between"
-                              py={1}
-                              borderBottom="1px solid #F3F4F6"
-                              width="100%"
+                      label={
+                        <Box>
+                          <Typography fontWeight="medium">
+                            {`${customer.group_name} (${customer.total_contacts} contacts)`}
+                          </Typography>
+                          {customer.initial_contacts && (
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
                             >
-                              <FormControlLabel
-                                control={
-                                  <Checkbox
-                                    checked={formData.group_id.includes(
-                                      customer.group_id
-                                    )}
-                                    onChange={(e) => {
-                                      const isChecked = e.target.checked;
-                                      const selectedGroups =
-                                        customerLists.filter((c) =>
-                                          formData.group_id.includes(c.group_id)
-                                        );
-                                      const totalSelectedContacts =
-                                        selectedGroups.reduce(
-                                          (sum, group) =>
-                                            sum + (group.total_contacts || 0),
-                                          0
-                                        );
-                                      if (
-                                        isChecked &&
-                                        totalSelectedContacts +
-                                          customer.total_contacts >
-                                          1000
-                                      ) {
-                                        setWarningMessage(
-                                          `Selecting "${customer.group_name}" would exceed the 1000 contact limit.`
-                                        );
-                                        setTimeout(
-                                          () => setWarningMessage(""),
-                                          3000
-                                        );
-                                        return;
-                                      }
-                                      setWarningMessage("");
-                                      setFormData((prev) => ({
-                                        ...prev,
-                                        group_id: isChecked
-                                          ? [
-                                              ...prev.group_id,
-                                              customer.group_id,
-                                            ]
-                                          : prev.group_id.filter(
-                                              (id) => id !== customer.group_id
-                                            ),
-                                      }));
-                                      setShowList(false);
-                                    }}
-                                    disabled={isSubmitting || loading}
-                                  />
-                                }
-                                label={
-                                  <Box>
-                                    <Typography fontWeight="medium">
-                                      {`${customer.group_name} (${customer.total_contacts} contacts)`}
-                                    </Typography>
-                                    {customer.initial_contacts && (
-                                      <Typography
-                                        variant="caption"
-                                        color="text.secondary"
-                                      >
-                                        Initial contacts:{" "}
-                                        {customer.initial_contacts}
-                                        {customer.unsubscribed_contacts
-                                          ? ` | Unsubscribed contacts: ${customer.unsubscribed_contacts}`
-                                          : ""}
-                                      </Typography>
-                                    )}
-                                  </Box>
-                                }
-                              />
-                              <Box
-                                px={1}
-                                py={0.5}
-                                border="1px dashed #10B981"
-                                borderRadius="4px"
-                                fontSize="12px"
-                                color="#10B981"
-                                alignSelf="center"
-                              >
-                                Exported data
-                              </Box>
-                            </Box>
-                          );
-                        })
-                      )}
+                              Initial contacts: {customer.initial_contacts}
+                              {customer.unsubscribed_contacts
+                                ? ` | Unsubscribed contacts: ${customer.unsubscribed_contacts}`
+                                : ""}
+                            </Typography>
+                          )}
+                        </Box>
+                      }
+                    />
+                    <Box px={1} py={0.5} border="1px dashed #10B981" borderRadius="4px" fontSize="12px" color="#10B981" alignSelf="center">
+                      Exported data
                     </Box>
-                  </>
-                );
-              })()}
-
-              {errors.group_id && (
-                <Typography color="error" variant="body2" mt={1}>
-                  {errors.group_id}
-                </Typography>
+                  </Box>
+                ))
               )}
             </Box>
-          </Box>
-        )}
+          </>
+        );
+      })()}
+
+      {errors.group_id && (
+        <Typography color="error" variant="body2" mt={1}>
+          {errors.group_id}
+        </Typography>
+      )}
+    </Box>
+  </Box>
+)}
+
         {/* Step 3: Select Template */}
         {step === 3 && (
           <div className="space-y-4">

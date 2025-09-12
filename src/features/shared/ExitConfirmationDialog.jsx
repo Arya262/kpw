@@ -1,52 +1,57 @@
-import React, { useRef, useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 
-const ExitConfirmationDialog = ({
-  showDialog,
+const ConfirmationDialog = ({
+  open,
+  hasUnsavedChanges = false,
   onCancel,
   onConfirm,
-  title = "Exit Confirmation",
-  message = "Are you sure you want to exit?",
-  hasUnsavedChanges = false,
-  confirmButtonText = "OK",
-  cancelButtonText = "Cancel"
+  cancelLabel = "Cancel",
+  confirmLabel = "Exit",
+  closeOnBackdrop = true,
 }) => {
   const dialogRef = useRef(null);
 
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === "Escape") {
-        onCancel();
-      }
+    if (open && dialogRef.current) {
+      dialogRef.current.focus();
+    }
+
+    const handleEsc = (e) => {
+      if (e.key === "Escape") onCancel?.();
     };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onCancel]);
 
-  useEffect(() => {
-    dialogRef.current?.focus();
-  }, []);
+    if (open) {
+      document.addEventListener("keydown", handleEsc);
+    }
+    return () => document.removeEventListener("keydown", handleEsc);
+  }, [open, onCancel]);
 
-  if (!showDialog) return null;
-
-  const displayMessage = hasUnsavedChanges
-    ? "You have unsaved changes. Are you sure you want to exit?"
-    : message;
+  if (!open) return null;
 
   return (
     <div
-      className="fixed inset-0 bg-[#000]/50 flex items-center justify-center z-50 transition-opacity duration-300"
-      onMouseDown={(e) => e.stopPropagation()}
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] transition-opacity duration-300"
+      onClick={closeOnBackdrop ? onCancel : undefined}
     >
       <div
         ref={dialogRef}
-        className="bg-white rounded-xl p-6 w-full max-w-sm shadow-lg transform transition-all duration-300 scale-100"
         role="dialog"
         aria-modal="true"
         aria-labelledby="dialog-title"
         aria-describedby="dialog-message"
         tabIndex="-1"
+        className="
+          bg-white rounded-xl 
+          p-4 sm:p-6 
+          w-full max-w-full sm:max-w-md 
+          shadow-xl transform transition-all duration-300 scale-100
+          mx-4 sm:mx-0
+        "
+        onClick={(e) => e.stopPropagation()}
       >
+        {/* Header */}
         <div className="flex items-center gap-3 mb-4">
+          
           <svg
             className="w-6 h-6 text-teal-500"
             fill="none"
@@ -62,26 +67,32 @@ const ExitConfirmationDialog = ({
             ></path>
           </svg>
           <h3 id="dialog-title" className="text-lg font-semibold text-gray-800">
-            {title}
+            Exit Confirmation
           </h3>
         </div>
+
+        {/* Message */}
         <p id="dialog-message" className="text-gray-600 mb-6">
-          {displayMessage}
+          {hasUnsavedChanges
+            ? "You have unsaved changes. Are you sure you want to exit?"
+            : "Are you sure you want to exit?"}
         </p>
+
+        {/* Actions */}
         <div className="flex justify-end gap-3">
           <button
             onClick={onCancel}
-            className="px-3 py-2 w-[70px] bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
-            aria-label={cancelButtonText}
+            aria-label={cancelLabel}
+            className="px-4 py-2 min-w-[80px] bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors duration-200 focus:outline-none font-medium cursor-pointer"
           >
-            {cancelButtonText}
+            {cancelLabel}
           </button>
           <button
             onClick={onConfirm}
-            className="px-3 py-2 w-[70px] bg-[#0AA89E] text-white rounded-md hover:bg-[#0AA89E] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
-            aria-label={confirmButtonText}
+            aria-label={confirmLabel}
+            className="px-6 py-2 min-w-[80px] bg-[#0AA89E] text-white rounded-md hover:bg-[#00BBA7] transition-colors duration-200 focus:outline-none font-medium cursor-pointer"
           >
-            {confirmButtonText}
+            {confirmLabel}
           </button>
         </div>
       </div>
@@ -89,4 +100,4 @@ const ExitConfirmationDialog = ({
   );
 };
 
-export default ExitConfirmationDialog;
+export default ConfirmationDialog;

@@ -1,132 +1,202 @@
-import React, { useCallback } from 'react';
-import PropTypes from 'prop-types';
-import Dropdown from '../../components/Dropdown';
+import React, { useState, useEffect } from "react";
+import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 
-const Pagination = ({
+export default function Pagination({
   currentPage,
   totalPages,
-  totalItems,
   itemsPerPage,
-  itemsPerPageOptions = [5, 10, 25],
-  onPageChange,
-  onItemsPerPageChange,
-  className = ''
-}) => {
-  // Calculate the range of items being shown
-  const startItem = ((currentPage - 1) * itemsPerPage) + 1;
-  const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+  totalItems,
+  onPageChange = () => {},
+  onItemsPerPageChange = () => {},
+}) {
+  const [activePage, setActivePage] = useState(currentPage || 1);
 
-  // Generate page numbers to show (max 5 at a time)
+  // Sync with prop changes
+  useEffect(() => {
+    setActivePage(currentPage || 1);
+  }, [currentPage]);
+
+  // Handle page change
+  const handlePageClick = (newPage) => {
+    if (newPage < 1 || newPage > totalPages) return;
+    setActivePage(newPage);
+    onPageChange(newPage);
+  };
+
+  const handlePrevPage = () => handlePageClick(activePage - 1);
+  const handleNextPage = () => handlePageClick(activePage + 1);
+
+  const safeTotal = typeof totalItems === "number" ? totalItems : 0;
+  const safeLimit = typeof itemsPerPage === "number" ? itemsPerPage : 10;
+  const safeTotalPages = typeof totalPages === "number" ? totalPages : 1;
+
+  // Calculate page numbers to display (max 5 pages)
   const getPageNumbers = () => {
-    const pages = [];
-    const maxVisiblePages = 5;
-    
-    if (totalPages <= maxVisiblePages) {
-      // Show all pages if less than max visible
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(i);
-      }
-    } else {
-      // Show ellipsis and current page in the middle
-      let startPage = Math.max(1, currentPage - 2);
-      let endPage = Math.min(totalPages, currentPage + 2);
-      
-      if (currentPage <= 3) {
-        endPage = maxVisiblePages;
-      } else if (currentPage >= totalPages - 2) {
-        startPage = totalPages - 4;
-      }
-      
-      for (let i = startPage; i <= endPage; i++) {
-        pages.push(i);
-      }
+    let startPage = Math.max(activePage - 2, 1);
+    let endPage = Math.min(startPage + 4, safeTotalPages);
+
+    // Adjust start if we're at the end
+    if (endPage - startPage < 4) {
+      startPage = Math.max(endPage - 4, 1);
     }
-    
+
+    const pages = [];
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
     return pages;
   };
 
   return (
-    <div className={`relative flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 px-4 py-3 bg-white rounded-b-lg ${className}`}>
-      {/* Items per page selector */}
-      <div className="flex items-center gap-2 text-sm">
-        <span className="text-gray-600">Show</span>
-        <div className="relative w-24">
-          <Dropdown
-            value={itemsPerPage}
-            onChange={(value) => onItemsPerPageChange(Number(value))}
-            options={itemsPerPageOptions.map(option => ({
-              value: option,
-              label: String(option),
-              color: 'text-gray-700'
-            }))}
-            placeholder={String(itemsPerPage)}
-          />
+    <div className="w-full mt-4">
+      {/* Desktop / Large screens */}
+      <div className="hidden md:flex flex-col md:flex-row justify-between items-center gap-4 bg-white border border-gray-200 rounded-lg p-4">
+        {/* Rows per page selector */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-600">Rows per page:</span>
+          <div className="relative">
+            <select
+              value={safeLimit}
+              onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
+              className="appearance-none bg-white border border-gray-300 rounded-md pl-3 pr-8 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 cursor-pointer"
+            >
+              {[5, 10, 25, 50].map((num) => (
+                <option key={num} value={num}>{num}</option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+              <ChevronDown className="h-4 w-4" />
+            </div>
+          </div>
         </div>
-        <span className="text-gray-600 whitespace-nowrap">per page</span>
-      </div>
-      
-      {/* Items count info */}
-      <div className="text-sm text-gray-600">
-        Showing <span className="font-medium">{startItem}-{endItem}</span> of <span className="font-medium">{totalItems}</span>
-      </div>
-      
-      {/* Page navigation */}
-      <div className="flex items-center space-x-1">
-        <button
-          onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-          className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0AA89E] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          aria-label="Previous page"
-        >
-          Previous
-        </button>
-        
-        {/* Page numbers */}
-        <div className="hidden sm:flex items-center space-x-1">
-          {getPageNumbers().map((pageNum, index, array) => (
-            <React.Fragment key={pageNum}>
-              {/* Show ellipsis if there's a gap */}
-              {index > 0 && array[index - 1] !== pageNum - 1 && (
-                <span className="px-2 text-gray-500">...</span>
-              )}
-              
-              <button
-                onClick={() => onPageChange(pageNum)}
-                className={`w-8 h-8 flex items-center justify-center text-sm font-medium rounded-md transition-colors ${
-                  currentPage === pageNum 
-                    ? 'bg-[#0AA89E] text-white' 
-                    : 'text-gray-700 hover:bg-gray-100 border border-gray-300'
-                }`}
-                aria-current={currentPage === pageNum ? 'page' : undefined}
-              >
-                {pageNum}
-              </button>
-            </React.Fragment>
+
+        {/* Pagination buttons */}
+        <div className="flex items-center space-x-1">
+          <button
+            onClick={() => handlePageClick(1)}
+            disabled={activePage === 1}
+            className={`p-1.5 rounded-md transition-all duration-300 ease-in-out transform hover:scale-105 ${
+              activePage === 1
+                ? "text-gray-400 cursor-not-allowed"
+                : "text-gray-700 hover:bg-gray-100 hover:shadow-sm"
+            }`}
+          >
+            First
+          </button>
+
+          <button
+            onClick={handlePrevPage}
+            disabled={activePage === 1}
+            className={`p-1.5 rounded-md transition-all duration-300 ease-in-out transform hover:scale-105 ${
+              activePage === 1
+                ? "text-gray-400 cursor-not-allowed"
+                : "text-gray-700 hover:bg-gray-100 hover:shadow-sm"
+            }`}
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+
+          {getPageNumbers().map((pageNum) => (
+            <button
+              key={pageNum}
+              onClick={() => handlePageClick(pageNum)}
+              className={`w-8 h-8 flex items-center justify-center rounded-full text-sm transition-all duration-300 ease-in-out transform hover:scale-105 ${
+                activePage === pageNum
+                  ? "bg-teal-500 text-white shadow-md"
+                  : "text-gray-700 hover:bg-gray-100 hover:shadow-sm"
+              }`}
+            >
+              {pageNum}
+            </button>
           ))}
+
+          <button
+            onClick={handleNextPage}
+            disabled={activePage === safeTotalPages}
+            className={`p-1.5 rounded-md transition-all duration-300 ease-in-out transform hover:scale-105 ${
+              activePage === safeTotalPages
+                ? "text-gray-400 cursor-not-allowed"
+                : "text-gray-700 hover:bg-gray-100 hover:shadow-sm"
+            }`}
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+
+          <button
+            onClick={() => handlePageClick(safeTotalPages)}
+            disabled={activePage === safeTotalPages}
+            className={`p-1.5 rounded-md transition-all duration-300 ease-in-out transform hover:scale-105 ${
+              activePage === safeTotalPages
+                ? "text-gray-400 cursor-not-allowed"
+                : "text-gray-700 hover:bg-gray-100 hover:shadow-sm"
+            }`}
+          >
+            Last
+          </button>
         </div>
-        
-        <button
-          onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0AA89E] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          aria-label="Next page"
-        >
-          Next
-        </button>
+
+        {/* Results info */}
+        <div className="text-sm text-gray-600">
+          Showing{" "}
+          <span className="font-medium">
+            {Math.min((activePage - 1) * safeLimit + 1, safeTotal)}
+          </span>{" "}
+          -{" "}
+          <span className="font-medium">
+            {Math.min(activePage * safeLimit, safeTotal)}
+          </span>{" "}
+          of <span className="font-medium">{safeTotal}</span> results
+        </div>
+      </div>
+
+      {/* Mobile / Tablet */}
+      <div className="flex md:hidden items-center bg-white border border-gray-200 rounded-lg p-3 overflow-x-auto whitespace-nowrap gap-3">
+        {/* Rows per page */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-600">Rows per page:</span>
+          <select
+            value={safeLimit}
+            onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
+            className="bg-white border border-gray-300 rounded-md text-sm py-1 px-2"
+          >
+            {[5, 10, 25, 50].map((num) => (
+              <option key={num} value={num}>{num}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Results + arrows */}
+        <div className="flex items-center gap-3 text-sm text-gray-600">
+          <span>
+            {Math.min((activePage - 1) * safeLimit + 1, safeTotal)}–
+            {Math.min(activePage * safeLimit, safeTotal)} of {safeTotal}
+          </span>
+          <div className="flex items-center">
+            <button
+              onClick={handlePrevPage}
+              disabled={activePage === 1}
+              className={`p-1 ${
+                activePage === 1
+                  ? "text-gray-400 cursor-not-allowed"
+                  : "text-gray-700"
+              }`}
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button
+              onClick={handleNextPage}
+              disabled={activePage === safeTotalPages}
+              className={`p-1 ${
+                activePage === safeTotalPages
+                  ? "text-gray-400 cursor-not-allowed"
+                  : "text-gray-700"
+              }`}
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
-};
-
-Pagination.propTypes = {
-  currentPage: PropTypes.number.isRequired,
-  totalPages: PropTypes.number.isRequired,
-  totalItems: PropTypes.number.isRequired,
-  itemsPerPage: PropTypes.number.isRequired,
-  itemsPerPageOptions: PropTypes.arrayOf(PropTypes.number),
-  onPageChange: PropTypes.func.isRequired,
-  onItemsPerPageChange: PropTypes.func.isRequired,
-  className: PropTypes.string
-};
-
-export default Pagination;
+}

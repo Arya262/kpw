@@ -1,11 +1,11 @@
-import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
+import { useState, useEffect, forwardRef, useImperativeHandle,useMemo, } from "react";
 import { useAuth } from "../../context/AuthContext";
-import searchIcon from "../../assets/search.png";
 import FilterBar from "./components/FilterBar";
 import SearchBar from "./components/SearchBar";
 import BroadcastTable from "./components/BroadcastTable";
 import { API_ENDPOINTS } from "../../config/api";
-
+import Pagination from "../shared/Pagination";
+import axios from "axios";
 const BroadcastDashboard = forwardRef(
   (
     {
@@ -24,42 +24,124 @@ const BroadcastDashboard = forwardRef(
     const [broadcasts, setBroadcasts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1, totalItems: 0, itemsPerPage: 10, });
     const { user } = useAuth();
 
-    const fetchBroadcasts = async () => {
+    const fetchBroadcasts = async (page = 1, limit = 10, search = "") => {
+      if (!user?.customer_id) return; 
+
       try {
         setLoading(true);
-        const response = await fetch(
-          `${API_ENDPOINTS.BROADCASTS.GET_ALL}?customer_id=${user?.customer_id}`,
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-            credentials: "include",
-          }
-        );
-        if (!response.ok) {
-          const errorDetails = await response.text();
-          throw new Error(`Failed to fetch broadcasts: ${errorDetails}`);
+        setError(null);
+
+        console.log("📤 Fetching broadcasts with params:", {
+          customer_id: user?.customer_id,
+          page,
+          limit,
+          search,
+        });
+
+        const response = await axios.get(API_ENDPOINTS.BROADCASTS.GET_ALL, {
+          params: {
+            customer_id: user?.customer_id,
+            page,
+            limit,
+            ...(search ? { search } : {}),
+          },
+          withCredentials: true,
+          validateStatus: (status) => status < 500, 
+        });
+
+        console.log("✅ API Response Status:", response.status);
+        console.log("📄 API Response Data:", response.data);
+
+        if (response.status >= 400) {
+          throw new Error(
+            response.data?.message || "Failed to fetch broadcasts"
+          );
         }
 
-        const data = await response.json();
-        const newBroadcasts = Array.isArray(data.broadcasts)
-          ? data.broadcasts
+        const result = response.data;
+        const broadcastsData = Array.isArray(result.broadcasts)
+          ? result.broadcasts
           : [];
-        setBroadcasts(newBroadcasts);
+
+        console.log("📦 Broadcasts Data from API:", broadcastsData);
+
+        if (broadcastsData.length === 0) {
+          console.log("ℹ️ No broadcasts found for the current customer");
+        }
+
+        setBroadcasts(broadcastsData);
+
+        setPagination((prev) => {
+          const newPagination = {
+            currentPage: result.pagination?.page || result.current_page || page,
+            totalPages:
+              result.pagination?.totalPages ||
+              result.last_page ||
+              (result.total ? Math.ceil(result.total / limit) : 1) ||
+              1,
+            totalItems:
+              result.pagination?.totalRecords ||
+              result.total ||
+              broadcastsData.length ||
+              0,
+            itemsPerPage: result.pagination?.limit || result.per_page || limit,
+          };
+          console.log("📊 Updated Pagination:", newPagination);
+          return newPagination;
+        });
 
         if (onBroadcastsUpdate) {
-          onBroadcastsUpdate(newBroadcasts);
+          onBroadcastsUpdate({
+            broadcasts: broadcastsData,
+            pagination: {
+              currentPage:
+                result.pagination?.page || result.current_page || page,
+              totalPages:
+                result.pagination?.totalPages ||
+                result.last_page ||
+                (result.total ? Math.ceil(result.total / limit) : 1) ||
+                1,
+              totalRecords:
+                result.pagination?.totalRecords ||
+                result.total ||
+                broadcastsData.length ||
+                0,
+              itemsPerPage:
+                result.pagination?.limit || result.per_page || limit,
+            },
+          });
         }
-
-        setError(null);
       } catch (err) {
-        console.error('Error fetching broadcasts:', err);
-        setError('Unable to load broadcasts. Please try again later.');
+        const errorMessage =
+          err.response?.data?.message ||
+          err.message ||
+          "Failed to fetch broadcasts";
+        console.error("❌ Error fetching broadcasts:", {
+          error: err,
+          response: err.response?.data,
+          status: err.response?.status,
+        });
+        setError(errorMessage);
+        toast.error(errorMessage);
       } finally {
         setLoading(false);
       }
+    };
+
+    const handlePageChange = (newPage) => {
+      setPagination((prev) => ({ ...prev, currentPage: newPage }));
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
+    const handleItemsPerPageChange = (newItemsPerPage) => {
+      setPagination((prev) => ({
+        ...prev,
+        currentPage: 1,
+        itemsPerPage: newItemsPerPage,
+      }));
     };
 
     useImperativeHandle(ref, () => ({
@@ -67,30 +149,30 @@ const BroadcastDashboard = forwardRef(
     }));
 
     useEffect(() => {
-      fetchBroadcasts();
-    }, []);
+      const timeout = setTimeout(() => {
+        fetchBroadcasts(
+          pagination.currentPage,
+          pagination.itemsPerPage,
+          search
+        );
+      }, 400); 
+      return () => clearTimeout(timeout);
+    }, [
+      pagination.currentPage,
+      pagination.itemsPerPage,
+      search,
+      user?.customer_id,
+    ]);
 
-    const filteredData = broadcasts.filter((broadcast) => {
-      const name = broadcast.broadcast_name || "";
-      const messageType = broadcast.message_type || "";
-      const searchText = search.toLowerCase();
 
-      const matchesSearch =
-        name.toLowerCase().includes(searchText) ||
-        messageType.toLowerCase().includes(searchText);
-
-      const matchesFilter =
-        activeFilter === "All" || broadcast.status === activeFilter;
-
-      return matchesSearch && matchesFilter;
-    });
-
-    const statuses = {
-      All: broadcasts.length,
-      Live: broadcasts.filter((d) => d.status === "Live").length,
-      Sent: broadcasts.filter((d) => d.status === "Sent").length,
-      Scheduled: broadcasts.filter((d) => d.schedule === "Scheduled").length,
-    };
+    const statuses = broadcasts.reduce(
+      (acc, b) => {
+        acc[b.status] = (acc[b.status] || 0) + 1;
+        acc.All++;
+        return acc;
+      },
+      { All: 0, Live: 0, Sent: 0, Scheduled: 0 }
+    );
 
     const filters = [
       {
@@ -118,6 +200,22 @@ const BroadcastDashboard = forwardRef(
         width: "w-[130px]",
       },
     ];
+
+    // 🔹 Optimized filtering with useMemo
+    const filteredData = useMemo(() => {
+      const searchText = search.toLowerCase();
+      return broadcasts.filter((broadcast) => {
+        const name = broadcast.broadcast_name?.toLowerCase() || "";
+        const type = broadcast.message_type?.toLowerCase() || "";
+        const matchesSearch =
+          name.includes(searchText) || type.includes(searchText);
+        const matchesFilter =
+          activeFilter === "All" || broadcast.status === activeFilter;
+        return matchesSearch && matchesFilter;
+      });
+    }, [broadcasts, search, activeFilter]);
+
+    // 🔹 Mobile view detection
     useEffect(() => {
       const handleResize = () => {
         setIsMobileView(window.innerWidth < 1000);
@@ -131,37 +229,6 @@ const BroadcastDashboard = forwardRef(
       setMenuOpen(menuOpen === idx ? null : idx);
     };
 
-    const handleDelete = async (idx) => {
-      // Delete is currently disabled
-      return;
-
-      // The original delete logic is commented out below
-      /*
-  try {
-    const broadcastToDelete = filteredData[idx];
-    const response = await fetch(
-      `http://next.tenacioustechies.com.au//broadcasts/${broadcastToDelete.id}`,
-      {
-        method: "DELETE",
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error("Failed to delete broadcast");
-    }
-
-    const newBroadcasts = broadcasts.filter((b) => b.id !== broadcastToDelete.id);
-    setBroadcasts(newBroadcasts);
-    if (onBroadcastsUpdate) {
-      onBroadcastsUpdate(newBroadcasts);
-    }
-    setMenuOpen(null);
-  } catch (err) {
-    setError(err.message);
-  }
-  */
-    };
-
     return (
       <div
         className={`w-full ${
@@ -169,24 +236,22 @@ const BroadcastDashboard = forwardRef(
         } rounded-xl mt-4 shadow-sm min-h-fit`}
       >
         <div className="flex items-center shadow-2xl p-4">
-          <div className="flex items-center gap-4 overflow-x-auto scrollbar-hide w-full justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full overflow-x-auto scrollbar-hide">
             <FilterBar
               filters={filters}
               activeFilter={activeFilter}
               setActiveFilter={setActiveFilter}
             />
-            <div className="block md:block lg:hidden">
-              <button className="flex items-center justify-center h-10 w-10">
-                <img
-                  src={searchIcon}
-                  alt="Search"
-                  className="w-5 h-5 opacity-60"
-                />
-              </button>
-            </div>
             <SearchBar search={search} setSearch={setSearch} />
           </div>
         </div>
+
+        {/* 🔹 Error banner */}
+        {error && (
+          <div className="bg-red-100 text-red-700 px-4 py-2 rounded-md m-4">
+            {error}
+          </div>
+        )}
 
         <BroadcastTable
           filteredData={filteredData}
@@ -196,10 +261,22 @@ const BroadcastDashboard = forwardRef(
           handleCheckboxChange={handleCheckboxChange}
           menuOpen={menuOpen}
           toggleMenu={toggleMenu}
-          handleDelete={handleDelete}
           loading={loading}
           error={error}
         />
+
+        {!loading && pagination.totalItems > 0 && (
+          <div className="border-t border-gray-200">
+            <Pagination
+              currentPage={pagination.currentPage}
+              totalPages={pagination.totalPages}
+              itemsPerPage={pagination.itemsPerPage}
+              totalItems={pagination.totalItems}
+              onPageChange={handlePageChange}
+              onItemsPerPageChange={handleItemsPerPageChange}
+            />
+          </div>
+        )}
       </div>
     );
   }

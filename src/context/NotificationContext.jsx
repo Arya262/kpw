@@ -25,7 +25,6 @@ export const NotificationProvider = ({ children }) => {
 
   // Keep ref in sync with state
   const setSelectedConversationId = useCallback((id) => {
-
     selectedConversationIdRef.current = id;
     _setSelectedConversationId(id);
   }, []);
@@ -37,118 +36,152 @@ export const NotificationProvider = ({ children }) => {
   const lastSoundTime = useRef(0);
 
   useEffect(() => {
-    notificationService.setCustomAudio("/notification.mp3");
+    // Set custom audio path relative to public directory
+    notificationService.setCustomAudio("/sound/notification.mp3");
+    
+    // Request notification permission on component mount
+    const requestPermissions = async () => {
+      try {
+        await notificationService.requestNotificationPermission();
+      } catch (error) {
+        console.warn('🔔 Failed to request notification permissions:', error);
+      }
+    };
+    
+    requestPermissions();
   }, []);
 
   const playSound = async () => {
+    if (!isNotificationEnabled) return;
+    
     const now = Date.now();
     if (now - lastSoundTime.current > 3000) {
       lastSoundTime.current = now;
-      await notificationService.playNotificationSound();
+      try {
+        await notificationService.playNotificationSound();
+      } catch (error) {
+        console.warn('🔇 Error playing notification sound:', error.message);
+      }
     }
   };
 
   const markConversationAsRead = (conversationId) => {
     setUnreadConversations((prev) => {
+      if (!prev[conversationId]) return prev; // avoid negative counts
       const newMap = { ...prev };
-      const removedCount = newMap[conversationId] || 0;
+      const removedCount = newMap[conversationId];
       delete newMap[conversationId];
-      setUnreadCount((prevUnread) => Math.max(prevUnread - removedCount, 0));
+      setUnreadCount((prevUnread) =>
+        Math.max(prevUnread - removedCount, 0)
+      );
       return newMap;
     });
   };
 
-const handleIncomingMessage = async (data) => {
-  console.log("📩 Raw incoming data:", data);
-  if (!data) return;
+  const handleIncomingMessage = async (data) => {
+    console.log("📩 Raw incoming data:", data);
+    if (!data) return;
 
-  let message = data?.message || data?.data || data;
-  if (typeof message === "string") {
-    try {
-      message = JSON.parse(message);
-    } catch {
+    let message = data?.message || data?.data || data;
+    if (typeof message === "string") {
+      try {
+        message = JSON.parse(message);
+      } catch {
+        return;
+      }
+    }
+
+    console.log("📩 Parsed message:", message);
+
+    // ✅ Normalize conversationId
+    const conversationId =
+      message.conversation_id ||
+      message.chat_id ||
+      message.contact_id ||
+      "unknown";
+
+    if (conversationId === "unknown") {
+      console.warn("⚠️ No conversation_id/chat_id/contact_id in message:", message);
       return;
+    }
+
+    // Skip if user is already viewing this conversation
+    const currentSelectedId = selectedConversationIdRef.current;
+    if (conversationId === currentSelectedId) {
+      console.log("Skipping notification for selected conversation");
+      return;
+    }
+
+    const contactName =
+      message.contact_name ||
+      message.sender_name ||
+      message.name ||
+      message.from ||
+      message.customerName ||
+      "Unknown";
+
+    const messageText =
+      message.content ||
+      message.element_name ||
+      message.message ||
+      message.text ||
+      `New message from ${contactName}`;
+
+    const now = Date.now();
+    if (now - (lastNotificationTime.current[conversationId] || 0) < 2000) return;
+    lastNotificationTime.current[conversationId] = now;
+
+    await playSound();
+
+    notificationService.showInAppNotification(messageText, "info");
+
+  if (isNotificationEnabled && !notificationService.isPageFocused()) {
+    try {
+      // Use timestamp in tag to make each notification unique while still grouping by conversation
+      const timestamp = Date.now();
+      await notificationService.showBrowserNotification(`${contactName}`, {
+        body: messageText,
+        icon: '/mobile_logo.webp',
+        data: { 
+          conversationId,
+          timestamp
+        },
+        tag: `message-${conversationId}-${timestamp}`,
+        renotify: true
+      });
+    } catch (error) {
+      console.warn('🔔 Failed to show browser notification:', error);
     }
   }
 
-  console.log("📩 Parsed message:", message);
+    setUnreadCount((prev) => prev + 1);
+    setUnreadConversations((prev) => ({
+      ...prev,
+      [conversationId]: (prev[conversationId] || 0) + 1,
+    }));
 
-  // ✅ Normalize conversationId (accepts conversation_id, chat_id, or contact_id)
-  const conversationId =
-    message.conversation_id ||
-    message.chat_id ||
-    message.contact_id ||
-    "unknown";
+    const newNotification = {
+      id: now,
+      type: "message",
+      title: `New message from ${contactName}`,
+      message: messageText,
+      conversationId,
+      contactName,
+      timestamp: new Date().toISOString(),
+      read: false,
+    };
 
-  if (conversationId === "unknown") {
-    console.warn("⚠️ No conversation_id/chat_id/contact_id in message:", message);
-    return;
-  }
-
-  // Skip notification if this is the currently selected conversation
-  const currentSelectedId = selectedConversationIdRef.current;
-  console.log(
-    "Incoming message - Conversation ID:",
-    conversationId,
-    "Selected ID (ref):",
-    currentSelectedId
-  );
-  if (conversationId === currentSelectedId) {
-    console.log("Skipping notification for selected conversation");
-    return;
-  }
-
-  const contactName =
-    message.contact_name ||
-    message.sender_name ||
-    message.name ||
-    message.from ||
-    message.customerName || 
-    "Unknown";
-
-  const messageText =
-    message.content ||
-    message.element_name ||
-    message.message ||
-    message.text ||
-    `New message from ${contactName}`;
-
-  const now = Date.now();
-  if (now - (lastNotificationTime.current[conversationId] || 0) < 2000) return;
-  lastNotificationTime.current[conversationId] = now;
-
-  await playSound();
-
-  notificationService.showInAppNotification(messageText, "info");
-
-  if (!notificationService.isPageFocused()) {
-    notificationService.showBrowserNotification(`💬 ${contactName}`, {
-      body: messageText,
+    setNotifications((prev) => {
+      const exists = prev.some(
+        (n) =>
+          n.message === messageText && n.conversationId === conversationId
+      );
+      if (exists) return prev;
+      return [newNotification, ...prev].slice(0, 10);
     });
-  }
 
-  setUnreadCount((prev) => prev + 1);
-  setUnreadConversations((prev) => ({
-    ...prev,
-    [conversationId]: (prev[conversationId] || 0) + 1,
-  }));
-
-  const newNotification = {
-    id: now,
-    type: "message",
-    title: `New message from ${contactName}`,
-    message: messageText,
-    conversationId,
-    contactName,
-    timestamp: new Date().toISOString(),
-    read: false,
+    window.dispatchEvent(new CustomEvent("message_received", { detail: data }));
   };
-
-  setNotifications((prev) => [newNotification, ...prev].slice(0, 10));
-
-  window.dispatchEvent(new CustomEvent("message_received", { detail: data }));
-};
-
 
   useEffect(() => {
     const preloadSound = () => {
@@ -159,57 +192,49 @@ const handleIncomingMessage = async (data) => {
     document.addEventListener("click", preloadSound);
   }, []);
 
-useEffect(() => {
-  if (!socket) return;
-
-  // Handler for full chat messages
-  const handleMessage = (data) => {
-    handleIncomingMessage(data);
-  };
-
-  // Handler for lightweight alerts (global notifications)
-  const handleAlert = (alert) => {
-    console.log("🔔 Received alert:", alert);
-    const { contact_id, name, content } = alert;
-
-    const conversationId = String(contact_id);
-
-    // Skip if user is already viewing this conversation
-    if (conversationId === selectedConversationIdRef.current) {
-      console.log("Skipping alert for active conversation");
-      return;
-    }
-
-    handleIncomingMessage({
-      message: {
-        conversation_id: conversationId,
-        contact_name: name,
-        content,
-      },
-    });
-  };
-
-  socket.on("newMessage", handleMessage);      // detailed message payload
-  socket.on("newMessageAlert", handleAlert);   // global lightweight alert
-
-  return () => {
-    socket.off("newMessage", handleMessage);
-    socket.off("newMessageAlert", handleAlert);
-  };
-}, [socket]);
-
   useEffect(() => {
-    const onFocus = () => {
-      if (!document.hidden) setUnreadCount(0);
+    if (!socket) return;
+
+    const handleMessage = (data) => {
+      handleIncomingMessage(data);
     };
-    document.addEventListener("visibilitychange", onFocus);
-    return () => document.removeEventListener("visibilitychange", onFocus);
-  }, []);
 
-  useEffect(() => {
-    if (!user?.customer_id) return; 
+    const handleAlert = (alert) => {
+      console.log("🔔 Received alert:", alert);
+      const { contact_id, name, content } = alert;
+      const conversationId = String(contact_id);
 
-const fetchUnreadCount = async () => {
+      if (conversationId === selectedConversationIdRef.current) {
+        console.log("Skipping alert for active conversation");
+        return;
+      }
+
+      handleIncomingMessage({
+        message: {
+          conversation_id: conversationId,
+          contact_name: name,
+          content,
+        },
+      });
+    };
+
+    socket.off("newMessage");
+    socket.off("newMessageAlert");
+    socket.on("newMessage", handleMessage);
+    socket.on("newMessageAlert", handleAlert);
+
+    return () => {
+      socket.off("newMessage", handleMessage);
+      socket.off("newMessageAlert", handleAlert);
+    };
+  }, [socket]);
+
+  // ❌ Removed "reset unreadCount on focus" effect (was wiping counts on reload)
+
+useEffect(() => {
+  if (!user?.customer_id) return;
+
+  const fetchUnreadCount = async () => {
     try {
       const response = await axios.get(
         `${API_ENDPOINTS.CHAT.CONVERSATIONS}?customer_id=${user.customer_id}`,
@@ -219,27 +244,26 @@ const fetchUnreadCount = async () => {
         }
       );
 
-      // Ensure we have an array
-      const conversations = Array.isArray(response.data)
-        ? response.data
-        : Array.isArray(response.data.items)
-        ? response.data.items
+      // ✅ Ensure array
+      const conversations = Array.isArray(response.data?.data)
+        ? response.data.data
         : [];
 
-      // Total unread count
+      // ✅ Total unread count
       const totalUnread = conversations.reduce(
         (sum, c) => sum + (c.unread_count || 0),
         0
       );
       setUnreadCount(totalUnread);
 
-      // Map conversationId -> unread count
+      // ✅ Map contact_id -> unread count
       const unreadMap = {};
       conversations.forEach(c => {
-        if (c.unread_count > 0 && c.conversation_id)
-          unreadMap[c.conversation_id] = c.unread_count;
+        if (c.unread_count > 0 && c.contact_id)
+          unreadMap[c.contact_id] = c.unread_count;
       });
       setUnreadConversations(unreadMap);
+
     } catch (error) {
       console.error("Failed to fetch contacts for unread count:", error);
     }
@@ -294,7 +318,14 @@ const fetchUnreadCount = async () => {
       setSelectedConversationId,
       selectedConversationId,
     }),
-    [unreadCount, unreadConversations, notifications, isNotificationEnabled, setSelectedConversationId, selectedConversationId]
+    [
+      unreadCount,
+      unreadConversations,
+      notifications,
+      isNotificationEnabled,
+      setSelectedConversationId,
+      selectedConversationId,
+    ]
   );
 
   return (

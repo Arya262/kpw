@@ -10,6 +10,7 @@ const ConfirmationDialog = ({ showExitDialog, cancelExit, confirmExit }) => {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === "Escape") cancelExit();
+      if (e.key === "Enter") confirmExit();
     };
     const handleClickOutside = (e) => {
       if (dialogRef.current && !dialogRef.current.contains(e.target)) {
@@ -26,16 +27,16 @@ const ConfirmationDialog = ({ showExitDialog, cancelExit, confirmExit }) => {
       window.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [showExitDialog, cancelExit]);
+  }, [showExitDialog, cancelExit, confirmExit]);
 
   useEffect(() => {
     dialogRef.current?.focus();
-  }, []);
+  }, [showExitDialog]);
 
   if (!showExitDialog) return null;
 
   return (
-    <div className="fixed inset-0 bg-[#000]/50  flex items-center justify-center z-50 transition-opacity duration-300">
+    <div className="fixed inset-0 bg-[#000]/50 flex items-center justify-center z-50">
       <div
         ref={dialogRef}
         className="bg-white rounded-xl p-6 w-full max-w-sm shadow-lg transform transition-all duration-300 scale-100"
@@ -76,7 +77,7 @@ const ConfirmationDialog = ({ showExitDialog, cancelExit, confirmExit }) => {
           </button>
           <button
             onClick={confirmExit}
-            className="px-3 py-2 w-[70px] bg-teal-500 text-white rounded-md hover:bg-teal-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
+            className="px-3 py-2 w-[70px] bg-teal-500 text-white rounded-md hover:bg-teal-600 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
           >
             OK
           </button>
@@ -105,30 +106,30 @@ const AddCreditModal = ({
     const handleClickOutside = (event) => {
       if (modalRef.current && !modalRef.current.contains(event.target)) {
         setIsCrossHighlighted(true);
-        setTimeout(() => setIsCrossHighlighted(false), 2000);
+        setTimeout(() => setIsCrossHighlighted(false), 1000);
       }
     };
 
-    if (isOpen) {
+    if (isOpen && !paymentLoading) {
       document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isOpen]);
+  }, [isOpen, paymentLoading]);
 
   useEffect(() => {
     if (paymentSuccess) {
       const timer = setTimeout(() => {
         onClose();
       }, 2000);
-
       return () => clearTimeout(timer);
     }
   }, [paymentSuccess, onClose]);
 
   const handleCloseAndNavigate = () => {
+    if (paymentLoading) return;
     setShowExitDialog(true);
   };
 
@@ -146,23 +147,22 @@ const AddCreditModal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-[#000]/50  flex items-center justify-center z-50 transition-all duration-300">
+    <div className="fixed inset-0 bg-[#000]/50 flex items-center justify-center z-50">
       <div
         ref={modalRef}
         className={`bg-white rounded-lg w-full max-w-sm shadow-lg p-6 relative border transition-all duration-300 ${
           isCrossHighlighted
-            ? "border-teal-500 border-2 shadow-[0_0_20px_rgba(5,163,163,0.3)]"
+            ? "border-red-500 animate-pulse"
             : "border-gray-300"
         }`}
       >
+        {/* Close button */}
         <button
           onClick={handleCloseAndNavigate}
           disabled={paymentLoading}
-          className={`absolute top-2 right-4 text-gray-600 hover:text-black text-3xl font-bold w-8 h-8 flex items-center justify-center pb-2 rounded-full transition-colors cursor-pointer ${
-            isCrossHighlighted
-              ? "bg-red-500 text-white hover:text-white"
-              : "bg-gray-100"
-          } ${paymentLoading ? "opacity-50 cursor-not-allowed" : ""}`}
+          className={`absolute top-2 right-4 text-gray-600 hover:text-black text-3xl font-bold w-8 h-8 flex items-center justify-center pb-2 rounded-full transition-colors ${
+            paymentLoading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+          }`}
         >
           ×
         </button>
@@ -179,24 +179,36 @@ const AddCreditModal = ({
           </div>
         ) : (
           <>
-            <div className="flex justify-between gap-2 mb-4">
+            {/* Predefined amounts */}
+            <div className="grid grid-cols-2 gap-3 mb-6">
               {[5000, 10000, 20000, 50000].map((amount) => (
                 <button
                   key={amount}
                   type="button"
-                  className={`px-3 py-1 rounded border w-full text-sm ${
-                    creditAmount === amount
-                      ? "bg-[#0AA89E] text-white"
-                      : "bg-gray-100 text-gray-800 hover:bg-gray-200"
-                  }`}
                   onClick={() => setCreditAmount(amount)}
                   disabled={paymentLoading}
+                  className={`
+        relative px-4 py-3 rounded-xl w-full text-base font-medium
+        transition-all duration-300 ease-in-out transform
+        ${
+          creditAmount === amount
+            ? "bg-gradient-to-r from-teal-500 to-teal-600 text-white shadow-lg scale-105 border-2 border-teal-600"
+            : "bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-300 hover:scale-105"
+        }
+        ${paymentLoading ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}
+      `}
                 >
-                  ₹{amount}
+                  ₹{amount.toLocaleString()}
+                  {creditAmount === amount && (
+                    <span className="absolute top-1 right-2 text-xs bg-white text-teal-600 px-2 py-0.5 rounded-full shadow-sm">
+                      Selected
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
 
+            {/* Custom amount */}
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -210,9 +222,9 @@ const AddCreditModal = ({
               </label>
               <input
                 type="number"
-                step="1"
                 min="1"
-                autoFocus={!paymentSuccess}
+                step="1"
+                onWheel={(e) => e.currentTarget.blur()} // prevent scroll
                 placeholder="e.g., 300 to unlock all features"
                 value={creditAmount}
                 onChange={(e) => setCreditAmount(Number(e.target.value))}
@@ -229,15 +241,14 @@ const AddCreditModal = ({
                   isNaN(creditAmount) ||
                   creditAmount <= 0
                 }
-                className={`w-full bg-[#0AA89E] hover:bg-[#0AA89E] text-white py-2 rounded-md font-semibold transition-all duration-200 flex items-center justify-center 
-    ${
-      paymentLoading ||
-      !creditAmount ||
-      isNaN(creditAmount) ||
-      creditAmount <= 0
-        ? "opacity-90 cursor-pointer"
-        : "cursor-pointer"
-    }`}
+                className={`w-full bg-[#0AA89E] text-white py-2 rounded-md font-semibold transition flex items-center justify-center ${
+                  paymentLoading ||
+                  !creditAmount ||
+                  isNaN(creditAmount) ||
+                  creditAmount <= 0
+                    ? "opacity-50 cursor-not-allowed"
+                    : "hover:bg-[#099089] cursor-pointer"
+                }`}
               >
                 {paymentLoading ? (
                   <span className="flex items-center gap-2">
@@ -277,7 +288,7 @@ const AddCreditModal = ({
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
+          transition={{ delay: 0.3 }}
           className="mt-6 text-center text-xs text-gray-500 flex items-center justify-center gap-1"
         >
           <ShieldCheck className="w-4 h-4 text-green-500" />
@@ -286,6 +297,7 @@ const AddCreditModal = ({
         </motion.div>
       </div>
 
+      {/* Exit dialog */}
       <ConfirmationDialog
         showExitDialog={showExitDialog}
         cancelExit={cancelExit}

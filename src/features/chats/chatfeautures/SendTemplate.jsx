@@ -331,22 +331,15 @@ const SendTemplate = ({ onSelect, onClose, returnFullTemplate = false }) => {
   };
 
   return (
-    <div
-      className="w-full max-w-3xl p-4 bg-white relative"
-      role="dialog"
-      aria-modal="true"
-    >
-      <button
-        onClick={onClose}
+    <div role="dialog" aria-modal="true">
+      <button onClick={onClose}
         className="absolute top-2 right-4 text-gray-600 hover:text-black text-3xl font-bold w-8 h-8 flex items-center justify-center pb-2 rounded-full transition-colors cursor-pointer bg-gray-100"
-        aria-label="Close template selection modal"
-      >
-        ×
+        aria-label="Close template selection modal" >
+            ×
       </button>
       <h2 className="text-lg font-semibold mb-4 text-center text-gray-800">
         Choose a Template
       </h2>
-
       {error && (
         <p id="error-message" className="text-red-500 text-sm text-center mb-4">
           {error}
@@ -373,7 +366,7 @@ const SendTemplate = ({ onSelect, onClose, returnFullTemplate = false }) => {
         </div>
       ) : (
         <div className="border border-gray-200 rounded-md overflow-hidden">
-          <div className="overflow-x-auto overflow-y-auto max-h-[400px] scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
+          <div className="overflow-x-auto overflow-y-auto max-h-[400px] scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent scrollbar-hide">
             <table className="min-w-full text-sm text-left text-gray-700">
               <thead className="bg-white text-gray-700 sticky top-0 z-10 shadow">
                 <tr>
@@ -445,7 +438,7 @@ const SendTemplate = ({ onSelect, onClose, returnFullTemplate = false }) => {
       )}
       {previewTemplate && (
         <div className="fixed inset-0 z-50 bg-[#000]/50 flex items-center justify-center px-4">
-          <div className="bg-white rounded-xl shadow-lg w-full max-w-4xl relative p-6">
+           <div className="bg-white rounded-xl shadow-lg w-full max-w-full sm:max-w-lg md:max-w-4xl relative p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setPreviewTemplate(null)}
               className="absolute top-3 right-4 text-gray-400 hover:text-black text-2xl font-bold"
@@ -456,8 +449,8 @@ const SendTemplate = ({ onSelect, onClose, returnFullTemplate = false }) => {
             <h3 className="text-xl font-semibold mb-4 text-gray-800 text-center">
               Template Preview
             </h3>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1 text-gray-800 text-sm">
+            <div className="flex flex-col sm:flex-row gap-4 max-h-[80vh] overflow-y-auto scrollbar-hide">
+              <div className="flex-1 w-full sm:w-1/2 text-gray-800 text-sm">
                 {previewTemplate.dynamicFields?.length > 0 ? (
                   <div className="space-y-3">
                     {/* {console.log("Current dynamicFields:", dynamicFields)} */}
@@ -598,7 +591,7 @@ const SendTemplate = ({ onSelect, onClose, returnFullTemplate = false }) => {
                   </div>
                 )}
               </div>
-              <div className="flex-1 flex justify-center">
+              <div className="flex-1 w-full sm:w-1/2 flex justify-center">
                 <div className="rounded-[2rem] shadow-xl w-full max-w-[320px] h-[75vh] max-h-[650px] flex flex-col overflow-hidden border-[6px] border-gray-200">
                   <div className="bg-[#075E54] h-12 flex items-center px-4 text-white font-semibold"></div>
                   <div

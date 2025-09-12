@@ -5,31 +5,7 @@ import { useNavigate } from "react-router-dom";
 import DeleteConfirmationDialog from "../shared/DeleteConfirmationDialog";
 import { toast } from "react-toastify";
 import { Edit2, Trash2 } from "lucide-react";
-
-const formatDate = (dateString) => {
-  if (!dateString) return "N/A";
-  const date = new Date(dateString);
-  const formattedDate = date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-  });
-  const hasTime = date.getHours() !== 0 || date.getMinutes() !== 0;
-  if (hasTime) {
-    const formattedTime = date.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    });
-    return (
-      <div className="flex flex-col">
-        <span>{formattedDate}</span>
-        <span>{formattedTime}</span>
-      </div>
-    );
-  }
-  return <span>{formattedDate}</span>;
-};
+import { formatDate } from "../../utils/formatters";
 
 const Table = ({
   templates = [],
@@ -39,11 +15,27 @@ const Table = ({
   canDelete,
   onAddTemplate,
   vendorIcon,
+  pagination,
+  searchTerm: propSearchTerm = "",
+  onSearchChange,
 }) => {
   const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState("All");
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState(propSearchTerm);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
+  
+  // Sync local search term with prop
+  useEffect(() => {
+    setSearchTerm(propSearchTerm);
+  }, [propSearchTerm]);
+  
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    if (onSearchChange) {
+      onSearchChange(value);
+    }
+  };
   const [localTemplates, setLocalTemplates] = useState([]);
   const [menuOpen, setMenuOpen] = useState(null);
   const [shouldFlipUp, setShouldFlipUp] = useState({});
@@ -91,28 +83,22 @@ const Table = ({
     );
   }, [localTemplates, activeFilter]);
 
-  const displayedTemplates = useMemo(() => {
-    const term = searchTerm.toLowerCase();
-    return statusFilteredTemplates.filter(
-      (t) =>
-        t.element_name?.toLowerCase().includes(term) ||
-        t.category?.toLowerCase().includes(term)
-    );
-  }, [statusFilteredTemplates, searchTerm]);
+  // Use the templates directly since search is now handled server-side
+  const filteredTemplates = templates;
 
   // Selection logic
   useEffect(() => {
-    const total = displayedTemplates.length;
+    const total = filteredTemplates.length;
     const selected = Object.values(selectedRows).filter(Boolean).length;
     setSelectAll(selected === total && total > 0);
-  }, [selectedRows, displayedTemplates.length]);
+  }, [selectedRows, filteredTemplates.length]);
 
   const handleSelectAllChange = (event) => {
     const checked = event.target.checked;
     setSelectAll(checked);
     const newSelected = {};
     if (checked) {
-      displayedTemplates.forEach((_, idx) => {
+      filteredTemplates.forEach((_, idx) => {
         newSelected[idx] = true;
       });
     }
@@ -152,7 +138,7 @@ const Table = ({
     
     const selectedTemplates = Object.entries(selectedRows)
       .filter(([_, isSelected]) => isSelected)
-      .map(([idx]) => displayedTemplates[parseInt(idx)])
+      .map(([idx]) => filteredTemplates[parseInt(idx)])
       .filter(template => template);
       
     if (selectedTemplates.length === 0) {
@@ -347,15 +333,16 @@ const Table = ({
                 </button>
               ))}
             </div>
-            <div className="hidden sm:block flex-grow max-w-[400px] relative ml-auto">
-              <IoSearch className="absolute right-2 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <div className="relative w-full sm:w-64">
               <input
                 type="text"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search template by Name or Category..."
-                className="pl-3 pr-7 py-1.5 sm:py-2 border border-gray-300 text-sm sm:text-base rounded-md w-full focus:outline-none focus:ring-1 focus:ring-[#0AA89E] focus:border-[#0AA89E] placeholder:text-sm sm:placeholder:text-base"
+                onChange={handleSearchChange}
+                placeholder="Search by name or category..."
+                className="w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-[#0AA89E] focus:border-[#0AA89E] text-sm"
+                aria-label="Search templates"
               />
+              <IoSearch className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             </div>
             {/* Add New Templates Button */}
             {onAddTemplate && (
@@ -440,7 +427,7 @@ const Table = ({
                         Type
                       </th>
                       <th className="px-2 py-3 sm:px-6 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">
-                        Message Type
+                        Template Type
                       </th>
                       <th className="px-2 py-3 sm:px-6 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">
                         Action
@@ -450,7 +437,7 @@ const Table = ({
                 </tr>
               </thead>
               <tbody className="max-h-[calc(100vh-300px)] overflow-y-auto">
-                {displayedTemplates.length === 0 ? (
+                {filteredTemplates.length === 0 ? (
                   <tr>
                     <td
                       colSpan="7"
@@ -465,7 +452,7 @@ const Table = ({
                     </td>
                   </tr>
                 ) : (
-                  displayedTemplates.map((template, idx) => (
+                  filteredTemplates.map((template, idx) => (
                     <tr
                       key={template.id || idx}
                       ref={(el) => (rowRefs.current[idx] = el)}
@@ -487,18 +474,17 @@ const Table = ({
                       <td className="px-2 py-4 text-[12px] sm:text-[16px] font-semibold rounded text-center">
                         <span
                           className={`px-3 py-1 rounded-full inline-block text-center min-w-[100px] font-medium
-      shadow-sm transition-colors duration-200
-      ${
-        template.status?.toLowerCase() === "approved"
-          ? "text-green-800 bg-green-200"
-          : template.status?.toLowerCase() === "pending"
-          ? "text-yellow-800 bg-yellow-200"
-          : template.status?.toLowerCase() === "failed"
-          ? "text-red-800 bg-red-200"
-          : "text-gray-800 bg-gray-200"
-      }
-    `}
-                        >
+                                       shadow-sm transition-colors duration-200
+                                            ${
+                                              template.status?.toLowerCase() === "approved"
+                                                ? "text-green-800 bg-green-200"
+                                                : template.status?.toLowerCase() === "pending"
+                                                ? "text-yellow-800 bg-yellow-200"
+                                                : template.status?.toLowerCase() === "failed"
+                                                ? "text-red-800 bg-red-200"
+                                                : "text-gray-800 bg-gray-200"
+                                            }
+                                    `}>
                           {template.status}
                         </span>
                       </td>
@@ -575,6 +561,8 @@ const Table = ({
             </table>
           </div>
         </div>
+        {/* Pagination */}
+        {pagination}
       </div>
       <DeleteConfirmationDialog
         showDialog={showDeleteDialog}

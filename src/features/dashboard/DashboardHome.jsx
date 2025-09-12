@@ -200,26 +200,30 @@ const DashboardHome = () => {
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-3 px-4 pt-2">
-        <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800">
-          Dashboard
-        </h2>
+<div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-3 px-4 pt-2">
+  {/* Left side: Title + description */}
+  <div>
+    <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800">
+      Dashboard
+    </h2>
+  </div>
 
-        {/* Button wrapper prevents full width */}
-        <div className="w-full sm:w-auto">
-          <button
-            className="bg-[#0AA89E] hover:bg-[#0AA89E]/90 text-white flex items-center justify-center gap-2 px-4 py-2 rounded-lg cursor-pointer w-full sm:w-auto"
-            onClick={
-              permissions.canAddCredits
-                ? () => setShowAddCredit(true)
-                : handleUnauthorizedAddCredit
-            }
-          >
-            <img src={vendor} alt="plus sign" className="w-4 h-4" />
-            Add Credit
-          </button>
-        </div>
-      </div>
+  {/* Right side: Button */}
+  <div className="w-full sm:w-auto">
+    <button
+      type="button"
+      className="bg-[#0AA89E] hover:bg-[#0AA89E]/90 text-white flex items-center justify-center gap-2 px-4 py-2 rounded-lg cursor-pointer w-full sm:w-auto"
+      onClick={
+        permissions.canAddCredits
+          ? () => setShowAddCredit(true)
+          : handleUnauthorizedAddCredit
+      }
+    >
+      <img src={vendor} alt="plus sign" className="w-4 h-4" />
+      Add Credit
+    </button>
+  </div>
+</div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-6 lg:mx-7">
         {stats.map(({ title, icon: Icon, value, gradient }, i) => (
@@ -246,58 +250,59 @@ const DashboardHome = () => {
       </div>
       {/* Wallet Balance Card */}
       <motion.div
-        className="p-6 rounded-xl bg-white shadow-md flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 col-span-1 sm:col-span-2 lg:col-span-4 mt-6 mx-7"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        {/* Wallet Info */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-          <p className="text-lg font-semibold">
-            Wallet balance:{" "}
-            <span className="font-bold text-green-600">
-              ₹{summary.total_credit_remaining.toLocaleString()}
-            </span>
-          </p>
-          <span className="flex items-center text-sm text-gray-600">
-            <FaWhatsapp className="text-green-500 mr-1" />
-            Good for{" "}
-            <strong>
-              {/* {Math.floor(summary.total_credit_remaining / 1.038)} */}
-            </strong>{" "}
-            marketing messages.{" "}
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                setShowWalletDetails(true);
-              }}
-              className="text-blue-500 hover:underline"
-            >
-              View details
-            </button>
-          </span>
-        </div>
+  className="p-4 sm:p-6 rounded-xl bg-white shadow-md flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between col-span-1 sm:col-span-2 lg:col-span-4 mt-4 sm:mt-6 mx-4 sm:mx-7"
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.5 }}
+>
+  {/* Wallet Info */}
+  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+    <p className="text-base sm:text-lg font-semibold">
+      Wallet balance:{" "}
+      <span className="font-bold text-green-600">
+        ₹{summary.total_credit_remaining.toLocaleString()}
+      </span>
+    </p>
+    <span className="flex flex-wrap items-center text-gray-600 gap-1 text-xs sm:text-sm md:text-base">
+  <FaWhatsapp className="text-green-500" />
+  Good for{" "}
+  <strong className="font-semibold">
+    {/* {Math.floor(summary.total_credit_remaining / 1.038)} */}
+  </strong>{" "}
+  marketing messages.{" "}
+  <button
+    onClick={(e) => {
+      e.preventDefault();
+      setShowWalletDetails(true);
+    }}
+    className="text-blue-500 hover:underline ml-1"
+  >
+    View details
+  </button>
+</span>
+  </div>
 
-        {/* Buttons */}
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={
-              permissions.canAddCredits
-                ? () => setShowAddCredit(true)
-                : handleUnauthorizedAddCredit
-            }
-            className="px-4 py-2 border border-blue-500 text-blue-600 rounded-lg hover:bg-blue-50 transition"
-          >
-            ₹ Top–up
-          </button>
-          <button 
-            onClick={() => setShowTransactionHistory(true)}
-            className="px-4 py-2 border border-gray-400 text-gray-600 rounded-lg hover:bg-gray-100 transition"
-          >
-            ⟳ History
-          </button>
-        </div>
-      </motion.div>
+  {/* Buttons */}
+  <div className="flex flex-col sm:flex-row gap-2">
+    <button
+      onClick={
+        permissions.canAddCredits
+          ? () => setShowAddCredit(true)
+          : handleUnauthorizedAddCredit
+      }
+      className="px-4 py-2 border border-blue-500 text-blue-600 rounded-lg hover:bg-blue-50 transition"
+    >
+      ₹ Top–up
+    </button>
+    <button
+      onClick={() => setShowTransactionHistory(true)}
+      className="px-4 py-2 border border-gray-400 text-gray-600 rounded-lg hover:bg-gray-100 transition"
+    >
+      ⟳ History
+    </button>
+  </div>
+</motion.div>
+
       <motion.div
         className="mt-5"
         initial={{ opacity: 0, y: 20 }}

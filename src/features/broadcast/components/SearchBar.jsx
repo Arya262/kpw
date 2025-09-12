@@ -3,8 +3,8 @@ import searchIcon from "../../../assets/search.png";
 
 const SearchBar = ({ search, setSearch }) => {
   return (
-    <div className="hidden lg:block flex-shrink-0 ml-28">
-      <div className="relative w-[300px]">
+    <div className="flex-shrink-0 ml-0 sm:ml-10 md:ml-16 lg:ml-28">
+      <div className="relative w-full md:w-[280px] lg:w-[300px]">
         <img
           src={searchIcon}
           alt="Search"
@@ -22,4 +22,4 @@ const SearchBar = ({ search, setSearch }) => {
   );
 };
 
-export default SearchBar; 
+export default SearchBar;
