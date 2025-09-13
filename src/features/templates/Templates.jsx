@@ -21,19 +21,19 @@ const Templates = () => {
   const { user } = useAuth();
   const permissions = getPermissions(user);
 
-  // Destructure from the refactored hook
   const {
     data: { templates = [], loading, error },
     pagination: {
       currentPage = 1,
       totalPages = 1,
       totalItems = 0,
+      totalRecords = 0,
       itemsPerPage = 10,
       onPageChange,
       onItemsPerPageChange,
     },
     search: { searchTerm = "", setSearchTerm } = {},
-    actions: { addTemplate, deleteTemplate, fetchTemplates, updateTemplate } = {},
+    actions: { addTemplate, deleteTemplate, fetchTemplates } = {},
   } = useTemplates();
 
   const [editingTemplate, setEditingTemplate] = useState(null);
@@ -41,14 +41,35 @@ const Templates = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Summary counts
-  const approvedCount = templates.filter((t) => t.status?.toLowerCase() === "approved").length;
-  const pendingCount = templates.filter((t) => t.status?.toLowerCase() === "pending").length;
-  const failedCount = templates.filter((t) => t.status?.toLowerCase() === "failed").length;
+  const approvedCount = templates.filter(
+    (t) => t.status?.toLowerCase() === "approved"
+  ).length;
+  const pendingCount = templates.filter(
+    (t) => t.status?.toLowerCase() === "pending"
+  ).length;
+  const failedCount = templates.filter(
+    (t) => t.status?.toLowerCase() === "failed"
+  ).length;
 
   const summaryCards = [
-    { label: "Approved Templates", count: approvedCount, image: approvedIcon, bgColor: "bg-[#D1FADF]" },
-    { label: "Pending Templates", count: pendingCount, image: pendingIcon, bgColor: "bg-[#FEE4E2]" },
-    { label: "Failed Templates", count: failedCount, image: rejectedIcon, bgColor: "bg-[#FECDCA]" },
+    {
+      label: "Approved Templates",
+      count: approvedCount,
+      image: approvedIcon,
+      bgColor: "bg-[#D1FADF]",
+    },
+    {
+      label: "Pending Templates",
+      count: pendingCount,
+      image: pendingIcon,
+      bgColor: "bg-[#FEE4E2]",
+    },
+    {
+      label: "Failed Templates",
+      count: failedCount,
+      image: rejectedIcon,
+      bgColor: "bg-[#FECDCA]",
+    },
   ];
 
   // Add template
@@ -61,7 +82,10 @@ const Templates = () => {
       // Refresh page 1 (or you could fetch currentPage)
       await fetchTemplates(1, itemsPerPage, searchTerm);
     } catch (error) {
-      toast.error(error?.message || "Failed to create template", createToastConfig(5000));
+      toast.error(
+        error?.message || "Failed to create template",
+        createToastConfig(5000)
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -75,14 +99,20 @@ const Templates = () => {
         const template = templates.find((t) => t.id === id);
         if (template) {
           const success = await deleteTemplate(template.element_name, id);
-          if (!success) throw new Error(`Failed to delete template: ${template.element_name}`);
+          if (!success)
+            throw new Error(
+              `Failed to delete template: ${template.element_name}`
+            );
         }
       }
       // After deletion refresh current page
       await fetchTemplates(currentPage, itemsPerPage, searchTerm);
       return true;
     } catch (error) {
-      toast.error(error?.message || "Failed to delete template(s)", defaultToastConfig);
+      toast.error(
+        error?.message || "Failed to delete template(s)",
+        defaultToastConfig
+      );
       return false;
     }
   };
@@ -99,8 +129,17 @@ const Templates = () => {
 
   return (
     <div className="flex flex-col gap-4 pt-2">
-      <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop closeOnClick draggable pauseOnHover theme="light" />
-            <div className="flex items-center justify-between">
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        draggable
+        pauseOnHover
+        theme="light"
+      />
+      <div className="flex items-center justify-between">
         <h2 className="text-xl pt-0 font-semibold">Templates List</h2>
 
         {permissions.canAddTemplate && (
@@ -121,12 +160,22 @@ const Templates = () => {
             key={index}
             className="w-full md:w-[350px] h-[124px] p-5 rounded-xl bg-white flex items-center gap-6 shadow-[0_4px_8px_0_rgba(0,0,0,0.1)]"
           >
-            <div className={`w-[60px] h-[60px] rounded-full flex items-center justify-center ${card.bgColor}`}>
-              <img src={card.image} alt={card.label} className="w-[32px] h-[32px] object-contain" />
+            <div
+              className={`w-[60px] h-[60px] rounded-full flex items-center justify-center ${card.bgColor}`}
+            >
+              <img
+                src={card.image}
+                alt={card.label}
+                className="w-[32px] h-[32px] object-contain"
+              />
             </div>
             <div className="text-left">
-              <p className="text-[18px] text-[#555] font-medium font-poppins">{card.label}</p>
-              <p className="text-[22px] font-bold font-poppins mt-1">{card.count}</p>
+              <p className="text-[18px] text-[#555] font-medium font-poppins">
+                {card.label}
+              </p>
+              <p className="text-[22px] font-bold font-poppins mt-1">
+                {card.count}
+              </p>
             </div>
           </div>
         ))}
@@ -148,10 +197,16 @@ const Templates = () => {
                 // Otherwise refresh list after editing (you can replace with direct API call here)
                 await fetchTemplates(currentPage, itemsPerPage, searchTerm);
               }
-              toast.success("Template updated successfully!", defaultToastConfig);
+              toast.success(
+                "Template updated successfully!",
+                defaultToastConfig
+              );
               setEditingTemplate(null);
             } catch (err) {
-              toast.error("Failed to save template. Please try again.", createToastConfig(5000));
+              toast.error(
+                "Failed to save template. Please try again.",
+                createToastConfig(5000)
+              );
             }
           }}
         />
@@ -168,22 +223,27 @@ const Templates = () => {
             onDelete={permissions.canDeleteTemplate ? handleDelete : undefined}
             canEdit={permissions.canEditTemplate}
             canDelete={permissions.canDeleteTemplate}
-            onAddTemplate={permissions.canAddTemplate ? () => setIsModalOpen(true) : undefined}
+            onAddTemplate={
+              permissions.canAddTemplate
+                ? () => setIsModalOpen(true)
+                : undefined
+            }
             vendorIcon={vendor}
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
             pagination={
               <div className="mt-4">
                 <Pagination
-  currentPage={currentPage}
-  totalPages={totalPages}
-  totalItems={totalItems}
-  itemsPerPage={itemsPerPage}
-  onPageChange={onPageChange}
-  onItemsPerPageChange={onItemsPerPageChange}
-/>
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalRecords}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={onPageChange}
+                  onItemsPerPageChange={onItemsPerPageChange}
+                />
               </div>
             }
+            totalRecords={totalRecords}
           />
         )}
       </ErrorBoundary>

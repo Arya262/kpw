@@ -17,6 +17,7 @@ export const useTemplates = () => {
     currentPage: 1,
     totalPages: 1,
     totalItems: 0,
+    totalRecords: 0,
     itemsPerPage: 10,
   });
 
@@ -80,6 +81,7 @@ export const useTemplates = () => {
           result.total ??
           templates.length ??
           0,
+        totalRecords: result.pagination?.totalRecords ?? 0, 
         itemsPerPage: result.pagination?.limit ?? result.per_page ?? limit,
       }));
     } catch (err) {
@@ -172,7 +174,7 @@ useEffect(() => {
     }
   };
 
-  // ❌ Delete template
+
   const deleteTemplate = async (templateName, id) => {
     try {
       const response = await axios.delete(API_ENDPOINTS.TEMPLATES.DELETE(), {
@@ -206,6 +208,7 @@ useEffect(() => {
       totalPages: pagination.totalPages,
       totalItems: pagination.totalItems,
       itemsPerPage: pagination.itemsPerPage,
+      totalRecords: pagination.totalRecords,
       onPageChange: handlePageChange,
       onItemsPerPageChange: handleItemsPerPageChange,
     },

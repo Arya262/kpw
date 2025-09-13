@@ -146,102 +146,102 @@ const ExploreTemplates = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {filteredTemplates.map((template) => (
             <motion.div
-              key={template.id}
-              whileHover={{ y: -8, scale: 1.02 }}
-              transition={{ duration: 0.2 }}
-              className="bg-white/90 backdrop-blur rounded-2xl shadow-lg overflow-hidden flex flex-col border border-gray-100 hover:border-cyan-300 transition-all duration-300 group"
-            >
-              {/* Image */}
-              {hasImage(template) && (
-                <div className="relative">
-                  <img
-                    src={template.container_meta.mediaUrl}
-                    alt={template.element_name || "Template image"}
-                    className="w-full h-44 object-cover"
-                    onError={(e) => {
-                      e.target.src = "/fallbacks/default.jpg";
-                      e.target.onerror = null;
+            key={template.id}
+            whileHover={{ y: -8, scale: 1.02 }}
+            transition={{ duration: 0.2 }}
+            className="bg-white/90 backdrop-blur rounded-2xl shadow-lg overflow-hidden flex flex-col border border-gray-100 hover:border-cyan-300 transition-all duration-300 group"
+          >
+            {/* Image */}
+            {hasImage(template) && (
+              <div className="relative">
+                <img
+                  src={template.container_meta.mediaUrl}
+                  alt={template.element_name || "Template image"}
+                  className="w-full h-44 object-cover"
+                  onError={(e) => {
+                    e.target.src = "/fallbacks/default.jpg";
+                    e.target.onerror = null;
+                  }}
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-70 group-hover:opacity-90 transition" />
+              </div>
+            )}
+          
+            {/* Content */}
+            <div className="p-4 flex-1 flex flex-col justify-between">
+              <div className="flex justify-between items-start">
+                {/* Text Container */}
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-lg font-semibold text-gray-900 truncate">
+                    {template.element_name}
+                  </h3>
+                  <span
+                    className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium mt-1 ${
+                      template.category?.toLowerCase() === "marketing"
+                        ? "bg-green-100 text-green-700"
+                        : template.category?.toLowerCase() === "info"
+                        ? "bg-blue-100 text-blue-700"
+                        : "bg-gray-100 text-gray-600"
+                    }`}
+                  >
+                    {template.category}
+                  </span>
+                </div>
+          
+                {/* Actions */}
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => {
+                      setSelectedTemplate(template);
+                      setIsDrawerOpen(true);
                     }}
-                    loading="lazy"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-70 group-hover:opacity-90 transition" />
+                    className="p-2 rounded-full hover:bg-gray-100 transition"
+                    title="Preview Template"
+                  >
+                    <Eye className="w-5 h-5 text-gray-600 group-hover:scale-110 transition" />
+                  </button>
+          
+                  <button
+                    onClick={() => handleDeleteClick(template)}
+                    className="p-2 rounded-full hover:bg-red-50 transition"
+                    title="Delete Template"
+                  >
+                    <Trash2 className="w-5 h-5 text-red-500 group-hover:scale-110 transition" />
+                  </button>
                 </div>
-              )}
-
-              {/* Content */}
-              <div className="p-4 flex-1 flex flex-col justify-between">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">
-                      {template.element_name}
-                    </h3>
-                    <span
-                      className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium mt-1 ${
-                        template.category?.toLowerCase() === "marketing"
-                          ? "bg-green-100 text-green-700"
-                          : template.category?.toLowerCase() === "info"
-                          ? "bg-blue-100 text-blue-700"
-                          : "bg-gray-100 text-gray-600"
-                      }`}
-                    >
-                      {template.category}
-                    </span>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => {
-                        setSelectedTemplate(template);
-                        setIsDrawerOpen(true);
-                      }}
-                      className="p-2 rounded-full hover:bg-gray-100 transition"
-                      title="Preview Template"
-                    >
-                      <Eye className="w-5 h-5 text-gray-600 group-hover:scale-110 transition" />
-                    </button>
-
-                    <button
-                      onClick={() => handleDeleteClick(template)}
-                      className="p-2 rounded-full hover:bg-red-50 transition"
-                      title="Delete Template"
-                    >
-                      <Trash2 className="w-5 h-5 text-red-500 group-hover:scale-110 transition" />
-                    </button>
-                  </div>
-                </div>
-
-                <p className="text-sm text-gray-600 mt-3 line-clamp-3">
-                  {template.container_meta?.sampleText ||
-                    "No sample text available"}
-                </p>
               </div>
-
-              {/* Bottom CTA */}
-              <div className="flex">
-                <button
-                  disabled={template?.status?.toLowerCase() !== "approved"}
-                  onClick={() =>
-                    navigate("/broadcast", {
-                      state: { selectedTemplate: template, openForm: true },
-                    })
-                  }
-                  className={`flex-1 px-4 py-3 font-semibold rounded-b-2xl transition-all ${
-                    template?.status?.toLowerCase() === "approved"
-                      ? "bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:brightness-110"
-                      : "bg-gray-200 text-gray-500 cursor-not-allowed"
-                  }`}
-                >
-                  {template?.status?.toLowerCase() === "approved" ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <Send className="w-4 h-4" /> Send
-                    </span>
-                  ) : (
-                    "Pending Approval"
-                  )}
-                </button>
-              </div>
-            </motion.div>
+          
+              <p className="text-sm text-gray-600 mt-3 line-clamp-3">
+                {template.container_meta?.sampleText || "No sample text available"}
+              </p>
+            </div>
+          
+            {/* Bottom CTA */}
+            <div className="flex">
+              <button
+                disabled={template?.status?.toLowerCase() !== "approved"}
+                onClick={() =>
+                  navigate("/broadcast", {
+                    state: { selectedTemplate: template, openForm: true },
+                  })
+                }
+                className={`flex-1 px-4 py-3 font-semibold rounded-b-2xl transition-all ${
+                  template?.status?.toLowerCase() === "approved"
+                    ? "bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:brightness-110"
+                    : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                }`}
+              >
+                {template?.status?.toLowerCase() === "approved" ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Send className="w-4 h-4" /> Send
+                  </span>
+                ) : (
+                  "Pending Approval"
+                )}
+              </button>
+            </div>
+          </motion.div>
           ))}
         </div>
       )}

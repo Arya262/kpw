@@ -14,6 +14,7 @@ const Table = ({
   canEdit,
   canDelete,
   pagination,
+  totalRecords,
   searchTerm,
   onSearchChange,
 }) => {
@@ -30,23 +31,17 @@ const Table = ({
   const rowRefs = useRef({});
 
   // ✅ counts for filter bar
-  const filteredCounts = useMemo(() => {
-    const approved = templates.filter(
-      (t) => t.status?.toLowerCase() === "approved"
-    ).length;
-    const pending = templates.filter(
-      (t) => t.status?.toLowerCase() === "pending"
-    ).length;
-    const failed = templates.filter(
-      (t) => t.status?.toLowerCase() === "failed"
-    ).length;
+const filteredCounts = useMemo(() => {
+    const approved = templates.filter(t => t.status?.toLowerCase() === "approved").length;
+    const pending = templates.filter(t => t.status?.toLowerCase() === "pending").length;
+    const failed = templates.filter(t => t.status?.toLowerCase() === "failed").length;
     return {
-      all: templates.length,
+      all: totalRecords || templates.length, // ✅ totalRecords from API
       approved,
       pending,
       failed,
     };
-  }, [templates]);
+  }, [templates, totalRecords]);
 
   const filters = [
     { label: "All", count: filteredCounts.all },
