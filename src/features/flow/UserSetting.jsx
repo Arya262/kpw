@@ -248,7 +248,7 @@ const roleOptions = [
               type="button"
         >
           <img src={vendor} alt="plus sign" className="w-5 h-5" />
-          Add Contact
+          Add User
         </button>
           </div>
         </div>

@@ -44,7 +44,7 @@ export const useChatLogic = ({
     }
   }, []);
 
-  // ===== Fetch Contacts with Cursor Pagination =====
+// ===== Fetch Contacts with Cursor Pagination =====
   const fetchContacts = useCallback(
     async ({ cursor = null, limit = 10 } = {}) => {
       if (!user?.customer_id) return;
@@ -59,7 +59,7 @@ export const useChatLogic = ({
           headers: { "Content-Type": "application/json" },
           withCredentials: true,
         });
- console.log('API Response:', response.data); 
+
         const { data = [], nextCursor, hasMore } = response.data;
 
         const enriched = data.map((c) => ({
@@ -114,7 +114,7 @@ export const useChatLogic = ({
         );
 
         const { messages = [], pagination } = response.data;
-
+        // console.log(messages);
 
         if (!cursor) {
           // 🔹 First load → replace messages
@@ -152,107 +152,126 @@ export const useChatLogic = ({
   );
 
   const selectContact = useCallback(
-  (contact) => {
-    if (!contact) {
-      console.error("No contact provided to selectContact");
-      return;
-    }
-
-   
-
-    if (!contact.contact_id) {
-     
-      setSelectedContact(contact);
-      setMessages([]);
-      return;
-    }
-
-    const currentContact = selectedContactRef.current;
-
-    // Prevent re-selecting the same contact
-    const isSameContact =
-      currentContact &&
-      ((currentContact.contact_id &&
-        currentContact.contact_id === contact.contact_id) ||
-        (currentContact.mobile_no &&
-          contact.mobile_no &&
-          currentContact.mobile_no === contact.mobile_no));
-
-    if (isSameContact) {
-      
-      return;
-    }
-
-
-
-    setSelectedContact(contact);
-
-    setContacts((prev) =>
-      prev.map((c) => ({
-        ...c,
-        active:
-          (c.contact_id && c.contact_id === contact.contact_id) ||
-          (c.mobile_no &&
-            contact.mobile_no &&
-            c.mobile_no === contact.mobile_no),
-        unreadCount:
-          (c.contact_id && c.contact_id === contact.contact_id) ||
-          (c.mobile_no &&
-            contact.mobile_no &&
-            c.mobile_no === contact.mobile_no)
-            ? 0
-            : c.unreadCount || 0,
-      }))
-    );
-
-    if (contact.contact_id) {
-      
-      fetchMessagesForContact(contact.contact_id);
-      socket?.emit("join_contact", String(contact.contact_id)); 
-    }
-  },
-  [
-    socket,
-    fetchMessagesForContact,
-    setSelectedContact,
-    setContacts,
-    setMessages,
-  ]
-);
-
-const handleIncomingMessage = useCallback(
-  (msg) => {
-    const isFromSelectedChat = selectedContactRef.current?.contact_id === msg.contact_id;
- 
-    if (!isFromSelectedChat) {
-      const contact = contacts.find((c) => c.contact_id === msg.contact_id);
-      if (contact) {
-        toast.info(`New message from ${contact.name}`);
+    (contact) => {
+      if (!contact) {
+        console.error("No contact provided to selectContact");
+        return;
       }
-    }
 
-    setContacts((prev) =>
-      prev.map((c) => {
-        if (c.contact_id === msg.contact_id) {
-          return {
-            ...c,
-            lastMessage: msg.content || msg.element_name,
-            lastMessageType: msg.message_type,
-            lastMessageTime: msg.sent_at,
-            unreadCount: isFromSelectedChat ? 0 : (c.unreadCount || 0) + 1,
-          };
+      // console.log("Selecting contact:", {
+      //   name: contact.name,
+      //   contact_id: contact.contact_id,
+      //   mobile_no: contact.mobile_no,
+      //   currentContact: selectedContactRef.current,
+      // });
+
+      if (!contact.contact_id) {
+        // console.log(`👆 New chat selected with ${contact.name}`);
+        setSelectedContact(contact);
+        setMessages([]);
+        return;
+      }
+
+      const currentContact = selectedContactRef.current;
+
+      // Check if the same contact is being selected again
+      const isSameContact =
+        currentContact &&
+        ((currentContact.contact_id &&
+          currentContact.contact_id === contact.contact_id) ||
+          (currentContact.mobile_no &&
+            contact.mobile_no &&
+            currentContact.mobile_no === contact.mobile_no));
+
+      if (isSameContact) {
+        // console.log(
+        //   `⚠️ Contact ${contact.name} already selected, no new fetch.`
+        // );
+        return;
+      }
+
+      // console.log(
+      //   `👆 New contact selected: ${contact.name} (ID: ${
+      //     contact.contact_id || "new"
+      //   }, Phone: ${contact.mobile_no || "none"})`
+      // );
+
+      setSelectedContact(contact);
+
+      if (setSelectedConversationId && contact.contact_id) {
+        // console.log("Setting selected conversation ID:", contact.contact_id);
+        setSelectedConversationId(contact.contact_id);
+      } else if (!contact.contact_id) {
+        // console.log("No contact_id, new chat started");
+      }
+
+      // Update contacts active state
+      setContacts((prev) =>
+        prev.map((c) => ({
+          ...c,
+          active:
+            (c.contact_id && c.contact_id === contact.contact_id) ||
+            (c.mobile_no &&
+              contact.mobile_no &&
+              c.mobile_no === contact.mobile_no),
+          unreadCount:
+            (c.contact_id && c.contact_id === contact.contact_id) ||
+            (c.mobile_no &&
+              contact.mobile_no &&
+              c.mobile_no === contact.mobile_no)
+              ? 0
+              : c.unreadCount || 0,
+        }))
+      );
+
+      if (contact.contact_id) {
+        // console.log("Fetching messages for conversation:", contact.contact_id);
+        fetchMessagesForContact(contact.contact_id);
+        socket?.emit("join_conversation", String(contact.contact_id));
+      }
+    },
+    [
+      socket,
+      fetchMessagesForContact,
+      setSelectedContact,
+      setContacts,
+      setMessages,
+    ]
+  );
+
+  const handleIncomingMessage = useCallback(
+    (msg) => {
+      const isFromSelectedChat = selectedContactRef.current?.contact_id === msg.contact_id;
+
+      if (!isFromSelectedChat) {
+        const contact = contacts.find((c) => c.contact_id === msg.contact_id);
+        if (contact) {
+          toast.info(`New message from ${contact.name}`);
         }
-        return c;
-      })
-    );
+      }
 
-    if (isFromSelectedChat) {
-      setMessages((prev) => [...prev, msg]);
-      fetchedConversations.current.delete(msg.contact_id);
-    }
-  },
-  [setContacts, setMessages, selectedContact, contacts]
-);
+      setContacts((prev) =>
+        prev.map((c) => {
+          if (c.contact_id === msg.contact_id) {
+            return {
+              ...c,
+              lastMessage: msg.content || msg.element_name,
+              lastMessageType: msg.message_type,
+              lastMessageTime: msg.sent_at,
+              unreadCount: isFromSelectedChat ? 0 : (c.unreadCount || 0) + 1,
+            };
+          }
+          return c;
+        })
+      );
+
+      if (isFromSelectedChat) {
+        setMessages((prev) => [...prev, msg]);
+        fetchedConversations.current.delete(msg.conversation_id);
+      }
+    },
+    [setContacts, setMessages, selectedContact, contacts]
+  );
 
   const setupSocketListener = useCallback(() => {
     if (!socket) return;
@@ -261,11 +280,7 @@ const handleIncomingMessage = useCallback(
       socket.off("newMessage", handleIncomingMessage);
     };
   }, [socket, handleIncomingMessage]);
-
-
-
-  
-
+  // ===== Send Message (text or template) =====
   const sendMessage = useCallback(
     async (input) => {
       if (permissions && !permissions.canSendMessages) return;

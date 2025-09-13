@@ -22,7 +22,7 @@ const Broadcast = () => {
   const location = useLocation();
   const { user } = useAuth();
   const permissions = getPermissions(user);
-
+  const [pagination, setPagination] = useState(null);
   const canDeleteBroadcast = (broadcast) => {
     if (!permissions.canDelete) return false;
     if (user?.role?.toLowerCase?.() === "user") {
@@ -92,8 +92,12 @@ const Broadcast = () => {
     setShowPopup(false);
   };
 
-  const handleBroadcastsUpdate = (newBroadcasts) => {
-    setBroadcasts(newBroadcasts);
+  const handleBroadcastsUpdate = ({
+    broadcasts: newBroadcasts,
+    pagination: newPagination,
+  }) => {
+    setBroadcasts(newBroadcasts || []);
+    setPagination(newPagination || null);
   };
 
   const handleAddBroadcast = () => {
@@ -130,8 +134,10 @@ const Broadcast = () => {
         </button>
       </div>
 
-      <BroadcastStats data={broadcasts} />
-
+      <BroadcastStats
+        data={broadcasts}
+        totalRecords={pagination?.totalRecords || 0}
+      />
       <BroadcastDashboard
         ref={broadcastDashboardRef}
         onBroadcastsUpdate={handleBroadcastsUpdate}
@@ -160,7 +166,9 @@ const Broadcast = () => {
             <button
               onClick={() => setShowPopup(false)}
               className={`absolute top-2 right-4 text-gray-600 hover:text-black text-3xl font-bold w-8 h-8 flex items-center justify-center pb-2 rounded-full transition-colors cursor-pointer ${
-                highlightCancel ? "bg-red-500 text-white hover:text-white" : "bg-gray-100"
+                highlightCancel
+                  ? "bg-red-500 text-white hover:text-white"
+                  : "bg-gray-100"
               }`}
               aria-label="Close"
             >

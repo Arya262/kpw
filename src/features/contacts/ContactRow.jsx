@@ -34,6 +34,12 @@ export default function ContactRow({
     });
   };
 
+  const handleCheckboxChange = (e) => {
+    e.stopPropagation();
+    // Toggle the current checked state
+    onCheckboxChange(contact.contact_id, !isChecked);
+  };
+
   const handleDeleteClick = (e) => {
     e.stopPropagation();
     onDeleteClick(contact);
@@ -55,7 +61,7 @@ export default function ContactRow({
             type="checkbox"
             className="form-checkbox w-4 h-4"
             checked={isChecked}
-            onChange={onCheckboxChange}
+            onChange={handleCheckboxChange}
           />
         </div>
       </td>

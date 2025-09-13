@@ -14,19 +14,21 @@ const ChatMessages = ({
   selectedContact,
   messages = [],
   isTyping,
-  fetchMessagesForContact, // 👈 pass your fetch function as prop
+  fetchMessagesForContact,
 }) => {
   const messagesEndRef = useRef(null);
   const chatContainerRef = useRef(null);
-
-  // 🔹 Scroll to bottom when new messages arrive
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, isTyping]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  const loadingOlder = useRef(false);
+ const prevMessagesLength = useRef(0);
+ const prevContactId = useRef(null);
+const scrollToBottom = (instant = false) => {
+  if (messagesEndRef.current) {
+    messagesEndRef.current.scrollIntoView({
+      behavior: instant ? "auto" : "smooth",
+      block: "end",
+    });
+  }
+};
 
   // 🔹 Load older messages when user scrolls to top
   const handleScroll = useCallback(async () => {
@@ -34,13 +36,22 @@ const ChatMessages = ({
     if (!container || !selectedContact?.contact_id) return;
 
     if (container.scrollTop === 0) {
+      const prevHeight = container.scrollHeight;
       const oldestMessage = messages[0];
       if (!oldestMessage) return;
+
+      loadingOlder.current = true;
 
       await fetchMessagesForContact(selectedContact.contact_id, {
         limit: 20,
         cursor: oldestMessage.sent_at,
       });
+
+      requestAnimationFrame(() => {
+  const newHeight = container.scrollHeight;
+  container.scrollTop = newHeight - prevHeight;
+  loadingOlder.current = false;
+});
     }
   }, [messages, selectedContact, fetchMessagesForContact]);
 
@@ -49,8 +60,51 @@ const ChatMessages = ({
     if (!container) return;
 
     container.addEventListener("scroll", handleScroll);
-    return () => container.removeEventListener("scroll", handleScroll);
+    return () => {
+      container.removeEventListener("scroll", handleScroll);
+    };
   }, [handleScroll]);
+
+// 🔹 Scroll to the last message when switching chat OR when messages update
+
+useEffect(() => {
+  if (
+    selectedContact?.contact_id &&
+    messages.length > 0 &&
+    prevContactId.current !== selectedContact.contact_id
+  ) {
+    // ✅ Only run when contact actually changes
+    requestAnimationFrame(() => {
+      scrollToBottom(true);
+    });
+  }
+
+  prevContactId.current = selectedContact?.contact_id;
+}, [selectedContact?.contact_id, messages.length]);
+
+// 🔹 Auto scroll when new messages arrive (but NOT when fetching older)
+useEffect(() => {
+  if (!messagesEndRef.current) return;
+
+  const container = chatContainerRef.current;
+  if (!container) return;
+
+  const lastMessage = messages[messages.length - 1];
+  const sentByUser = lastMessage && lastMessage.status !== "received";
+
+  const nearBottom =
+    container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+
+  const isNewMessage = messages.length > prevMessagesLength.current;
+
+  if (isNewMessage && !loadingOlder.current) {
+    if (sentByUser || nearBottom || isTyping) {
+      scrollToBottom();
+    }
+  }
+
+  prevMessagesLength.current = messages.length; // ✅ update **after** handling
+}, [messages, isTyping]);
 
   // 🔹 Group messages by date
   const getDateLabel = (date) => {
@@ -73,10 +127,8 @@ const ChatMessages = ({
     [messages]
   );
 
-  const isSentByUser = (msg) => msg.status !== "received";
-
   const renderMessage = (msg, index) => {
-    const sent = isSentByUser(msg);
+    const sent = msg.status !== "received";
     const time = msg.sent_at
       ? new Date(msg.sent_at).toLocaleTimeString("en-US", {
           hour: "numeric",
@@ -106,7 +158,6 @@ const ChatMessages = ({
       case "document":
         return <DocumentMessage msg={message} sent={sent} />;
       default:
-         console.warn("Unknown type:", msg.message_type);
         return (
           <div className="text-red-500 text-sm italic">
             Unsupported message type: {msg.message_type}
@@ -132,15 +183,22 @@ const ChatMessages = ({
                 {dateLabel}
               </span>
             </div>
-            {msgs.map((msg, i) => (
-              <div
-                key={msg.message_id || `${msg.message_type}-${i}`}
-                className="mb-4"
-                role="listitem"
-              >
-                {renderMessage(msg, i)}
-              </div>
-            ))}
+            {msgs.map((msg, i) => {
+  const isLastMessage =
+    i === msgs.length - 1 &&
+    dateLabel === Object.keys(groupedMessages).slice(-1)[0]; // last group & last msg
+
+  return (
+    <div
+      key={msg.message_id || `${msg.message_type}-${i}`}
+      className="mb-4"
+      role="listitem"
+      ref={isLastMessage ? messagesEndRef : null} // ✅ attach ref only to last
+    >
+      {renderMessage(msg, i)}
+    </div>
+  );
+})}
           </div>
         ))
       ) : (

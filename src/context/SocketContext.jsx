@@ -23,7 +23,7 @@ export const SocketProvider = ({ children }) => {
 
     // User logged in => create socket if not already connected
     if (!socket) {
-      const newSocket = io("http://localhost:60000", {
+      const newSocket = io("https://marketing-uoxu.onrender.com", {
         transports: ["websocket"],
         withCredentials: true,
       });

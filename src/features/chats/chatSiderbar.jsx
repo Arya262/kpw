@@ -108,11 +108,16 @@ const ChatSidebar = ({
   const [hasMore, setHasMore] = useState(true);
 
   const filteredContacts = useMemo(() => {
-    return (contacts || []).filter((c) =>
-      c.name?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    if (!searchQuery) return contacts || [];
+    const query = searchQuery.toLowerCase().trim();
+    return (contacts || []).filter((c) => {
+      // Check if name includes the query (case insensitive)
+      const nameMatch = c.name?.toLowerCase().includes(query);
+      // Check mobile number field
+      const phoneMatch = c.mobile_no?.includes(query);
+      return nameMatch || phoneMatch;
+    });
   }, [contacts, searchQuery]);
-
 
   const handleScroll = useCallback(async () => {
     const container = listRef.current;
