@@ -23,6 +23,7 @@ export const API_ENDPOINTS = {
     SEND_MESSAGE: `${API_BASE}/sendmessage`,
     DELETE_CONVERSATION: `${API_BASE}/deleteconversations`,
     MARK_AS_READ: `${API_BASE}/markMessagesAsRead`,
+    SEND_MEDIA: `${API_BASE}/sendMedia`,
   },
   TEMPLATES: {
     GET_ALL: `${API_BASE}/templates`,

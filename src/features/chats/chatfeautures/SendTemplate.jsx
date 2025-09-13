@@ -130,41 +130,38 @@ const SendTemplate = ({ onSelect, onClose, returnFullTemplate = false }) => {
   };
 
   const uploadToBackend = async (file) => {
-    if (!user?.customer_id) {
-      throw new Error("User authentication required.");
+  if (!user?.customer_id) {
+    throw new Error("User authentication required.");
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("customer_id", user.customer_id);
+  formData.append("fileType", file.type);
+
+  try {
+    const response = await axios.post(API_ENDPOINTS.CHAT.SEND_MEDIA, formData, {
+      withCredentials: true,
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    if (!response.data.success) {
+      throw new Error(response.data.message || "Failed to upload media.");
     }
 
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("customer_id", user.customer_id);
-
-    // send actual MIME type
-    formData.append("fileType", file.type);
-
-    try {
-      const response = await axios.post(
-        "http://localhost:60000/sendMedia",
-        formData,
-        { withCredentials: true }
-      );
-
-      if (!response.data.success) {
-        throw new Error(response.data.message || "Failed to upload media.");
-      }
-
-      return response.data.mediaId;
-    } catch (error) {
-      console.error(
-        "Error uploading to backend:",
-        error.response?.data || error.message
-      );
-      throw new Error(
-        error.response?.data?.message ||
-          error.message ||
-          "Failed to upload media."
-      );
-    }
-  };
+    return response.data.mediaId;
+  } catch (error) {
+    console.error(
+      "Error uploading to backend:",
+      error.response?.data || error.message
+    );
+    throw new Error(
+      error.response?.data?.message || error.message || "Failed to upload media."
+    );
+  }
+};
 
   const handleMediaUpload = async (file, templateType) => {
     setUploading(true);

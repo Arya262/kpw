@@ -22,21 +22,24 @@ const ExploreTemplates = () => {
   const permissions = getPermissions(user);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
-  const { templates, loading, error, addTemplate, deleteTemplate } =
-    useTemplates(user?.customer_id);
+  const {
+    data: { templates = [], loading, error },
+    search: { searchTerm, setSearchTerm },
+    actions: { addTemplate, deleteTemplate },
+    pagination,
+  } = useTemplates();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
 
   // Filter templates based on search term
-  const filteredTemplates = templates.filter(
+  const filteredTemplates = (templates || []).filter(
     (template) =>
-      template.element_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      template.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      template.language?.toLowerCase().includes(searchTerm.toLowerCase())
+      template?.element_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      template?.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      template?.language?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleAddTemplate = async (newTemplate) => {
@@ -124,7 +127,7 @@ const ExploreTemplates = () => {
         </div>
       ) : error ? (
         <p className="text-red-500">{error}</p>
-      ) : templates.length === 0 || filteredTemplates.length === 0 ? (
+      ) : !templates?.length || !filteredTemplates?.length ? (
         <div className="flex flex-col items-center justify-center py-20 text-center text-gray-500">
           <img
             src="/illustrations/empty.svg"
