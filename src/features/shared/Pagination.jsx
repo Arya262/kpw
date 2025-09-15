@@ -11,13 +11,12 @@ export default function Pagination({
 }) {
   const [activePage, setActivePage] = useState(currentPage || 1);
   const [windowStart, setWindowStart] = useState(1);
-  const windowSize = 3;
+  const windowSize = 5;
 
   // Sync with prop changes
   useEffect(() => {
     setActivePage(currentPage || 1);
 
-    // 🔥 adjust window if currentPage goes outside of visible range
     if (currentPage < windowStart) {
       setWindowStart(currentPage);
     } else if (currentPage > windowStart + windowSize - 1) {
@@ -25,7 +24,7 @@ export default function Pagination({
     }
   }, [currentPage]);
 
-  // scroll window left/right (NOT selecting directly)
+
   const handlePrevArrow = () => {
     setWindowStart((prev) => Math.max(prev - 1, 1));
   };
@@ -43,7 +42,7 @@ export default function Pagination({
     setActivePage(newPage);
     onPageChange(newPage);
 
-    // 🔥 Auto-adjust window so activePage stays visible
+  
     if (newPage < windowStart) {
       setWindowStart(newPage);
     } else if (newPage > windowStart + windowSize - 1) {

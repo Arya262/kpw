@@ -380,10 +380,10 @@ export default function ContactList() {
       return;
     }
 
-    // Build selected contacts from ALL fetched contacts
+   
     const selectedContactList = selectedContactIds
       .map((id) => allContacts.find((c) => c.contact_id == id))
-      .filter(Boolean) // skip any missing contacts
+      .filter(Boolean)
       .map((contact) => ({
         contact_id: contact.contact_id,
         Name: `${contact.first_name || ""} ${contact.last_name || ""}`.trim(),
@@ -629,7 +629,7 @@ export default function ContactList() {
 
   return (
     <>
-      <div className="flex-1">
+      <div className="flex-1 pt-2.5">
         {error && (
           <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded relative">
             {error}

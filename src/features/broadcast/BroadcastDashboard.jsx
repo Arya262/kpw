@@ -139,6 +139,13 @@ const BroadcastDashboard = forwardRef(
     useImperativeHandle(ref, () => ({
       fetchBroadcasts,
     }));
+    
+    useEffect(() => {
+  if (search) {
+    setPagination((prev) => ({ ...prev, currentPage: 1 }));
+  }
+}, [search]);
+  
 
     useEffect(() => {
       const timeout = setTimeout(() => {

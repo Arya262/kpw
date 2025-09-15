@@ -482,6 +482,7 @@ export default function GroupManagement() {
     totalItems: 0,
     itemsPerPage: 10,
   });
+
   const fetchGroups = async (page = 1, limit = 10, search = "") => {
     try {
       setLoading(true);
@@ -562,15 +563,24 @@ export default function GroupManagement() {
     }
   };
 
+  // ✅ Single effect for initial load + search
   useEffect(() => {
-    fetchGroups();
-  }, [user?.customer_id]);
+    const timer = setTimeout(() => {
+      fetchGroups(
+        1,
+        pagination.itemsPerPage,
+        searchTerm.trim() !== "" ? searchTerm : ""
+      );
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm, pagination.itemsPerPage, user?.customer_id]);
 
   // Pagination handlers
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= pagination.totalPages) {
       setPagination((prev) => ({ ...prev, currentPage: newPage }));
-      fetchGroups(newPage, pagination.itemsPerPage);
+      fetchGroups(newPage, pagination.itemsPerPage, searchTerm.trim());
     }
   };
 
@@ -580,7 +590,7 @@ export default function GroupManagement() {
       itemsPerPage: newItemsPerPage,
       currentPage: 1,
     }));
-    fetchGroups(1, newItemsPerPage);
+    fetchGroups(1, newItemsPerPage, searchTerm.trim());
   };
 
   // In all handlers, check permissions.canManageGroups before proceeding
@@ -773,7 +783,7 @@ export default function GroupManagement() {
   };
 
   return (
-    <div className="flex-1">
+    <div className="flex-1 pt-2.5">
       <ErrorDisplay error={error} setError={setError} />
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
         {/* Title */}

@@ -103,32 +103,37 @@ export const useTemplates = () => {
     }
   };
 
-  // 📄 Handle pagination
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= pagination.totalPages) {
       setPagination((prev) => ({ ...prev, currentPage: newPage }));
-      fetchTemplates(newPage, pagination.itemsPerPage, searchTerm);
     }
   };
 
-  const handleItemsPerPageChange = (newItemsPerPage) => {
-    setPagination((prev) => ({
-      ...prev,
-      itemsPerPage: newItemsPerPage,
-      currentPage: 1,
-    }));
-    fetchTemplates(1, newItemsPerPage, searchTerm);
-  };
+const handleItemsPerPageChange = (newItemsPerPage) => {
+ setPagination((prev) => ({
+   ...prev,
+   itemsPerPage: newItemsPerPage,
+   currentPage: 1,
+ }));
+};
 
-  // ⌛ Debounced search
-useEffect(() => {
+  useEffect(() => {
   const timeout = setTimeout(() => {
-    fetchTemplates(pagination.currentPage, pagination.itemsPerPage, searchTerm);
+
+   fetchTemplates(
+    searchTerm ? 1 : pagination.currentPage, 
+    pagination.itemsPerPage,
+     searchTerm
+   );
+   if (searchTerm) {
+     setPagination((prev) => ({ ...prev, currentPage: 1 }));
+   }
   }, 500);
+
   return () => clearTimeout(timeout);
 }, [pagination.currentPage, pagination.itemsPerPage, searchTerm]);
 
-  // ➕ Add template
+
   const addTemplate = async (newTemplate) => {
     const isMedia = ["IMAGE", "VIDEO", "DOCUMENT"].includes(
       newTemplate.templateType?.toUpperCase()

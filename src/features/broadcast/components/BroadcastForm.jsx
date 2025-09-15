@@ -4,20 +4,9 @@ import ScheduleSelector from "./ScheduleSelector";
 import MessageTypeSelector from "./MessageTypeSelector";
 import { API_ENDPOINTS } from "../../../config/api";
 import { useAuth } from "../../../context/AuthContext";
-import {
-  Box,
-  Button,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  FormHelperText,
-  Typography,
-  CircularProgress,
-  TextField,
-  FormControlLabel,
-  Checkbox,
-} from "@mui/material";
+import { renderMedia } from "../../../utils/renderMedia";
+import { FileText } from "lucide-react";
+import { Box, Button, FormControl, InputLabel, Select, MenuItem, FormHelperText,Typography, CircularProgress, TextField,FormControlLabel, Checkbox, } from "@mui/material";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import FolderOffIcon from "@mui/icons-material/FolderOff";
 const BroadcastForm = ({
@@ -44,6 +33,12 @@ const BroadcastForm = ({
   const [templates, setTemplates] = useState([]);
   const [templatesLoading, setTemplatesLoading] = useState(true);
   const [templatesError, setTemplatesError] = useState(null);
+    const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    hasMore: false,
+    isLoadingMore: false
+  });
   const [errors, setErrors] = useState({});
   const location = useLocation();
   const { user } = useAuth();
@@ -59,40 +54,75 @@ const BroadcastForm = ({
     }
   }, [location.state, onTemplateSelect]);
 
-  useEffect(() => {
-    const fetchTemplates = async () => {
+  const fetchTemplates = async (page = 1, append = false) => {
+    if (page === 1) {
       setTemplatesLoading(true);
-      setTemplatesError(null);
-      try {
-        const response = await fetch(
-          `${API_ENDPOINTS.TEMPLATES.GET_ALL}?customer_id=${user?.customer_id}`,
-          {
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-          }
-        );
-        const data = await response.json();
-        if (Array.isArray(data.templates)) {
-          const normalizedTemplates = data.templates.map((t) => ({
-            ...t,
-            container_meta: {
-              ...t.container_meta,
-              sampleText:
-                t.container_meta?.sampleText || t.container_meta?.sample_text,
-            },
-          }));
-          setTemplates(normalizedTemplates);
-        } else {
-          setTemplatesError("Invalid response format");
+    } else {
+      setPagination(prev => ({ ...prev, isLoadingMore: true }));
+    }
+    setTemplatesError(null);
+    
+    try {
+      const response = await fetch(
+        `${API_ENDPOINTS.TEMPLATES.GET_ALL}?customer_id=${user?.customer_id}&page=${page}`,
+        {
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
         }
-      } catch (err) {
-        setTemplatesError("Failed to fetch templates");
-      } finally {
-        setTemplatesLoading(false);
+      );
+      const data = await response.json();
+      console.log('Templates API Response:', data); // Debug log
+      
+      if (data && Array.isArray(data.templates)) {
+        console.log('Total templates in response:', data.templates.length); // Debug log
+        const normalizedTemplates = data.templates.map((t) => ({
+          ...t,
+          container_meta: {
+            ...t.container_meta,
+            sampleText: t.container_meta?.sampleText || t.container_meta?.sample_text,
+          },
+        }));
+
+        setTemplates(prev => append ? [...prev, ...normalizedTemplates] : normalizedTemplates);
+        
+        // Get pagination data from response
+        const paginationData = data.pagination || {};
+        const hasMoreTemplates = paginationData.page < paginationData.totalPages;
+        
+        console.log('Pagination state:', { 
+          currentPage: paginationData.page || page, 
+          totalPages: paginationData.totalPages || 1, 
+          hasMore: hasMoreTemplates,
+          templatesCount: data.templates.length,
+          limit: paginationData.limit
+        });
+        
+        setPagination({
+          currentPage: paginationData.page || page,
+          totalPages: paginationData.totalPages || 1,
+          hasMore: hasMoreTemplates,
+          isLoadingMore: false
+        });
+      } else {
+        setTemplatesError("Invalid response format");
       }
-    };
+    } catch (err) {
+      console.error('Error fetching templates:', err);
+      setTemplatesError("Failed to fetch templates");
+    } finally {
+      setTemplatesLoading(false);
+    }
+  };
+
+  const loadMoreTemplates = () => {
+    if (pagination.hasMore && !pagination.isLoadingMore) {
+      fetchTemplates(pagination.currentPage + 1, true);
+    }
+  };
+
+  useEffect(() => {
     if (user?.customer_id) {
-      fetchTemplates();
+      fetchTemplates(1, false);
     }
   }, [user?.customer_id]);
 
@@ -527,33 +557,37 @@ const BroadcastForm = ({
                 }
 
                 return (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto scrollbar-hide">
-                    {approvedTemplates.map((template) => (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto scrollbar-hide">
+                      {approvedTemplates.map((template) => (
                       <div
                         key={template.id || template.element_name}
-                        className={`bg-white rounded-xl shadow-md overflow-hidden cursor-pointer transition-all duration-200 border-2 ${
-                          formData.selectedTemplate?.id === template.id ||
-                          formData.selectedTemplate?.element_name ===
+                        className={`bg-white rounded-xl shadow-md overflow-hidden cursor-pointer transition-all duration-200 border-2 ${formData.selectedTemplate?.id === template.id ||
+                            formData.selectedTemplate?.element_name ===
                             template.element_name
                             ? "border-teal-500 bg-teal-50"
                             : "border-gray-200 hover:border-teal-300 hover:shadow-lg"
-                        }`}
+                          }`}
                         onClick={() => {
                           onTemplateSelect(template);
                           setErrors((prev) => ({ ...prev, template: "" }));
-                        }}
-                      >
-                        {template.container_meta?.mediaUrl && (
-                          <img
-                            src={template.container_meta.mediaUrl}
-                            alt={template.element_name || "Template image"}
-                            className="w-full h-32 object-cover"
-                            onError={(e) => {
-                              e.target.onerror = null;
-                              e.target.style.display = "none";
-                            }}
-                          />
-                        )}
+                        }}>
+                        <div className="w-full h-32 flex items-center justify-center bg-gray-50 overflow-hidden">
+                            <div className="w-full h-full flex items-center justify-center">
+                              <div className="max-w-full max-h-full w-auto h-auto flex items-center justify-center [&>img]:object-contain [&>img]:max-h-full [&>img]:max-w-full [&>video]:object-contain [&>video]:max-h-full [&>video]:max-w-full">
+                                {renderMedia({
+                                  ...template,
+                                  mediaUrl: template.container_meta?.mediaUrl,
+                                  template_type: template.container_meta?.type,
+                                  element_name: template.element_name
+                                }) || (
+                                  <div className="flex flex-col items-center justify-center text-gray-400">
+                                    <span className="text-xs">No Preview</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                        </div>
                         <div className="p-4">
                           <div className="flex justify-between items-start mb-2">
                             <h4 className="font-semibold text-sm text-gray-800 truncate">
@@ -561,23 +595,23 @@ const BroadcastForm = ({
                             </h4>
                             {(formData.selectedTemplate?.id === template.id ||
                               formData.selectedTemplate?.element_name ===
-                                template.element_name) && (
-                              <div className="flex-shrink-0 w-5 h-5 bg-teal-500 rounded-full flex items-center justify-center">
-                                <svg
-                                  className="w-3 h-3 text-white"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M5 13l4 4L19 7"
-                                  />
-                                </svg>
-                              </div>
-                            )}
+                              template.element_name) && (
+                                <div className="flex-shrink-0 w-5 h-5 bg-teal-500 rounded-full flex items-center justify-center">
+                                  <svg
+                                    className="w-3 h-3 text-white"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M5 13l4 4L19 7"
+                                    />
+                                  </svg>
+                                </div>
+                              )}
                           </div>
                           <p className="text-xs text-gray-500 mb-2">
                             {template.category}
@@ -589,6 +623,26 @@ const BroadcastForm = ({
                         </div>
                       </div>
                     ))}
+                   </div>
+                    {pagination.hasMore && (
+                      <div className="flex justify-center">
+                        <button
+                          onClick={loadMoreTemplates}
+                          disabled={pagination.isLoadingMore}
+                          className="px-4 py-2 bg-teal-500 text-white rounded-md hover:bg-teal-600 disabled:opacity-50 flex items-center"
+                        >
+                          {pagination.isLoadingMore ? (
+                            <>
+                              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                              Loading...
+                            </>
+                          ) : 'Load More Templates'}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 );
               })()
@@ -659,36 +713,19 @@ const BroadcastForm = ({
               <div className="space-y-3">
                 {formData.selectedTemplate ? (
                   <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm space-y-3">
-                    {formData.selectedTemplate.container_meta?.mediaUrl && (
-                      <div>
-                        {/\.(mp4|webm|ogg)$/i.test(
-                          formData.selectedTemplate.container_meta.mediaUrl
-                        ) ? (
-                          <video
-                            controls
-                            className="w-full h-48 rounded-md object-cover"
-                          >
-                            <source
-                              src={
-                                formData.selectedTemplate.container_meta
-                                  .mediaUrl
-                              }
-                              type="video/mp4"
-                            />
-                            Your browser does not support the video tag.
-                          </video>
-                        ) : (
-                          <img
-                            src={
-                              formData.selectedTemplate.container_meta.mediaUrl
-                            }
-                            alt="Media Preview"
-                            className="w-full h-48 rounded-md object-cover"
-                            onError={(e) => (e.target.style.display = "none")}
-                          />
-                        )}
-                      </div>
-                    )}
+                    <div className="w-full h-48 flex items-center justify-center bg-gray-100 rounded-md overflow-hidden">
+                      {renderMedia({
+                        ...formData.selectedTemplate,
+                        mediaUrl: formData.selectedTemplate.container_meta?.mediaUrl,
+                        template_type: formData.selectedTemplate.container_meta?.type,
+                        element_name: formData.selectedTemplate.element_name
+                      }) || (
+                        <div className="flex flex-col items-center justify-center text-gray-400">
+                          <FileText className="w-12 h-12 mb-2" />
+                          <span className="text-sm">No Media Preview</span>
+                        </div>
+                      )}
+                    </div>
                     <p className="font-semibold text-gray-800">
                       {formData.selectedTemplate.element_name}
                     </p>
@@ -732,7 +769,7 @@ const BroadcastForm = ({
         )}
       </div>
       {/* Navigation Buttons - Fixed at bottom */}
-      <div className="sticky bottom-0 bg-white p-4">
+      <div className="sticky bottom-0 bg-white px-1 pb-2">
         <div className="flex justify-between">
           {step > 1 && (
             <button

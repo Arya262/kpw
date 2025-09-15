@@ -184,11 +184,10 @@ const handleSubmit = async (e) => {
     const updatedFormData = {
       customer_id: user?.customer_id,
       ...formData,
-      // Convert group_id array to single value if needed
       group_id: Array.isArray(formData.group_id) ? formData.group_id[0] : formData.group_id,
-      // Convert selectedDate to ISO string, or empty string
+
       scheduleDate: selectedDate ? selectedDate.toISOString() : "",
-      // Convert date to ISO string for backend consistency
+    
       date:
         formData.schedule === "Yes" && selectedDate
           ? selectedDate.toISOString()

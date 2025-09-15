@@ -229,7 +229,7 @@ const roleOptions = [
         pauseOnHover
         theme="light"
       />
-      <div className="mb-8">
+      <div className="pt-2.5">
         <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
           <div className="flex items-center gap-4 flex-wrap">
             <h2 className="text-xl font-bold">Users</h2>

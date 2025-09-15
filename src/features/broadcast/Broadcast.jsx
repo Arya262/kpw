@@ -109,7 +109,7 @@ const Broadcast = () => {
   };
 
   return (
-    <div className="p-0 bg-white min-h-screen">
+    <div className="pt-2.5 bg-white min-h-screen">
       <ToastContainer
         position="top-right"
         autoClose={3000}
