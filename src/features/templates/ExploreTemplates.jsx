@@ -14,15 +14,16 @@ import SkeletonCard from "../../components/SkeletonCard";
 import TemplateDrawer from "../../components/TemplateDrawer";
 import SearchInput from "../shared/SearchInput";
 import { useInView } from "react-intersection-observer";
-
+import { renderMedia } from "../../utils/renderMedia";
 const ExploreTemplates = () => {
+
   const navigate = useNavigate();
   const { user } = useAuth();
   const permissions = getPermissions(user);
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
-  const [allTemplates, setAllTemplates] = useState([]); // Store all loaded templates
+  const [allTemplates, setAllTemplates] = useState([]);
 
   const {
     data: { templates = [], loading, error },
@@ -39,7 +40,7 @@ const ExploreTemplates = () => {
   // Infinite scroll intersection observer
   const { ref: loadMoreRef, inView } = useInView({ threshold: 0 });
 
-  // Append new templates to local state
+
   useEffect(() => {
     if (templates.length > 0) {
       setAllTemplates((prev) => {
@@ -50,7 +51,6 @@ const ExploreTemplates = () => {
     }
   }, [templates]);
 
-  // Load next page on scroll
   useEffect(() => {
     if (inView && pagination.currentPage < pagination.totalPages && !loading) {
       fetchTemplates(pagination.currentPage + 1, pagination.itemsPerPage, searchTerm);
@@ -58,7 +58,7 @@ const ExploreTemplates = () => {
     }
   }, [inView, pagination, loading, fetchTemplates, searchTerm]);
 
-  // Filter templates based on search term
+
   const filteredTemplates = (allTemplates || []).filter(
     (template) =>
       template?.element_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -96,7 +96,7 @@ const ExploreTemplates = () => {
     setShowDeleteDialog(false);
     setTemplateToDelete(null);
 
-    // Remove from local state as well
+
     setAllTemplates((prev) => prev.filter((t) => t.id !== templateToDelete.id));
   };
 
@@ -104,9 +104,6 @@ const ExploreTemplates = () => {
     setShowDeleteDialog(false);
     setTemplateToDelete(null);
   };
-
-  const hasImage = (template) =>
-    template.container_meta?.mediaUrl && template.container_meta.mediaUrl.trim() !== "";
 
   return (
     <div className="p-0 sm:p-6 min-h-screen bg-gray-50">
@@ -165,21 +162,22 @@ const ExploreTemplates = () => {
                 transition={{ duration: 0.2 }}
                 className="bg-white/90 backdrop-blur rounded-2xl shadow-lg overflow-hidden flex flex-col border border-gray-100 hover:border-cyan-300 transition-all duration-300 group"
               >
-                {hasImage(template) && (
-                  <div className="relative">
-                    <img
-                      src={template.container_meta.mediaUrl}
-                      alt={template.element_name || "Template image"}
-                      className="w-full h-44 object-cover"
-                      onError={(e) => {
-                        e.target.src = "/fallbacks/default.jpg";
-                        e.target.onerror = null;
-                      }}
-                      loading="lazy"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-70 group-hover:opacity-90 transition" />
-                  </div>
-                )}
+
+                {(() => {
+                  const mediaTemplate = {
+                    ...template,
+                    ...template.container_meta,
+                    media_url: template.media_url || template.container_meta?.media_url,
+                    template_type: template.template_type || template.container_meta?.templateType,
+                    element_name: template.element_name
+                  };
+                  return renderMedia(mediaTemplate) && (
+                    <div className="relative">
+                      {renderMedia(mediaTemplate)}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-70 group-hover:opacity-90 transition" />
+                    </div>
+                  );
+                })()}
 
                 <div className="p-4 flex-1 flex flex-col justify-between">
                   <div className="flex justify-between items-start">
@@ -188,13 +186,12 @@ const ExploreTemplates = () => {
                         {template.element_name}
                       </h3>
                       <span
-                        className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium mt-1 ${
-                          template.category?.toLowerCase() === "marketing"
-                            ? "bg-green-100 text-green-700"
-                            : template.category?.toLowerCase() === "info"
+                        className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium mt-1 ${template.category?.toLowerCase() === "marketing"
+                          ? "bg-green-100 text-green-700"
+                          : template.category?.toLowerCase() === "info"
                             ? "bg-blue-100 text-blue-700"
                             : "bg-gray-100 text-gray-600"
-                        }`}
+                          }`}
                       >
                         {template.category}
                       </span>
@@ -235,11 +232,10 @@ const ExploreTemplates = () => {
                         state: { selectedTemplate: template, openForm: true },
                       })
                     }
-                    className={`flex-1 px-4 py-3 font-semibold rounded-b-2xl transition-all ${
-                      template?.status?.toLowerCase() === "approved"
-                        ? "bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:brightness-110"
-                        : "bg-gray-200 text-gray-500 cursor-not-allowed"
-                    }`}
+                    className={`flex-1 px-4 py-3 font-semibold rounded-b-2xl transition-all ${template?.status?.toLowerCase() === "approved"
+                      ? "bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:brightness-110"
+                      : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                      }`}
                   >
                     {template?.status?.toLowerCase() === "approved" ? (
                       <span className="flex items-center justify-center gap-2">

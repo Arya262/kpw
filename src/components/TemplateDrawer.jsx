@@ -12,7 +12,7 @@ import {
   List,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
+import { renderMedia } from "../utils/renderMedia";
 const chatBg = "/light.png";
 const buttonClass =
   "w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-blue-500 hover:bg-blue-50 border-t border-gray-200 first:border-t-0";
@@ -122,67 +122,17 @@ const TemplateDrawer = ({ isOpen, onClose, template }) => {
   const phoneCta =
     (meta.buttons || []).find((button) => button.type === "PHONE_NUMBER") || {};
 
-  const renderMediaPreview = () => {
-    switch (normalizedTemplateType) {
-      case "IMAGE":
-      case "Image":
-        return (
-          <img
-            src={
-              meta.sampleMedia
-                ? `data:image/jpeg;base64,${meta.sampleMedia.split("::")[1]}`
-                : "/placeholder-image.png"
-            }
-            alt="Image preview"
-            className="max-w-full max-h-[300px] object-contain rounded-lg"
-            onError={(e) => {
-              e.target.style.display = "none";
-              e.target.parentElement.innerHTML =
-                '<div className="text-red-500 text-sm">Failed to load image</div>';
-            }}
-          />
-        );
-      case "VIDEO":
-      case "Video":
-        return meta.sampleMedia ? (
-          <video
-            src={meta.sampleMedia}
-            controls
-            className="max-w-full max-h-[300px] object-contain rounded-lg"
-            onError={(e) => {
-              e.target.style.display = "none";
-              e.target.parentElement.innerHTML =
-                '<div className="text-red-500 text-sm">Failed to load video</div>';
-            }}
-          >
-            Your browser does not support the video tag.
-          </video>
-        ) : (
-          <p className="text-gray-500 text-center">
-            Upload a video to see preview
-          </p>
-        );
-      case "DOCUMENT":
-      case "Document":
-        return meta.sampleMedia ? (
-          <div className="flex items-center gap-2 p-2 bg-gray-100 rounded-lg">
-            <a
-              href={meta.sampleMedia}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-500 underline text-sm"
-              aria-label="View document"
-            >
-              {meta.fileName || "View Document"}
-            </a>
-          </div>
-        ) : (
-          <FileText className="w-12 h-12 text-gray-400" />
-        );
-      default:
-        return null;
-    }
+const renderMediaPreview = () => {
+
+  const mediaTemplate = {
+    ...template,
+    ...meta,     
+    template_type: normalizedTemplateType,
+    media_url: meta.media_url || template.media_url, 
+    element_name: template.element_name
   };
+  return renderMedia(mediaTemplate);
+};
   const hasCtas =
     urlCtas.some((cta) => cta.title && cta.url) ||
     offerCode ||

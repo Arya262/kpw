@@ -142,12 +142,12 @@ const TemplateModal = ({
     const validTypes = {
       Image: {
         types: ["image/jpeg", "image/png"],
-        maxSize: 5 * 1024 * 1024, // 5MB
+        maxSize: 5 * 1024 * 1024,
         extensions: [".jpeg", ".png"],
       },
       Video: {
         types: ["video/3gpp", "video/mp4"],
-        maxSize: 16 * 1024 * 1024, // 16MB
+        maxSize: 16 * 1024 * 1024,
         extensions: [".3gp", ".mp4"],
       },
       Document: {
@@ -229,7 +229,7 @@ const TemplateModal = ({
     try {
       const { mediaIdentifier, fileName } = await uploadFile(file);
       setExampleMedia(mediaIdentifier);
-      setMediaFileName(fileName); // <-- store file name
+      setMediaFileName(fileName); 
       setErrors((prev) => ({ ...prev, file: null }));
       toast.success("File uploaded successfully!");
     } catch (error) {
@@ -252,7 +252,7 @@ const TemplateModal = ({
     try {
       const { mediaIdentifier, fileName } = await uploadFile(selectedFile);
       setExampleMedia(mediaIdentifier);
-      setMediaFileName(fileName); // <-- store file name
+      setMediaFileName(fileName); 
       setErrors((prev) => ({ ...prev, file: null }));
       toast.success("File uploaded successfully!");
     } catch (error) {
