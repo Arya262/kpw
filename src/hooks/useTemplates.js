@@ -103,6 +103,7 @@ export const useTemplates = () => {
     }
   };
 
+  // 📄 Handle pagination
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= pagination.totalPages) {
       setPagination((prev) => ({ ...prev, currentPage: newPage }));

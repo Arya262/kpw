@@ -1,6 +1,9 @@
 import MessageStatusIcon from "./MessageStatusIcon";
+import { API_ENDPOINTS } from "../../../config/api";
+import { renderMedia } from "../../../utils/renderMedia";
 
 const TemplateMessage = ({ msg, sent }) => {
+  // console.log("📩 Full message payload from backend:", msg);
   const meta = msg.container_meta;
 
   const bubbleBg = sent ? "rgba(220, 248, 198, 0.5)" : "rgba(240, 240, 240, 0.5)";
@@ -19,13 +22,24 @@ const TemplateMessage = ({ msg, sent }) => {
     });
   };
 
+  // ✅ Helper to handle both full URLs and backend filenames
+  const getMediaUrl = (urlOrFile) => {
+    if (!urlOrFile) return null;
+    return urlOrFile.startsWith("http") ? urlOrFile : API_ENDPOINTS.TEMPLATES.GET_URL(urlOrFile);
+  };
+
+  // Check header component first for image/video/document
   const headerComponent = msg?.template_data?.template?.components?.find(
     (component) => component.type === "header"
   );
-  const templateParam = headerComponent?.parameters?.[0] || {};
-  const imageUrl = templateParam.image?.link || meta?.mediaUrl || meta?.headerValue;
-  const videoUrl = templateParam.video?.link || meta?.videoUrl;
-  const docUrl = templateParam.document?.link || meta?.documentUrl;
+  const headerParam = headerComponent?.parameters?.[0] || {};
+
+  const imageUrl =
+    headerParam.image?.link || getMediaUrl(msg?.media_url || msg?.mediaUrl || meta?.mediaUrl || meta?.media_url);
+  const videoUrl =
+    headerParam.video?.link || getMediaUrl(meta?.videoUrl);
+  const docUrl =
+    headerParam.document?.link || getMediaUrl(meta?.documentUrl);
 
   // File metadata
   const fileName = meta?.fileName || (docUrl ? docUrl.split("/").pop() : "");
@@ -34,7 +48,7 @@ const TemplateMessage = ({ msg, sent }) => {
 
   return (
     <div className={`relative flex ${sent ? "justify-end" : "justify-start"} px-2 mb-2`}>
-      {/* ✅ WhatsApp-style width container */}
+      {/* WhatsApp-style width container */}
       <div className="relative w-fit max-w-[75%] md:max-w-[35%]">
         {/* Tail */}
         <svg
@@ -75,24 +89,15 @@ const TemplateMessage = ({ msg, sent }) => {
                   rel="noopener noreferrer"
                   className="block w-full rounded-md overflow-hidden shadow-md"
                 >
-                  {/* Thumbnail preview (blurred page or fallback) */}
                   <div className="relative w-full h-40 bg-gray-200">
                     <img
                       src={meta?.docPreview}
                       alt="Document Preview"
                       className="w-full h-full object-cover"
-                      // onError={(e) => {
-                      //   e.target.src = "/fallback-doc-preview.png";
-                      // }}
                     />
-                    {/* Overlay with file details */}
                     <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 px-3 py-2">
-                      <p className="text-sm font-medium text-white truncate">
-                        {fileName}
-                      </p>
-                      <p className="text-xs text-gray-300">
-                        {fileSize}, {fileType}
-                      </p>
+                      <p className="text-sm font-medium text-white truncate">{fileName}</p>
+                      <p className="text-xs text-gray-300">{fileSize}, {fileType}</p>
                     </div>
                   </div>
                 </a>
@@ -128,9 +133,7 @@ const TemplateMessage = ({ msg, sent }) => {
 
                 {/* Footer */}
                 {meta.footer && (
-                  <p className="text-xs text-gray-400 pt-1 border-t border-gray-200">
-                    {meta.footer}
-                  </p>
+                  <p className="text-xs text-gray-400 pt-1 border-t border-gray-200">{meta.footer}</p>
                 )}
               </div>
             </>
@@ -146,7 +149,7 @@ const TemplateMessage = ({ msg, sent }) => {
           )}
 
           {/* Time & Status */}
-          <div className="flex justify-end items-center gap-1 px-3 pb-2">
+          <div className={`flex items-center gap-1 px-3 pb-2 ${sent ? "justify-end" : "justify-start"}`}>
             <span className="text-[10px] text-gray-500">{msg.sent_at}</span>
             {sent && <MessageStatusIcon status={msg.status} />}
           </div>

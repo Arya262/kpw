@@ -46,17 +46,9 @@ const MessageInput = ({ onSendMessage, selectedContact, canSendMessage }) => {
 
   const convertHtmlToWhatsAppMarkdown = (html) => {
     let text = html;
-
-    // Convert bold <b> or <strong>
     text = text.replace(/<(b|strong)>(.*?)<\/\1>/gi, "*$2*");
-
-    // Convert italic <i> or <em>
     text = text.replace(/<(i|em)>(.*?)<\/\1>/gi, "_$2_");
-
-    // Convert strikethrough <s> or <strike>
     text = text.replace(/<(s|strike)>(.*?)<\/\1>/gi, "~$2~");
-
-    // Remove all other HTML tags
     text = text.replace(/<\/?[^>]+(>|$)/g, "");
 
     return text.trim();
@@ -243,24 +235,23 @@ const MessageInput = ({ onSendMessage, selectedContact, canSendMessage }) => {
               }}
             ></div>
 
-            <button
-              type="submit"
-              className="ml-2 h-8 px-3 flex items-center justify-center text-white bg-teal-500 hover:bg-teal-600 rounded-full text-xs whitespace-nowrap cursor-pointer"
-              disabled={!isWithin24Hours}
-              onClick={() => {
-                if (!canSendMessage) {
-                  toast.error("You do not have permission to send messages.");
-                }
-              }}
-            >
-              <Send className="w-4 h-4 mr-1" />
-              {/* Hide text on small screens, show on medium and above */}
-              <span className="hidden sm:inline">
-                {sanitizeHtml(message).trim()
-                  ? "Send Message"
-                  : "Send Template"}
-              </span>
-            </button>
+            {isWithin24Hours && (
+  <button
+    type="submit"
+    className="ml-2 h-8 px-3 flex items-center justify-center text-white bg-teal-500 hover:bg-teal-600 rounded-full text-xs whitespace-nowrap cursor-pointer"
+    disabled={!canSendMessage}
+    onClick={() => {
+      if (!canSendMessage) {
+        toast.error("You do not have permission to send messages.");
+      }
+    }}
+  >
+    <Send className="w-4 h-4 mr-1" />
+    <span className="hidden sm:inline">
+      {sanitizeHtml(message).trim() ? "Send Message" : "Send Template"}
+    </span>
+  </button>
+)}
           </div>
         </form>
       </div>
@@ -277,7 +268,7 @@ const MessageInput = ({ onSendMessage, selectedContact, canSendMessage }) => {
                   toast.error("Invalid template selected.");
                   return;
                 }
-                // console.log("MessageInput payload:", filledTemplate);
+                console.log("MessageInput payload:", filledTemplate);
                 onSendMessage({
                   template_name: filledTemplate.element_name,
                   parameters: filledTemplate.parameters || [],
@@ -285,6 +276,8 @@ const MessageInput = ({ onSendMessage, selectedContact, canSendMessage }) => {
                   headerValue: filledTemplate.headerValue,
                   headerIsId: filledTemplate.headerIsId,
                   language_code: filledTemplate.language_code || "en",
+                  // media_url: filledTemplate.media_url,
+                  fileName: filledTemplate.fileName,
                 });
                 setShowTemplates(false);
               }}

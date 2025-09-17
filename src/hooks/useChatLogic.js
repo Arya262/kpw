@@ -335,7 +335,17 @@ export const useChatLogic = ({
               (p) => p !== mediaUrl
             );
           }
-        }        
+        }    
+        
+      // Add fileName and media_url if present
+      if (input.fileName) {
+        newMessage.fileName = input.fileName;
+        // Use fileName as media_url if media_url is not explicitly provided
+        if (!newMessage.media_url) {
+          newMessage.media_url = input.fileName;
+        }
+      }
+
         if (input.language_code) {
           newMessage.language_code = input.language_code;
         }
