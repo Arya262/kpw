@@ -8,7 +8,7 @@ export default function Dropdown({
   placeholder = "Select option",
 }) {
   const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState(""); // search state
+  const [search, setSearch] = useState("");
   const dropdownRef = useRef(null);
   const selected = options.find((opt) => opt.value === value);
 
@@ -33,7 +33,7 @@ export default function Dropdown({
     <div className="relative" ref={dropdownRef}>
       {/* Dropdown button */}
       <div
-        className="flex items-center justify-between w-full p-1 rounded text-sm font-medium shadow-sm border border-gray-200 bg-gray-100 focus-within:ring-2 focus-within:ring-teal-500"
+        className="flex items-center justify-between w-full p-1 rounded text-sm font-medium shadow-sm border border-gray-200 bg-gray-100 focus-within:ring-1 focus-within:ring-teal-500"
       >
         <input
           type="text"

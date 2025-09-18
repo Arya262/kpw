@@ -17,7 +17,7 @@ import ConfirmationDialog from "../shared/ExitConfirmationDialog";
 import { Navigate, useNavigate } from "react-router-dom";
 import BroadcastPages from "../broadcast/BroadcastPages";
 import { Phone } from "lucide-react";
-
+import GroupNameDialog from "./GroupNameDialog";
 const DeleteConfirmationDialog = ({
   showDeleteDialog,
   selectedCount,
@@ -121,6 +121,7 @@ export default function ContactList() {
   const [isCrossHighlighted, setIsCrossHighlighted] = useState(false);
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showGroupDialog, setShowGroupDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState(null);
   const popupRef = useRef(null);
@@ -369,8 +370,14 @@ export default function ContactList() {
     setShowDeleteDialog(true);
   };
 
+    // Store selected contacts for group creation
+  const [selectedContactsForGroup, setSelectedContactsForGroup] = useState({
+    ids: [],
+    list: []
+  });
+
   //brodcast button handler
-  const handleAddbroadcast = async () => {
+  const handleAddbroadcast = () => {
     const selectedContactIds = Object.entries(selectedContacts)
       .filter(([contactId, isSelected]) => isSelected)
       .map(([contactId]) => contactId);
@@ -380,10 +387,10 @@ export default function ContactList() {
       return;
     }
 
-   
+    // Build selected contacts from ALL fetched contacts
     const selectedContactList = selectedContactIds
       .map((id) => allContacts.find((c) => c.contact_id == id))
-      .filter(Boolean)
+      .filter(Boolean) // skip any missing contacts
       .map((contact) => ({
         contact_id: contact.contact_id,
         Name: `${contact.first_name || ""} ${contact.last_name || ""}`.trim(),
@@ -394,13 +401,25 @@ export default function ContactList() {
     console.log("Selected contact IDs:", selectedContactIds);
     console.log("Selected Contacts:", selectedContactList);
 
-    const groupName = prompt("Enter a name for the contact group:");
+    // Store the selected contacts and show the group dialog
+    setSelectedContactsForGroup({
+      ids: selectedContactIds,
+      list: selectedContactList
+    });
+    setShowGroupDialog(true);
+  };
+
+  // Handle group creation after group name is confirmed
+  const handleCreateGroup = async (groupName) => {
     if (!groupName || groupName.trim() === "") {
       toast.error("Group name is required.");
       return;
     }
 
+    const { ids: selectedContactIds, list: selectedContactList } = selectedContactsForGroup;
+
     try {
+      setIsDeleting(true);
       const formData = new FormData();
       formData.append("customer_id", user?.customer_id);
       formData.append("group_name", groupName.trim());
@@ -427,6 +446,7 @@ export default function ContactList() {
       }
 
       toast.success("Group created successfully!");
+      setShowGroupDialog(false);
 
       navigate("/broadcast", {
         state: {
@@ -442,6 +462,8 @@ export default function ContactList() {
     } catch (err) {
       console.error("Error creating group:", err);
       toast.error(err.message || "Could not create group.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -913,6 +935,12 @@ export default function ContactList() {
             isDeleting={isDeleting}
           />
         )}
+        <GroupNameDialog
+        isOpen={showGroupDialog}
+        onClose={() => setShowGroupDialog(false)}
+        onConfirm={handleCreateGroup}
+        isSubmitting={isDeleting}
+      />
     </>
   );
 }

@@ -67,7 +67,7 @@ export default function OptionsDropdown({
       
       setPosition({
         top,
-        left: `${rect.right - 176}px`, // 176px is the dropdown width
+        left: `${rect.right - 176}px`, 
         width: '176px'
       });
     }

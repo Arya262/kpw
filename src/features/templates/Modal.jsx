@@ -25,7 +25,7 @@ const templateSchema = z.object({
   language: z.string().min(1, "Please select a language"),
   header: z.string().max(60, "Header must be 60 characters or less").optional(),
   templateType: z
-    .enum(["Text", "Image", "Video", "Document"], {
+    .enum(["None","Text", "Image", "Video", "Document"], {
       required_error: "Please select a template type",
     })
     .optional(),
@@ -621,13 +621,13 @@ const TemplateModal = ({
             buttons,
             example: sampleText,
             exampleMedia,
-            media_url: mediaFileName, // <-- pass file name as url
+            media_url: mediaFileName, 
             messageSendTTL: 3360,
             container_meta: {
               header: header
                 ? header
                 : isMediaTemplate
-                ? { type: templateType.toUpperCase(), media: { id: exampleMedia, media_url: mediaFileName } } // <-- pass file name as url in header.media
+                ? { type: templateType.toUpperCase(), media: { id: exampleMedia, media_url: mediaFileName } }
                 : null,
               footer: footer || null,
               data: format,
@@ -844,28 +844,27 @@ const TemplateModal = ({
                 <>
                   <div className="mb-5 border-t-2 pt-4 border-gray-200 ">
                     <div className="font-semibold mb-1">Template Type</div>
-                    <div className="flex gap-4">
-                      {["None", "Text", "Image", "Video", "Document"].map(
-                        (type) => (
-                          <label key={type} className="flex items-center gap-2">
-                            <input
-                              type="radio"
-                              name="templateType"
-                              checked={templateType === type}
-                              onChange={() => {
-                                setTemplateType(type);
-                                validateField("templateType", type);
-                                setSelectedFile(null);
-                                setPreviewUrl("");
-                                setExampleMedia("");
-                                setErrors((prev) => ({ ...prev, file: null }));
-                              }}
-                              aria-label={`Select ${type} template type`}
-                            />
-                            {type}
-                          </label>
-                        )
-                      )}
+                    <div className="grid grid-cols-2 sm:flex sm:flex-row gap-4">
+                      {["None", "Text", "Image", "Video", "Document"].map((type) => (
+                        <label key={type} className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="templateType"
+                            value={type}
+                            checked={templateType === type}
+                            onChange={(e) => {
+                              const selectedType = e.target.value;
+                              setTemplateType(selectedType);
+                              validateField("templateType", selectedType);
+                              setSelectedFile(null);
+                              setPreviewUrl("");
+                              setExampleMedia("");
+                              setErrors((prev) => ({ ...prev, file: null }));
+                            }}
+                          />
+                          {type}
+                        </label>
+                      ))}
                     </div>
                   </div>
 
