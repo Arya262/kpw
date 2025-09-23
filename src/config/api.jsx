@@ -1,5 +1,5 @@
 export const API_BASE =
-  //  import.meta.env.VITE_API_BASEz || "http://localhost:60000";
+  // import.meta.env.VITE_API_BASEz || "http://localhost:60000";
   import.meta.env.VITE_API_BASE || "https://marketing.foodchow.co.uk";
 
 export const API_ENDPOINTS = {
@@ -23,6 +23,7 @@ export const API_ENDPOINTS = {
     SEND_MESSAGE: `${API_BASE}/sendmessage`,
     DELETE_CONVERSATION: `${API_BASE}/deleteconversations`,
     MARK_AS_READ: `${API_BASE}/markMessagesAsRead`,
+    SEND_MEDIA: `${API_BASE}/sendMedia`,
   },
   TEMPLATES: {
     GET_ALL: `${API_BASE}/templates`,
@@ -32,6 +33,7 @@ export const API_ENDPOINTS = {
     UPDATE_ALT: `${API_BASE}/updatetemplate`,
     DELETE: () => `${API_BASE}/deletetemplate`,
     UPLOAD_MEDIA: `${API_BASE}/uploadMedia`,
+    GET_URL: (filename) => `${API_BASE}/uploads/media/${filename}`,
   },
   GROUPS: {
     GET_ALL: `${API_BASE}/returnGroups`,

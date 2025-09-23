@@ -1,0 +1,39 @@
+{
+    "India": {
+      "marketing": 0.88,
+      "authentication": 0.125,
+      "utility": 0.125,
+      "service": 0
+    },
+    "Afghanistan": {
+      "marketing": 0.0876,
+      "authentication": 0.0508,
+      "utility": 0.0188,
+      "service": 0
+    },
+    "Albania": {
+      "marketing": 0.1028,
+      "authentication": 0.06661,
+      "utility": 0.04219,
+      "service": 0
+    },
+    "Algeria": {
+      "marketing": 0.0269,
+      "authentication": 0.0172,
+      "utility": 0.00729,
+      "service": 0
+    },
+    "United States": {
+      "marketing": 0.0299,
+      "authentication": 0.0161,
+      "utility": 0.00479,
+      "service": 0
+    },
+    "All other countries": {
+      "marketing": 0.0722,
+      "authentication": 0.0364,
+      "utility": 0.00921,
+      "service": 0
+    }
+  }
+  

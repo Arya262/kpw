@@ -615,7 +615,7 @@ export default function MessagingAnalytics({ usageHistory }) {
 </div>
 
 
-              {/* Campaign Details */}
+{/* Campaign Details */}
 <div className="rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 hover:shadow-lg hover:scale-[1.02] transition">
   <h2 className="text-lg sm:text-xl font-semibold border-b pb-3 border-gray-300 mb-4">
     Campaign Details
@@ -646,13 +646,12 @@ export default function MessagingAnalytics({ usageHistory }) {
           {camp.count}
         </p>
       </div>
-    ))}
-  </div>
+     ))}
+    </div>
+ </div>
 </div>
 
-            </div>
-
-            {/* Messaging & Fees Overview */}
+ {/* Messaging & Fees Overview */}
 <div className="mb-8">
   <div className="rounded-xl shadow-sm hover:shadow-lg hover:scale-[1.02] transition border border-gray-200 p-4 sm:p-6">
     <h2 className="text-lg sm:text-xl font-semibold mb-4">
@@ -662,7 +661,7 @@ export default function MessagingAnalytics({ usageHistory }) {
       <LineChart
         data={filteredData.map((item) => ({
           ...item,
-          total_fees: item.gupshup_fees + item.meta_fees, // ✅ add total
+          total_fees: item.gupshup_fees + item.meta_fees, 
         }))}
         className="text-xs"
         margin={{ top: 5, right: 20, left: 0, bottom: 5 }}

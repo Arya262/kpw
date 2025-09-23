@@ -281,107 +281,120 @@ export const useChatLogic = ({
     };
   }, [socket, handleIncomingMessage]);
   // ===== Send Message (text or template) =====
-  const sendMessage = useCallback(
-    async (input) => {
-      if (permissions && !permissions.canSendMessages) return;
-      if (!selectedContact) return;
+const sendMessage = useCallback(
+  async (input) => {
+    if (permissions && !permissions.canSendMessages) return;
+    if (!selectedContact) return;
 
-      let contact_id = selectedContact.contact_id;
-      let customer_id = user.customer_id;
-      let phoneNumber = `${selectedContact.country_code}${selectedContact.mobile_no}`;
+    let contact_id = selectedContact.contact_id;
+    let customer_id = user.customer_id;
+    let phoneNumber = `${selectedContact.country_code}${selectedContact.mobile_no}`;
 
-      const newMessage = {
-        contact_id,
-        customer_id,
-        phoneNumber,
-      };
-      let messageType = "text";
+    const newMessage = {
+      contact_id,
+      customer_id,
+      phoneNumber,
+    };
+    let messageType = "text";
 
-      if (typeof input === "string") {
-        // Free-form text
-        newMessage.message = input;
-      } else if (input.template_name) {
-        // Template message
-        messageType = "template";
-        newMessage.element_name = input.template_name;
+    if (typeof input === "string") {
+      // Free-form text
+      newMessage.message = input;
+    } else if (input.template_name) {
+      // Template message
+      messageType = "template";
+      newMessage.element_name = input.template_name;
 
-        // Add parameters
-        if (Array.isArray(input.parameters) && input.parameters.length > 0) {
-          newMessage.parameters = input.parameters;
-        }
-
-        // Handle header (image, video, document, or text)
-        if (input.headerType && input.headerValue) {
-          newMessage.headerType = input.headerType;
-          newMessage.headerValue = input.headerValue;
-          newMessage.headerIsId = input.headerIsId;
-        } else {
-          // Try to auto-detect from parameters if no header is set
-          const mediaUrl = input.parameters?.find((url) =>
-            url.match(/\.(jpeg|png|mp4|pdf|docx?)$/i)
-          );
-
-          if (mediaUrl) {
-            if (/\.(jpeg|png)$/i.test(mediaUrl)) {
-              newMessage.headerType = "image";
-            } else if (/\.(mp4)$/i.test(mediaUrl)) {
-              newMessage.headerType = "video";
-            } else if (/\.(pdf|docx?)$/i.test(mediaUrl)) {
-              newMessage.headerType = "document";
-            }
-            newMessage.headerValue = mediaUrl;
-            newMessage.headerIsId = input.headerIsId; 
-            newMessage.parameters = input.parameters.filter(
-              (p) => p !== mediaUrl
-            );
-          }
-        }        
-        if (input.language_code) {
-          newMessage.language_code = input.language_code;
-        }
-      } else {
-        console.warn("Invalid message input");
-        return;
+      // Add parameters
+      if (Array.isArray(input.parameters) && input.parameters.length > 0) {
+        newMessage.parameters = input.parameters;
       }
 
-      try {
-        // console.log("🚀 Sending message payload:", newMessage);
-        const response = await axios.post(`${API_BASE}/sendmessage`, {
-          ...newMessage,
-          message_type: messageType,
-        });
-
-      
-        fetchMessagesForContact(selectedContact.contact_id);
-        setContacts((prev) =>
-          prev
-            .map((c) =>
-                 c.contact_id === selectedContact.contact_id
-                ? {
-                    ...c,
-                    lastMessage:
-                      typeof input === "string" ? input : input.template_name,
-                    lastMessageType: messageType,
-                    lastMessageTime: new Date().toISOString(),
-                    unreadCount: 0,
-                  }
-                : c
-            )
-            .sort(
-              (a, b) =>
-                new Date(b.lastMessageTime || b.updated_at || 0) -
-                new Date(a.lastMessageTime || a.updated_at || 0)
-            )
+      // Handle header (image, video, document, or text)
+      if (input.headerType && input.headerValue) {
+        newMessage.headerType = input.headerType;
+        newMessage.headerValue = input.headerValue;
+        newMessage.headerIsId = input.headerIsId;
+      } else {
+        // Try to auto-detect from parameters if no header is set
+        const mediaUrl = input.parameters?.find((url) =>
+          url.match(/\.(jpeg|png|mp4|pdf|docx?)$/i)
         );
 
-        // toast.success("Message sent successfully");
-      } catch (err) {
-        console.error("❌ Error sending message:", err.response?.data || err);
-        toast.error("Failed to send message");
+        if (mediaUrl) {
+          if (/\.(jpeg|png)$/i.test(mediaUrl)) {
+            newMessage.headerType = "image";
+          } else if (/\.(mp4)$/i.test(mediaUrl)) {
+            newMessage.headerType = "video";
+          } else if (/\.(pdf|docx?)$/i.test(mediaUrl)) {
+            newMessage.headerType = "document";
+          }
+          newMessage.headerValue = mediaUrl;
+          newMessage.headerIsId = input.headerIsId;
+          newMessage.parameters = input.parameters.filter(
+            (p) => p !== mediaUrl
+          );
+        }
       }
-    },
-    [selectedContact, setContacts, fetchMessagesForContact, permissions]
-  );
+
+      // Add fileName and media_url if present
+      if (input.fileName) {
+        newMessage.fileName = input.fileName;
+        // Use fileName as media_url if media_url is not explicitly provided
+        if (!newMessage.media_url) {
+          newMessage.media_url = input.fileName;
+        }
+      }
+
+      if (input.language_code) {
+        newMessage.language_code = input.language_code;
+      }
+    } else {
+      console.warn("Invalid message input");
+      return;
+    }
+
+    try {
+      console.log("🚀 Sending message payload:", newMessage);
+      const response = await axios.post(`${API_BASE}/sendmessage`, {
+        ...newMessage,
+        message_type: messageType,
+      });
+
+      fetchMessagesForContact(selectedContact.contact_id);
+      setContacts((prev) =>
+        prev
+          .map((c) =>
+            c.contact_id === selectedContact.contact_id
+              ? {
+                  ...c,
+                  lastMessage:
+                    typeof input === "string"
+                      ? input
+                      : input.fileName
+                      ? `${input.template_name} (${input.fileName})` 
+                      : input.template_name,
+                  lastMessageType: messageType,
+                  lastMessageTime: new Date().toISOString(),
+                  unreadCount: 0,
+                }
+              : c
+          )
+          .sort(
+            (a, b) =>
+              new Date(b.lastMessageTime || b.updated_at || 0) -
+              new Date(a.lastMessageTime || a.updated_at || 0)
+          )
+      );
+
+      toast.success("Message sent successfully");
+    } catch (err) {
+      console.error("❌ Error sending message:", err.response?.data || err);
+      toast.error("Failed to send message");
+    }
+  },
+  [selectedContact, setContacts, fetchMessagesForContact, permissions, user]
+);
 
  const deleteChat = useCallback(
   async (contact) => {

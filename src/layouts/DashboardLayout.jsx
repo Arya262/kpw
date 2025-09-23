@@ -47,7 +47,7 @@ const DashboardLayout = () => {
   
 
         <main
-  className={`flex-1 p-2.5 bg-white ${
+  className={`flex-1 px-2.5 pb-2.5 bg-white ${
     isChatRoute ? "overflow-hidden" : "overflow-y-auto custom-scroll"
   }`}
 >

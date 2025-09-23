@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Users, Plus, Edit2, Trash2, UserCheck, CloudUpload } from "lucide-react";
+import {Users,Plus,Edit2,Trash2,UserCheck,CloudUpload,} from "lucide-react";
 import { API_ENDPOINTS } from "../../config/api";
 import axios from "axios";
 import { useAuth } from "../../context/AuthContext";
@@ -16,14 +16,11 @@ const EmptyState = ({ searchTerm }) => (
   <tr>
     <td colSpan="8" className="text-center py-8">
       <div className="text-gray-500">
-        {searchTerm
-          ? `No groups match "${searchTerm}"`
-          : "No groups found."}
+        {searchTerm ? `No groups match "${searchTerm}"` : "No groups found."}
       </div>
     </td>
   </tr>
 );
-
 
 const ErrorDisplay = ({ error, setError }) => {
   if (!error) return null;
@@ -50,7 +47,9 @@ const GroupCard = ({ group, onEdit, onDelete, onViewContacts }) => {
             <Users className="w-5 h-5 text-teal-600" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-800">{group.name}</h3>
+            <h3 className="text-lg font-semibold text-gray-800">
+              {group.name}
+            </h3>
             <p className="text-sm text-gray-500">
               {group.contact_count || 0} contacts
             </p>
@@ -88,7 +87,9 @@ const GroupCard = ({ group, onEdit, onDelete, onViewContacts }) => {
       <div className="flex items-center justify-between text-xs text-gray-500">
         <span>Created: {new Date(group.created_at).toLocaleDateString()}</span>
         {group.updated_at && (
-          <span>Updated: {new Date(group.updated_at).toLocaleDateString()}</span>
+          <span>
+            Updated: {new Date(group.updated_at).toLocaleDateString()}
+          </span>
         )}
       </div>
     </div>
@@ -169,35 +170,51 @@ const GroupForm = ({ group, onSave, onCancel }) => {
 
         // Check for phone number column
         const phoneColumns = [
-          'phone', 'mobile', 'phone_number', 'mobile_number',
-          'phone number', 'mobile number', 'contact', 'contact_number',
-          'tel', 'telephone', 'cell', 'cellphone', 'number'
+          "phone",
+          "mobile",
+          "phone_number",
+          "mobile_number",
+          "phone number",
+          "mobile number",
+          "contact",
+          "contact_number",
+          "tel",
+          "telephone",
+          "cell",
+          "cellphone",
+          "number",
         ];
 
-        const phoneColumnIndex = headers.findIndex(header =>
-          phoneColumns.some(phoneCol => header.includes(phoneCol))
+        const phoneColumnIndex = headers.findIndex((header) =>
+          phoneColumns.some((phoneCol) => header.includes(phoneCol))
         );
 
         if (phoneColumnIndex === -1) {
-          setFileError("CSV file must contain a phone number column. Accepted column names include: phone, mobile, phone_number, mobile_number, contact, telephone, etc.");
+          setFileError(
+            "CSV file must contain a phone number column. Accepted column names include: phone, mobile, phone_number, mobile_number, contact, telephone, etc."
+          );
           resolve(false);
           return;
         }
 
-
-        const phoneColumnHasData = lines.slice(1)
-          .filter(line => line.trim())
-          .some(line => {
-            const columns = line.split(',');
-            const phoneValue = columns[phoneColumnIndex]?.trim().replace(/["\']/g, '');
+        const phoneColumnHasData = lines
+          .slice(1)
+          .filter((line) => line.trim())
+          .some((line) => {
+            const columns = line.split(",");
+            const phoneValue = columns[phoneColumnIndex]
+              ?.trim()
+              .replace(/["\']/g, "");
             if (!phoneValue) return false;
-            const cleanPhone = phoneValue.replace(/[\s\-\(\)\+\.]/g, '');
+            const cleanPhone = phoneValue.replace(/[\s\-\(\)\+\.]/g, "");
             const digitCount = (cleanPhone.match(/\d/g) || []).length;
             return digitCount >= 7;
           });
 
         if (!phoneColumnHasData) {
-          setFileError("The phone number column exists but appears to be empty or contains invalid phone numbers. Please ensure the phone column has valid phone numbers.");
+          setFileError(
+            "The phone number column exists but appears to be empty or contains invalid phone numbers. Please ensure the phone column has valid phone numbers."
+          );
           resolve(false);
           return;
         }
@@ -221,7 +238,12 @@ const GroupForm = ({ group, onSave, onCancel }) => {
       setFile(null);
       return;
     }
-    if (!(selectedFile.name.endsWith(".csv") || selectedFile.name.endsWith(".docx"))) {
+    if (
+      !(
+        selectedFile.name.endsWith(".csv") ||
+        selectedFile.name.endsWith(".docx")
+      )
+    ) {
       setFileError("Only .csv or .docx files are allowed.");
       setFile(null);
       return;
@@ -244,12 +266,16 @@ const GroupForm = ({ group, onSave, onCancel }) => {
     if (!validName || !validFile || !validCsv) return;
     setIsSubmitting(true);
     try {
-      await onSave({ name: name.trim(), description: description.trim(), file, fileRemoved });
+      await onSave({
+        name: name.trim(),
+        description: description.trim(),
+        file,
+        fileRemoved,
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
-
 
   const confirmExit = () => {
     setIsPopupOpen(false);
@@ -272,9 +298,14 @@ const GroupForm = ({ group, onSave, onCancel }) => {
         <input
           type="text"
           value={name}
-          onChange={(e) => { setName(e.target.value); setGroupNameError(""); }}
+          onChange={(e) => {
+            setName(e.target.value);
+            setGroupNameError("");
+          }}
           placeholder="Enter group name"
-          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 ${groupNameError ? "border-red-500" : "border-gray-300"}`}
+          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+            groupNameError ? "border-red-500" : "border-gray-300"
+          }`}
           required
         />
         {groupNameError && (
@@ -298,8 +329,11 @@ const GroupForm = ({ group, onSave, onCancel }) => {
           Upload File (.csv or .docx)
         </label>
         <div
-          className={`mb-2 border-2 rounded-md p-4 text-center transition-all duration-200 ${isDragging ? "border-[#0AA89E] bg-blue-50" : "border-dashed border-gray-300"
-            }`}
+          className={`mb-2 border-2 rounded-md p-4 text-center transition-all duration-200 ${
+            isDragging
+              ? "border-[#0AA89E] bg-blue-50"
+              : "border-dashed border-gray-300"
+          }`}
           onDragOver={(e) => {
             e.preventDefault();
             setIsDragging(true);
@@ -330,9 +364,7 @@ const GroupForm = ({ group, onSave, onCancel }) => {
             className="cursor-pointer text-gray-500 flex flex-col items-center"
           >
             <CloudUpload className="w-12 h-12 mb-2" />
-            <p className="text-sm">
-              Drag & drop a CSV or DOCX file here
-            </p>
+            <p className="text-sm">Drag & drop a CSV or DOCX file here</p>
             <p className="text-xs mt-1">Max 50MB and 200K contacts allowed.</p>
           </label>
           {fileError && (
@@ -359,7 +391,10 @@ const GroupForm = ({ group, onSave, onCancel }) => {
               <span>
                 Current file: <b>{group.file_name}</b>
                 {group.total_contacts !== undefined && (
-                  <> | Contacts: <b>{group.total_contacts}</b></>
+                  <>
+                    {" "}
+                    | Contacts: <b>{group.total_contacts}</b>
+                  </>
                 )}
               </span>
               <button
@@ -376,7 +411,9 @@ const GroupForm = ({ group, onSave, onCancel }) => {
             </div>
           )}
           <div className="text-xs text-gray-500 mt-2">
-            <a href="/sample.csv" download className="text-[#0AA89E] underline">Download sample CSV file</a>
+            <a href="/sample.csv" download className="text-[#0AA89E] underline">
+              Download sample CSV file
+            </a>
           </div>
         </div>
       </div>
@@ -438,7 +475,6 @@ export default function GroupManagement() {
     totalItems: 0,
     itemsPerPage: 10,
   });
-
   const fetchGroups = async (page = 1, limit = 10, search = "") => {
     try {
       setLoading(true);
@@ -450,6 +486,15 @@ export default function GroupManagement() {
         limit,
         search,
       });
+      
+      // Debug: Log the full API endpoint and params
+      const params = new URLSearchParams({
+        customer_id: user?.customer_id,
+        page,
+        limit,
+        ...(search ? { search } : {}),
+      });
+      console.log("🌐 Full API URL:", `${API_ENDPOINTS.GROUPS.GET_ALL}?${params.toString()}`);
 
       const response = await axios.get(API_ENDPOINTS.GROUPS.GET_ALL, {
         params: {
@@ -466,13 +511,25 @@ export default function GroupManagement() {
       console.log("📄 API Response Data:", response.data);
 
       if (response.status >= 400) {
-        throw new Error(response.data?.message || 'Failed to fetch groups');
+        throw new Error(response.data?.message || "Failed to fetch groups");
       }
 
       const result = response.data;
+      console.log("🔍 Full API Response:", result);
+      
       const groupsData = Array.isArray(result.data) ? result.data : [];
-
       console.log("📦 Groups Data from API:", groupsData);
+      
+      // Debug: Check if search term is being used in the response
+      if (search) {
+        console.log(`🔎 Checking search results for "${search}":`);
+        const searchLower = search.toLowerCase();
+        const matchingGroups = groupsData.filter(g => 
+          g.group_name?.toLowerCase().includes(searchLower) || 
+          g.description?.toLowerCase().includes(searchLower)
+        );
+        console.log(`   Found ${matchingGroups.length} matching groups in response`);
+      }
 
       if (groupsData.length === 0) {
         console.log("ℹ️ No groups found for the current customer");
@@ -494,22 +551,19 @@ export default function GroupManagement() {
 
       setGroups(transformedGroups);
 
-      setPagination((prev) => {
-        const newPagination = {
-          currentPage: result.current_page || result.page || page,
-          totalPages:
-            result.last_page ||
-            result.totalPages ||
-            (result.total ? Math.ceil(result.total / limit) : 1) ||
-            1,
-          totalItems: result.total || groupsData.length || 0,
-          itemsPerPage: result.per_page || result.limit || limit,
-        };
-        console.log("📊 Updated Pagination:", newPagination);
-        return newPagination;
-      });
+      // The API response has pagination data at response.data.pagination
+      const paginationData = response.data.pagination || {};
+      const newPagination = {
+        currentPage: paginationData.page || page,
+        totalPages: paginationData.totalPages || 1,
+        totalItems: paginationData.totalRecords || 0,
+        itemsPerPage: paginationData.limit || limit,
+      };
+      console.log("📊 Updated Pagination:", newPagination);
+      setPagination(newPagination);
     } catch (err) {
-      const errorMessage = err.response?.data?.message || err.message || 'Failed to fetch groups';
+      const errorMessage =
+        err.response?.data?.message || err.message || "Failed to fetch groups";
       console.error("❌ Error fetching groups:", {
         error: err,
         response: err.response?.data,
@@ -525,6 +579,19 @@ export default function GroupManagement() {
   useEffect(() => {
     fetchGroups();
   }, [user?.customer_id]);
+
+  // Add debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchTerm.trim() !== '') {
+        fetchGroups(1, pagination.itemsPerPage, searchTerm);
+      } else {
+        fetchGroups(1, pagination.itemsPerPage);
+      }
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timer);
+  }, [searchTerm, user?.customer_id]);
 
   // Pagination handlers
   const handlePageChange = (newPage) => {
@@ -542,6 +609,7 @@ export default function GroupManagement() {
     }));
     fetchGroups(1, newItemsPerPage);
   };
+
   // In all handlers, check permissions.canManageGroups before proceeding
   const handleCreateGroup = async (groupData) => {
     if (!permissions.canManageGroups) return;
@@ -551,14 +619,14 @@ export default function GroupManagement() {
       const groupName = groupData.name;
       const file = groupData.file;
       const fileRemoved = groupData.fileRemoved;
-      formData.append('customer_id', customerId);
-      formData.append('group_name', groupName);
-      formData.append('description', groupData.description || '');
+      formData.append("customer_id", customerId);
+      formData.append("group_name", groupName);
+      formData.append("description", groupData.description || "");
       if (file) {
-        formData.append('file', file);
+        formData.append("file", file);
       }
       if (fileRemoved) {
-        formData.append('remove_file', 'true');
+        formData.append("remove_file", "true");
       }
 
       const response = await fetch(`${API_ENDPOINTS.GROUPS.CREATE}`, {
@@ -585,15 +653,15 @@ export default function GroupManagement() {
     if (!permissions.canManageGroups) return;
     try {
       const formData = new FormData();
-      formData.append('group_id', editingGroup.id);
-      formData.append('customer_id', user?.customer_id);
-      formData.append('group_name', groupData.name);
-      formData.append('description', groupData.description || '');
+      formData.append("group_id", editingGroup.id);
+      formData.append("customer_id", user?.customer_id);
+      formData.append("group_name", groupData.name);
+      formData.append("description", groupData.description || "");
       if (groupData.file) {
-        formData.append('file', groupData.file);
+        formData.append("file", groupData.file);
       }
       if (groupData.fileRemoved) {
-        formData.append('remove_file', 'true');
+        formData.append("remove_file", "true");
       }
 
       const response = await fetch(`${API_ENDPOINTS.GROUPS.UPDATE}`, {
@@ -696,7 +764,6 @@ export default function GroupManagement() {
     setSelectAll(selected === total && total > 0);
   }, [selectedRows, displayedGroups.length]);
 
-
   const handleDeleteSelected = async () => {
     const selectedIds = Object.entries(selectedRows)
       .filter(([_, isSelected]) => isSelected)
@@ -710,10 +777,17 @@ export default function GroupManagement() {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ group_id: groupId, customer_id: user?.customer_id }),
+          body: JSON.stringify({
+            group_id: groupId,
+            customer_id: user?.customer_id,
+          }),
         });
       }
-      toast.success(`${selectedIds.length} group${selectedIds.length > 1 ? "s" : ""} deleted successfully!`);
+      toast.success(
+        `${selectedIds.length} group${
+          selectedIds.length > 1 ? "s" : ""
+        } deleted successfully!`
+      );
       setSelectedRows({});
       setSelectAll(false);
       fetchGroups();
@@ -752,7 +826,8 @@ export default function GroupManagement() {
               stroke="currentColor"
               viewBox="0 0 24 24"
               strokeWidth="2"
-              aria-hidden="true">
+              aria-hidden="true"
+            >
               <circle cx="11" cy="11" r="8" />
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
@@ -792,27 +867,83 @@ export default function GroupManagement() {
                   </div>
                 </th>
                 {Object.values(selectedRows).some(Boolean) && (
-                  <th colSpan="7" className="px-2 py-3 sm:px-6">
-                    <div className="flex justify-center">
-                      <button
-                        onClick={() => setShowDeleteDialog(true)}
-                        disabled={isDeleting}
-                        className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 disabled:opacity-50 cursor-pointer"
-                        aria-label={`Delete ${Object.values(selectedRows).filter(Boolean).length} selected groups`}
-                      >
-                        Delete Selected
-                      </button>
-                    </div>
-                  </th>
+                  // <th colSpan="7" className="px-2 py-3 sm:px-6">
+                  //   <div className="flex justify-center">
+                  //     <button
+                  //       onClick={() => setShowDeleteDialog(true)}
+                  //       disabled={isDeleting}
+                  //       className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 disabled:opacity-50 cursor-pointer"
+                  //       aria-label={`Delete ${
+                  //         Object.values(selectedRows).filter(Boolean).length
+                  //       } selected groups`}
+                  //     >
+                  //       Delete Selected
+                  //     </button>
+                  //   </div>
+                  // </th>
+
+                  <th colSpan="6" className="px-4 py-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-700">
+                          {Object.values(selectedRows).filter(Boolean).length}{" "}
+                          template(s) selected
+                        </span>
+                        <button
+                          onClick={handleDeleteSelected}
+                          disabled={isDeleting}
+                          className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isDeleting ? (
+                            <>
+                              <svg
+                                className="animate-spin h-3 w-3 text-white"
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                              >
+                                <circle
+                                  className="opacity-25"
+                                  cx="12"
+                                  cy="12"
+                                  r="10"
+                                  stroke="currentColor"
+                                  strokeWidth="4"
+                                ></circle>
+                                <path
+                                  className="opacity-75"
+                                  fill="currentColor"
+                                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                ></path>
+                              </svg>
+                              Deleting...
+                            </>
+                          ) : (
+                            "Delete Selected"
+                          )}
+                        </button>
+                      </div>
+                    </th>
                 )}
                 {!Object.values(selectedRows).some(Boolean) && (
                   <>
-                    <th className="px-2 py-3 sm:px-6 text-center font-semibold font-sans text-gray-700">LIST NAME</th>
-                    <th className="px-2 py-3 sm:px-6 text-center font-semibold font-sans text-gray-700">DESCRIPTION</th>
-                    <th className="px-2 py-3 sm:px-6 text-center font-semibold font-sans text-gray-700">CATEGORY</th>
-                    <th className="px-2 py-3 sm:px-6 text-center font-semibold font-sans text-gray-700">NO. OF CONTACTS</th>
-                    <th className="px-2 py-3 sm:px-6 text-center font-semibold font-sans text-gray-700">CREATED ON</th>
-                    <th className="px-2 py-3 sm:px-6 text-center font-semibold font-sans text-gray-700">ACTIONS</th>
+                    <th className="px-2 py-3 sm:px-6 text-center font-semibold font-sans text-gray-700">
+                      LIST NAME
+                    </th>
+                    <th className="px-2 py-3 sm:px-6 text-center font-semibold font-sans text-gray-700">
+                      DESCRIPTION
+                    </th>
+                    <th className="px-2 py-3 sm:px-6 text-center font-semibold font-sans text-gray-700">
+                      CATEGORY
+                    </th>
+                    <th className="px-2 py-3 sm:px-6 text-center font-semibold font-sans text-gray-700">
+                      NO. OF CONTACTS
+                    </th>
+                    <th className="px-2 py-3 sm:px-6 text-center font-semibold font-sans text-gray-700">
+                      CREATED ON
+                    </th>
+                    <th className="px-2 py-3 sm:px-6 text-center font-semibold font-sans text-gray-700">
+                      ACTIONS
+                    </th>
                   </>
                 )}
               </tr>
@@ -850,13 +981,13 @@ export default function GroupManagement() {
           </table>
         </div>
       </div>
-      {!loading && pagination.totalItems > 0 && (
+      {pagination.totalItems > 0 && (
         <div className="border-t border-gray-200">
           <Pagination
             currentPage={pagination.currentPage}
             totalPages={pagination.totalPages}
-            itemsPerPage={pagination.itemsPerPage}
             totalItems={pagination.totalItems}
+            itemsPerPage={pagination.itemsPerPage}
             onPageChange={handlePageChange}
             onItemsPerPageChange={handleItemsPerPageChange}
           />
@@ -866,23 +997,29 @@ export default function GroupManagement() {
       {showDeleteDialog && (
         <div className="fixed inset-0 bg-[#000]/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-lg">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Delete Confirmation</h3>
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">
+              Delete Confirmation
+            </h3>
             <p className="text-gray-600 mb-6">
-              Are you sure you want to delete {Object.values(selectedRows).filter(Boolean).length} selected group{Object.values(selectedRows).filter(Boolean).length > 1 ? "s" : ""}? This action cannot be undone.
+              Are you sure you want to delete{" "}
+              {Object.values(selectedRows).filter(Boolean).length} selected
+              group
+              {Object.values(selectedRows).filter(Boolean).length > 1
+                ? "s"
+                : ""}
+              ? This action cannot be undone.
             </p>
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowDeleteDialog(false)}
                 disabled={isDeleting}
-                className="px-3 py-2 w-[70px] bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors duration-200 cursor-pointer"
-              >
+                className="px-3 py-2 w-[70px] bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors duration-200 cursor-pointer">
                 Cancel
               </button>
               <button
                 onClick={handleDeleteSelected}
                 disabled={isDeleting}
-                className="px-3 py-2 w-[70px] bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200  flex items-center justify-center cursor-pointer"
-              >
+                className="px-3 py-2 w-[70px] bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200  flex items-center justify-center cursor-pointer">
                 {isDeleting ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                 ) : (
@@ -897,38 +1034,44 @@ export default function GroupManagement() {
       {(showForm || editingGroup) && (
         <div
           className="fixed inset-0 bg-[#000]/40 flex items-center justify-center z-50 transition-all duration-300"
-          onClick={e => {
+          onClick={(e) => {
             if (e.target === e.currentTarget) {
               setIsCrossHighlighted(true);
               setTimeout(() => setIsCrossHighlighted(false), 2000);
             }
-          }}
-        >
-        <div ref={modalRef}
-              className={` bg-white rounded-lg  w-[95%] sm:w-full sm:max-w-4xl max-h-[90vh] overflow-y-auto relative sm:animate-slideUp border transition-all duration-300 
-                ${isCrossHighlighted ? 'border-teal-500' : 'border-gray-300'}`}
-                onClick={e => e.stopPropagation()}
-                tabIndex="-1">
-              <button onClick={() => setShowExitDialog(true)} className={` absolute top-2 right-2 sm:right-4 text-gray-600 hover:text-black text-2xl sm:text-3xl font-bold w-8 h-8 flex items-center justify-center pb-1 sm:pb-2 
-                  rounded-full transition-colors cursor-pointer ${isCrossHighlighted ? "bg-red-500 text-white hover:text-white" : "bg-gray-100"}`}>
-                  ×
-              </button>
+          }}>
+          <div
+            ref={modalRef}
+            className={` bg-white rounded-lg  w-[95%] sm:w-full sm:max-w-4xl max-h-[90vh] overflow-y-auto relative sm:animate-slideUp border transition-all duration-300 
+                ${isCrossHighlighted ? "border-teal-500" : "border-gray-300"}`}
+            onClick={(e) => e.stopPropagation()}
+            tabIndex="-1">
+            <button
+              onClick={() => setShowExitDialog(true)}
+              className={` absolute top-2 right-2 sm:right-4 text-gray-600 hover:text-black text-2xl sm:text-3xl font-bold w-8 h-8 flex items-center justify-center pb-1 sm:pb-2 
+                  rounded-full transition-colors cursor-pointer ${
+                    isCrossHighlighted
+                      ? "bg-red-500 text-white hover:text-white"
+                      : "bg-gray-100"
+                  }`}>
+              ×
+            </button>
 
-              <div className="mx-auto bg-white shadow-lg rounded-xl text-gray-500 p-4 sm:p-6">
-                <h2 className="text-lg sm:text-xl font-semibold mb-2 text-black">
-                  {editingGroup ? "Edit Group" : "Create New Group"}
-                </h2>
+            <div className="mx-auto bg-white shadow-lg rounded-xl text-gray-500 p-4 sm:p-6">
+              <h2 className="text-lg sm:text-xl font-semibold mb-2 text-black">
+                {editingGroup ? "Edit Group" : "Create New Group"}
+              </h2>
 
-                <GroupForm
-                  group={editingGroup}
-                  onSave={handleSave}
-                  onCancel={() => {
-                    setShowForm(false);
-                    setEditingGroup(null);
-                  }}
-                />
-              </div>
-         </div>
+              <GroupForm
+                group={editingGroup}
+                onSave={handleSave}
+                onCancel={() => {
+                  setShowForm(false);
+                  setEditingGroup(null);
+                }}
+              />
+            </div>
+          </div>
           <ConfirmationDialog
             open={showExitDialog && permissions.canAccessModals}
             hasUnsavedChanges={false}
@@ -941,9 +1084,12 @@ export default function GroupManagement() {
       {deletingGroup && (
         <div className="fixed inset-0 bg-[#000]/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-lg">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Delete Confirmation</h3>
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">
+              Delete Confirmation
+            </h3>
             <p className="text-gray-600 mb-6">
-              Are you sure you want to delete the group "{deletingGroup.name}"? This action cannot be undone.
+              Are you sure you want to delete the group "{deletingGroup.name}"?
+              This action cannot be undone.
             </p>
             <div className="flex justify-end gap-3">
               <button

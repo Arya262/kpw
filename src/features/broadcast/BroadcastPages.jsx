@@ -1,5 +1,6 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import { toast } from "react-toastify";
 import SendTemplate from "../chats/chatfeautures/SendTemplate";
 import BroadcastHeader from "./components/BroadcastHeader";
 import BroadcastForm from "./components/BroadcastForm";
@@ -24,6 +25,8 @@ const [formData, setFormData] = useState({
   schedule: "No",
   scheduleDate: "",
   selectedTemplate: location.state?.selectedTemplate || null,
+  directContacts: location.state?.contacts || null,
+  isDirectBroadcast: location.state?.directBroadcast || false, 
 });
 
   const { user } = useAuth();
@@ -175,74 +178,96 @@ const [formData, setFormData] = useState({
     }
   };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setIsSubmitting(true);
-  setError(null);
-
-  try {
-    const updatedFormData = {
-      customer_id: user?.customer_id,
-      ...formData,
-      // Convert group_id array to single value if needed
-      group_id: Array.isArray(formData.group_id) ? formData.group_id[0] : formData.group_id,
-      // Convert selectedDate to ISO string, or empty string
-      scheduleDate: selectedDate ? selectedDate.toISOString() : "",
-      // Convert date to ISO string for backend consistency
-      date:
-        formData.schedule === "Yes" && selectedDate
-          ? selectedDate.toISOString()
-          : new Date().toISOString(),
-      status: formData.schedule === "No" ? "Live" : "Scheduled",
-      type: "Manual Broadcast",
-    };
-
-    const response = await fetch(API_ENDPOINTS.BROADCASTS.GET_CUSTOMERS, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify(updatedFormData),
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-
-    const result = await response.json();
-
-    if (result.success) {
-      setAlertMessage("Broadcast saved successfully!");
-      setShowAlert(true);
-
-      if (onBroadcastCreated) {
-        onBroadcastCreated();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError(null);
+  
+    try {
+      const isDirectBroadcast = formData.isDirectBroadcast;
+      console.log("📤 Preparing broadcast data...");
+      console.log("Is direct broadcast:", isDirectBroadcast);
+  
+      const broadcastData = {
+        customer_id: user?.customer_id,
+        broadcastName: formData.broadcastName,
+        messageType: formData.messageType,
+        schedule: formData.schedule,
+        scheduleDate: selectedDate ? selectedDate.toISOString() : "",
+        date:
+          formData.schedule === "Yes" && selectedDate
+            ? selectedDate.toISOString()
+            : new Date().toISOString(),
+        status: formData.schedule === "No" ? "Live" : "Scheduled",
+        type: isDirectBroadcast ? "Direct Broadcast" : "Manual Broadcast",
+      };
+  
+      // 🟢 Direct broadcast → send contacts
+      if (isDirectBroadcast && formData.directContacts) {
+        broadcastData.contacts = formData.directContacts;
+        broadcastData.total_contacts = formData.directContacts.length;
+      } else {
+        // 🟢 Group broadcast → send group_id
+        broadcastData.group_id = Array.isArray(formData.group_id)
+          ? formData.group_id[0]
+          : formData.group_id;
       }
-
-      setTimeout(() => {
-        setShowAlert(false);
-        onClose();
-        navigate("/broadcast", {
-          state: { formData: updatedFormData },
-          replace: true,
-        });
-      }, 2000);
-    } else {
-      throw new Error(result.message || "Failed to save broadcast");
+  
+      // 🟢 Template data if available
+      if (formData.selectedTemplate) {
+        broadcastData.template_id = formData.selectedTemplate.id;
+        broadcastData.template_name = formData.selectedTemplate.element_name;
+      }
+  
+      // ✅ Single API endpoint
+      const endpoint = API_ENDPOINTS.BROADCASTS.GET_CUSTOMERS;
+  
+      console.log("🌐 Sending request to:", endpoint);
+      console.log("📤 Request payload:", JSON.stringify(broadcastData, null, 2));
+  
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(broadcastData),
+      });
+  
+      console.log("📥 Response status:", response.status, response.statusText);
+  
+      // ✅ Parse JSON only once
+      let result;
+      try {
+        result = await response.json();
+      } catch {
+        throw new Error("Invalid JSON response from server");
+      }
+  
+      console.log("📩 Response data:", result);
+  
+      if (!response.ok) {
+        throw new Error(result.message || "Failed to create broadcast");
+      }
+  
+      // ✅ Success
+      const successMessage = isDirectBroadcast
+        ? `Broadcast sent to ${broadcastData.total_contacts} contacts!`
+        : "Broadcast created successfully!";
+  
+      toast.success(successMessage);
+      onBroadcastCreated();
+      onClose();
+      navigate("/broadcast", { replace: true });
+  
+    } catch (err) {
+      console.error("❌ Error saving broadcast:", err);
+      setError("Unable to save broadcast. Please try again later.");
+      setAlertMessage("Failed to save broadcast. Please try again.");
+      setShowAlert(true);
+      setTimeout(() => setShowAlert(false), 2000);
+    } finally {
+      setIsSubmitting(false);
     }
-  } catch (err) {
-    console.error("Error saving broadcast:", err);
-    setError("Unable to save broadcast. Please try again later.");
-    setAlertMessage("Failed to save broadcast. Please try again.");
-    setShowAlert(true);
-    setTimeout(() => {
-      setShowAlert(false);
-    }, 2000);
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+  };
 
   const openTemplate = () => {
     setIsTemplateOpen(true);

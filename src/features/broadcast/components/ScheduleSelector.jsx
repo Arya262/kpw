@@ -13,25 +13,17 @@ const ScheduleSelector = ({
   const getMinTime = () => {
     const now = new Date();
     if (selectedDate && selectedDate.toDateString() === now.toDateString()) {
-      const nextHour =
-        now.getMinutes() > 0 ? now.getHours() + 1 : now.getHours();
-      return new Date().setHours(nextHour, 0);
+      return now; // allow changing freely after selection
     }
-    return new Date().setHours(0, 0);
+    const min = new Date();
+    min.setHours(0, 0, 0, 0);
+    return min;
   };
-
-  // Filter out past times + 15 min buffer for today
+  
+  // Only block past times (not past + 15 min)
   const filterPassedTime = (time) => {
     const now = new Date();
-    const timeToCheck = new Date(time);
-
-    if (timeToCheck.toDateString() === now.toDateString()) {
-      const currentMinutes = now.getHours() * 60 + now.getMinutes();
-      const checkMinutes =
-        timeToCheck.getHours() * 60 + timeToCheck.getMinutes();
-      return checkMinutes > currentMinutes + 15;
-    }
-    return true;
+    return time.getTime() > now.getTime();
   };
 
   // Handle Yes/No change
@@ -43,6 +35,17 @@ const ScheduleSelector = ({
 
   // Handle date change
   const handleDateChange = (date) => {
+    const now = new Date();
+  
+    if (date.toDateString() === now.toDateString()) {
+      // Snap directly to next 10-min interval from NOW
+      const minutes = Math.ceil(now.getMinutes() / 10) * 10;
+      const rounded = new Date(now);
+      rounded.setMinutes(minutes, 0, 0);
+  
+      date.setHours(rounded.getHours(), rounded.getMinutes(), 0, 0);
+    }
+  
     setSelectedDate(date);
   };
 

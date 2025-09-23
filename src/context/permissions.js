@@ -51,8 +51,8 @@ export const ROLE_PERMISSIONS = {
     canAddBroadcast: false, 
     canViewBroadcast: true,
     canViewTemplates: true,
-    canAddTemplate:false, // for own templates
-    canEditTemplate: false, // for own templates
-    canDeleteTemplate: false, // for own templates
+    canAddTemplate:false,
+    canEditTemplate: false,
+    canDeleteTemplate: false,
   },
 };

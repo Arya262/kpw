@@ -11,6 +11,7 @@ import ConfirmationDialog from "../shared/ExitConfirmationDialog";
 import { useAuth } from "../../context/AuthContext";
 import { API_ENDPOINTS } from "../../config/api";
 import Dropdown from "../../components/Dropdown";
+import RichTextEditor from "./RichTextEditor";
 
 const templateSchema = z.object({
   category: z.string().min(1, "Please select a template category"),
@@ -106,6 +107,7 @@ const TemplateModal = ({
       }
 
       const data = await response.json();
+      console.log("Upload API response:", data);
       const mediaIdentifier =
         data.handleId ||
         data.exampleMedia ||
@@ -116,7 +118,7 @@ const TemplateModal = ({
       if (!mediaIdentifier) {
         throw new Error("No media identifier returned from server");
       }
-
+      console.log("Media identifier returned:", mediaIdentifier);
       return typeof mediaIdentifier === "string"
         ? mediaIdentifier.split("\n")[0]
         : mediaIdentifier;
@@ -233,7 +235,6 @@ const TemplateModal = ({
     }
   };
 
- 
   const handleRetryUpload = async () => {
     if (!selectedFile) {
       toast.error("No file selected to retry");
@@ -315,10 +316,10 @@ const TemplateModal = ({
       setSelectedAction("None");
       setFormat("{{1}} is your verification code.");
       setFooter("");
-      setIncludeSecurityMessage(false); 
+      setIncludeSecurityMessage(false);
       setIncludeExpiry(false);
       setExpiryMinutes(10);
-      setAuthButtonText("Copy Code"); 
+      setAuthButtonText("Copy Code");
     } else {
       setTemplateType("None");
       setFormat("");
@@ -624,10 +625,10 @@ const TemplateModal = ({
         sampleValues,
       },
       ...(category === "AUTHENTICATION" && {
-      authButtonText,
-      codeExpirationMinutes: expiryMinutes, 
-      addSecurityRecommendation: includeSecurityMessage,
-    }),
+        authButtonText,
+        codeExpirationMinutes: expiryMinutes,
+        addSecurityRecommendation: includeSecurityMessage,
+      }),
     };
     console.log("Submitting template:", newTemplate);
     onSubmit(newTemplate);
@@ -895,7 +896,6 @@ const TemplateModal = ({
                       </>
                     )}
 
-                    
                     {["Image", "Video", "Document"].includes(templateType) && (
                       <div className="flex items-center gap-3 mt-4 mb-2">
                         <div className="relative flex-1">
@@ -982,60 +982,37 @@ const TemplateModal = ({
               <div className="mb-5 border-t-2 pt-4 border-gray-200">
                 <label
                   htmlFor="body"
-                  className="block w-full text-md font-semibold text-gray-700"
+                  className="block w-full text-md font-semibold text-gray-700 mb-2"
                 >
                   Body
                 </label>
-                <div className="flex justify-end mb-1">
-                  <span
-                    className={`text-xs ${
-                      format.length === 1024
-                        ? "text-red-500 font-semibold"
-                        : format.length >= 950
-                        ? "text-yellow-500"
-                        : "text-gray-400"
-                    }`}
-                  >
-                    {format.length}/1024
-                  </span>
-                </div>
-                <textarea
-                  id="body"
-                  className={`w-full border text-sm bg-gray-100 rounded p-4 pt-4 ${
-                    errors.format ? "border-red-500" : "border-transparent"
-                  } focus:outline-none focus:border-teal-500`}
-                  rows={4}
-                  placeholder="Template Format (use {{1}}, {{2}}... for variables)"
+                
+                <RichTextEditor
                   value={format}
+                  onChange={(html) => {
+                    setFormat(html);
+                    validateField("format", html);
+                  }}
+                  placeholder="Template Format (use {{1}}, {{2}}... for variables)"
                   maxLength={1024}
-                  style={{ resize: "vertical" }}
-                  onChange={(e) => {
-                    if (e.target.value.length <= 1024) {
-                      setFormat(e.target.value);
-                      validateField("format", e.target.value);
-                    }
-                  }}
+                  className="relative"
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
+                    if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
-                      const cursorPosition = e.target.selectionStart;
-                      const textBefore = format.substring(0, cursorPosition);
-                      const textAfter = format.substring(cursorPosition);
-                      const newText = textBefore + "\n" + textAfter;
-                      setFormat(newText);
-                      setTimeout(() => {
-                        e.target.setSelectionRange(
-                          cursorPosition + 1,
-                          cursorPosition + 1
-                        );
-                      }, 0);
+                      const selection = window.getSelection();
+                      if (selection.rangeCount) {
+                        const range = selection.getRangeAt(0);
+                        const br = document.createElement('br');
+                        range.deleteContents();
+                        range.insertNode(br);
+                        range.setStartAfter(br);
+                        range.setEndAfter(br);
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+                      }
                     }
                   }}
-                  aria-describedby={errors.format ? "format-error" : undefined}
-                ></textarea>
-                <p className="text-xs font-light text-gray-500 mb-2">
-                  Use text formatting - bold, italic, etc. Max 1024 characters.
-                </p>
+                />
                 {category === "AUTHENTICATION" && (
                   <div className="flex items-center mt-2">
                     <input
@@ -1079,207 +1056,203 @@ const TemplateModal = ({
                 />
               </div>
 
-             
-                <div className="mb-5 border-t-2 pt-4 border-gray-200">
-                  <label
-                    htmlFor="footer"
-                    className="block text-sm font-medium text-gray-700 mb-1"
-                  >
-                    Footer (Optional)
-                  </label>
+              <div className="mb-5 border-t-2 pt-4 border-gray-200">
+                <label
+                  htmlFor="footer"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Footer (Optional)
+                </label>
 
-                  {category !== "AUTHENTICATION" ? (
-                    <>
-                      <div className="relative mb-1">
-                        <input
-                          id="footer"
-                          type="text"
-                          className={`w-full bg-gray-100 border rounded p-3 pr-12 text-sm font-medium ${
-                            errors.footer
-                              ? "border-red-500"
-                              : "border-transparent"
-                          } focus:outline-none focus:border-teal-500`}
-                          placeholder="Template Footer"
-                          value={footer}
-                          onChange={(e) => {
-                            setFooter(e.target.value);
-                            validateField("footer", e.target.value);
-                          }}
-                        />
+                {category !== "AUTHENTICATION" ? (
+                  <>
+                    <div className="relative mb-1">
+                      <input
+                        id="footer"
+                        type="text"
+                        className={`w-full bg-gray-100 border rounded p-3 pr-12 text-sm font-medium ${
+                          errors.footer
+                            ? "border-red-500"
+                            : "border-transparent"
+                        } focus:outline-none focus:border-teal-500`}
+                        placeholder="Template Footer"
+                        value={footer}
+                        onChange={(e) => {
+                          setFooter(e.target.value);
+                          validateField("footer", e.target.value);
+                        }}
+                      />
 
-                        <span
-                          className={`absolute right-3 bottom-2 text-xs ${
-                            footer.length === 60
-                              ? "text-red-500 font-semibold"
-                              : footer.length >= 50
-                              ? "text-yellow-500"
-                              : "text-gray-400"
-                          }`}
-                        >
-                          {footer.length}/60
-                        </span>
-                      </div>
-
-                      {errors.footer && (
-                        <p
-                          id="footer-error"
-                          className="text-red-500 text-xs mb-1"
-                        >
-                          {errors.footer}
-                        </p>
-                      )}
-                      <p className="text-xs font-light text-gray-500 mb-6">
-                        You are allowed a maximum of 60 characters.
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <div className="relative mb-1">
-                        <input
-                          id="footer"
-                          type="text"
-                          className="w-full bg-gray-100 rounded p-3 pr-12 text-sm font-medium cursor-not-allowed text-gray-500"
-                          value={footer}
-                          disabled
-                        />
-                        <span
-                          className={`absolute right-3 bottom-2 text-xs ${
-                            footer.length === 60
-                              ? "text-red-500 font-semibold"
-                              : footer.length >= 50
-                              ? "text-yellow-500"
-                              : "text-gray-400"
-                          }`}
-                        >
-                          {footer.length}/60
-                        </span>
-                      </div>
-
-                      <div className="flex items-center mt-2">
-                        <input
-                          type="checkbox"
-                          id="includeExpiry"
-                          checked={includeExpiry}
-                          onChange={(e) => {
-                            const checked = e.target.checked;
-                            setIncludeExpiry(checked);
-                            const newValue = checked
-                              ? `This code expires in ${expiryMinutes} minutes.`
-                              : "";
-                            setFooter(newValue);
-                            validateField("footer", newValue);
-                          }}
-                          className="mr-2"
-                        />
-                        <label
-                          htmlFor="includeExpiry"
-                          className="text-sm text-gray-700"
-                        >
-                          Include expiry time
-                        </label>
-                      </div>
-
-                      {includeExpiry && (
-                        <div className="mt-2">
-                          <label className="block text-sm text-gray-700 mb-1">
-                            Expires in
-                          </label>
-
-                          <div className="flex items-center">
-                            <input
-                              type="number"
-                              min="1"
-                              max="90"
-                              value={expiryMinutes}
-                              onChange={(e) => {
-                                const value = Math.max(
-                                  1,
-                                  Math.min(90, Number(e.target.value))
-                                );
-                                setExpiryMinutes(value);
-                                const newValue = `This code expires in ${value} minutes.`;
-                                setFooter(newValue);
-                                validateField("footer", newValue);
-                              }}
-                              className="w-16 bg-gray-100  rounded p-2 text-sm font-medium mr-2 focus:outline-none focus:border-teal-500"
-                            />
-                            <span className="text-sm text-gray-700">
-                              minutes
-                            </span>
-                          </div>
-                        </div>
-                      )}
-
-                      {errors.footer && (
-                        <p
-                          id="footer-error"
-                          className="text-red-500 text-xs mb-1"
-                        >
-                          {errors.footer}
-                        </p>
-                      )}
-                    </>
-                  )}
-                </div>
-
-                {/* Authentication Section */}
-                {category === "AUTHENTICATION" && (
-                  <div className="mb-5 border-t-2 pt-4 border-gray-200">
-                    <p className="text-sm text-gray-600 mb-2">
-                      Basic authentication with quick setup. Your customers copy
-                      and paste the code into your app.
-                    </p>
-                    <label
-                      htmlFor="authButtonText"
-                      className="block text-sm font-medium text-gray-700 mb-1"
-                    >
-                      Button Text
-                    </label>
-
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-xs text-gray-400">
-                        Max 25 characters
-                      </span>
                       <span
-                        className={`text-xs ${
-                          authButtonText.length === 25
+                        className={`absolute right-3 bottom-2 text-xs ${
+                          footer.length === 60
                             ? "text-red-500 font-semibold"
-                            : authButtonText.length >= 20
+                            : footer.length >= 50
                             ? "text-yellow-500"
                             : "text-gray-400"
                         }`}
                       >
-                        {authButtonText.length}/25
+                        {footer.length}/60
                       </span>
                     </div>
 
-                    <input
-                      id="authButtonText"
-                      type="text"
-                      className={`w-full bg-gray-100 border rounded p-3 text-sm font-medium mb-1 ${
-                        errors.authButtonText
-                          ? "border-red-500"
-                          : "border-transparent"
-                      } focus:outline-none focus:border-teal-500`}
-                      placeholder="Button Text"
-                      value={authButtonText}
-                      onChange={(e) => {
-                        setAuthButtonText(e.target.value);
-                        validateField("authButtonText", e.target.value);
-                      }}
-                      maxLength={25}
-                    />
-                    {errors.authButtonText && (
+                    {errors.footer && (
                       <p
-                        id="authButtonText-error"
+                        id="footer-error"
                         className="text-red-500 text-xs mb-1"
                       >
-                        {errors.authButtonText}
+                        {errors.footer}
                       </p>
                     )}
-                  </div>
+                    <p className="text-xs font-light text-gray-500 mb-6">
+                      You are allowed a maximum of 60 characters.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="relative mb-1">
+                      <input
+                        id="footer"
+                        type="text"
+                        className="w-full bg-gray-100 rounded p-3 pr-12 text-sm font-medium cursor-not-allowed text-gray-500"
+                        value={footer}
+                        disabled
+                      />
+                      <span
+                        className={`absolute right-3 bottom-2 text-xs ${
+                          footer.length === 60
+                            ? "text-red-500 font-semibold"
+                            : footer.length >= 50
+                            ? "text-yellow-500"
+                            : "text-gray-400"
+                        }`}
+                      >
+                        {footer.length}/60
+                      </span>
+                    </div>
+
+                    <div className="flex items-center mt-2">
+                      <input
+                        type="checkbox"
+                        id="includeExpiry"
+                        checked={includeExpiry}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setIncludeExpiry(checked);
+                          const newValue = checked
+                            ? `This code expires in ${expiryMinutes} minutes.`
+                            : "";
+                          setFooter(newValue);
+                          validateField("footer", newValue);
+                        }}
+                        className="mr-2"
+                      />
+                      <label
+                        htmlFor="includeExpiry"
+                        className="text-sm text-gray-700"
+                      >
+                        Include expiry time
+                      </label>
+                    </div>
+
+                    {includeExpiry && (
+                      <div className="mt-2">
+                        <label className="block text-sm text-gray-700 mb-1">
+                          Expires in
+                        </label>
+
+                        <div className="flex items-center">
+                          <input
+                            type="number"
+                            min="1"
+                            max="90"
+                            value={expiryMinutes}
+                            onChange={(e) => {
+                              const value = Math.max(
+                                1,
+                                Math.min(90, Number(e.target.value))
+                              );
+                              setExpiryMinutes(value);
+                              const newValue = `This code expires in ${value} minutes.`;
+                              setFooter(newValue);
+                              validateField("footer", newValue);
+                            }}
+                            className="w-16 bg-gray-100  rounded p-2 text-sm font-medium mr-2 focus:outline-none focus:border-teal-500"
+                          />
+                          <span className="text-sm text-gray-700">minutes</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {errors.footer && (
+                      <p
+                        id="footer-error"
+                        className="text-red-500 text-xs mb-1"
+                      >
+                        {errors.footer}
+                      </p>
+                    )}
+                  </>
                 )}
-             
+              </div>
+
+              {/* Authentication Section */}
+              {category === "AUTHENTICATION" && (
+                <div className="mb-5 border-t-2 pt-4 border-gray-200">
+                  <p className="text-sm text-gray-600 mb-2">
+                    Basic authentication with quick setup. Your customers copy
+                    and paste the code into your app.
+                  </p>
+                  <label
+                    htmlFor="authButtonText"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Button Text
+                  </label>
+
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-xs text-gray-400">
+                      Max 25 characters
+                    </span>
+                    <span
+                      className={`text-xs ${
+                        authButtonText.length === 25
+                          ? "text-red-500 font-semibold"
+                          : authButtonText.length >= 20
+                          ? "text-yellow-500"
+                          : "text-gray-400"
+                      }`}
+                    >
+                      {authButtonText.length}/25
+                    </span>
+                  </div>
+
+                  <input
+                    id="authButtonText"
+                    type="text"
+                    className={`w-full bg-gray-100 border rounded p-3 text-sm font-medium mb-1 ${
+                      errors.authButtonText
+                        ? "border-red-500"
+                        : "border-transparent"
+                    } focus:outline-none focus:border-teal-500`}
+                    placeholder="Button Text"
+                    value={authButtonText}
+                    onChange={(e) => {
+                      setAuthButtonText(e.target.value);
+                      validateField("authButtonText", e.target.value);
+                    }}
+                    maxLength={25}
+                  />
+                  {errors.authButtonText && (
+                    <p
+                      id="authButtonText-error"
+                      className="text-red-500 text-xs mb-1"
+                    >
+                      {errors.authButtonText}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {category !== "AUTHENTICATION" && (
                 <>
@@ -1397,12 +1370,12 @@ const TemplateModal = ({
             />
           </div>
         </div>
-<ConfirmationDialog
-  open={showExitDialog}
-  hasUnsavedChanges={hasUnsavedChanges}
-  onCancel={handleCancelClick}
-  onConfirm={confirmExit}
-/>
+        <ConfirmationDialog
+          open={showExitDialog}
+          hasUnsavedChanges={hasUnsavedChanges}
+          onCancel={handleCancelClick}
+          onConfirm={confirmExit}
+        />
       </div>
     </div>
   );

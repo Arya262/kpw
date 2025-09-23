@@ -133,34 +133,34 @@ const MessageInput = ({ onSendMessage, selectedContact, canSendMessage }) => {
       <div className="sticky bottom-0 bg-white border-t border-gray-200 z-10 px-2 py-2">
         {!isWithin24Hours && (
           <div className="mb-2 p-3 bg-gray-50 border border-gray-200 rounded-md text-sm">
-<div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 text-gray-700">
-  <div className="flex items-start gap-2">
-    <svg
-      className="hidden sm:block w-5 h-5 text-gray-500 flex-shrink-0"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-      />
-    </svg>
-    <span className="font-medium">
-      Session has expired. To continue chat, you can send template-based
-      messages. When the customer sends a message,
-      the session will automatically reopen.
-    </span>
-  </div>
-  <button
-    onClick={() => setShowTemplates(true)}
-    className="mt-3 sm:mt-0 h-8 px-3 flex items-center justify-center text-white bg-teal-500 hover:bg-teal-600 rounded-full text-xs whitespace-nowrap cursor-pointer"
-  >
-    Select Template
-  </button>
-</div>
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 text-gray-700">
+              <div className="flex items-start gap-2">
+                <svg
+                  className="hidden sm:block w-5 h-5 text-gray-500 flex-shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <span className="font-medium">
+                  Session has expired. To continue chat, you can send
+                  template-based messages. When the customer sends a message,
+                  the session will automatically reopen.
+                </span>
+              </div>
+              <button
+                onClick={() => setShowTemplates(true)}
+                className="mt-3 sm:mt-0 h-8 px-3 flex items-center justify-center text-white bg-teal-500 hover:bg-teal-600 rounded-full text-xs whitespace-nowrap cursor-pointer"
+              >
+                Select Template
+              </button>
+            </div>
             <div className="text-xs text-gray-500">
               A session automatically expires after 24 hours.
             </div>
@@ -242,31 +242,34 @@ const MessageInput = ({ onSendMessage, selectedContact, canSendMessage }) => {
               }}
             ></div>
 
-            <button
-              type="submit"
-              className="ml-2 h-8 px-3 flex items-center justify-center text-white bg-teal-500 hover:bg-teal-600 rounded-full text-xs whitespace-nowrap cursor-pointer"
-              disabled={!isWithin24Hours}
-              onClick={() => {
-                if (!canSendMessage) {
-                  toast.error("You do not have permission to send messages.");
-                }
-              }}
-            >
-              <Send className="w-4 h-4 mr-1" />
-              
-              <span className="hidden sm:inline">
-                {sanitizeHtml(message).trim()
-                  ? "Send Message"
-                  : "Send Template"}
-              </span>
-            </button>
+            {isWithin24Hours && (
+              <button
+                type="submit"
+                className="ml-2 h-8 px-3 flex items-center justify-center text-white bg-teal-500 hover:bg-teal-600 rounded-full text-xs whitespace-nowrap cursor-pointer"
+                disabled={!canSendMessage}
+                onClick={() => {
+                  if (!canSendMessage) {
+                    toast.error("You do not have permission to send messages.");
+                  }
+                }}
+              >
+                <Send className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">
+                  {sanitizeHtml(message).trim()
+                    ? "Send Message"
+                    : "Send Template"}
+                </span>
+              </button>
+            )}
           </div>
         </form>
       </div>
       {showTemplates && (
         <div className="fixed inset-0 bg-[#000]/50 z-50 flex justify-center items-center p-2">
-          <div ref={modalRef}
-            className=" bg-white w-full max-w-full sm:max-w-md md:max-w-3xl p-4 relative mx-auto rounded-lg" >
+          <div
+            ref={modalRef}
+            className=" bg-white w-full max-w-full sm:max-w-md md:max-w-3xl p-4 relative mx-auto rounded-lg"
+          >
             <SendTemplate
               onSelect={(filledTemplate) => {
                 if (!filledTemplate || !filledTemplate.element_name) {
@@ -274,7 +277,7 @@ const MessageInput = ({ onSendMessage, selectedContact, canSendMessage }) => {
                   toast.error("Invalid template selected.");
                   return;
                 }
-                // console.log("MessageInput payload:", filledTemplate);
+                console.log("MessageInput payload:", filledTemplate);
                 onSendMessage({
                   template_name: filledTemplate.element_name,
                   parameters: filledTemplate.parameters || [],
@@ -282,6 +285,8 @@ const MessageInput = ({ onSendMessage, selectedContact, canSendMessage }) => {
                   headerValue: filledTemplate.headerValue,
                   headerIsId: filledTemplate.headerIsId,
                   language_code: filledTemplate.language_code || "en",
+                  // media_url: filledTemplate.media_url,
+                  fileName: filledTemplate.fileName,
                 });
                 setShowTemplates(false);
               }}

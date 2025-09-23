@@ -1,9 +1,8 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect } from "react";
 
 const LocationContext = createContext();
 
-// Cache key for localStorage
-const LOCATION_CACHE_KEY = 'user_location_cache';
+const LOCATION_CACHE_KEY = "user_location_cache";
 const CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export const LocationProvider = ({ children }) => {
@@ -13,150 +12,135 @@ export const LocationProvider = ({ children }) => {
       try {
         const parsed = JSON.parse(cached);
         if (parsed.timestamp && Date.now() - parsed.timestamp < CACHE_EXPIRY_MS) {
-          return {
-            loaded: true,
-            coordinates: parsed.coordinates,
-            address: parsed.address, // ✅ always plain string
-            error: null,
-          };
+          return parsed;
         }
       } catch (e) {
-        console.error('Failed to parse cached location', e);
+        console.error("Failed to parse cached location", e);
       }
     }
     return {
       loaded: false,
       coordinates: { lat: null, lng: null },
       address: null,
+      ip: null,
       error: null,
     };
   });
 
-  // Reverse geocoding to get state/city
+  // ✅ Get Visitor IP
+  const getVisitorIP = async () => {
+    try {
+      const response = await fetch("https://api64.ipify.org?format=json");
+      const data = await response.json();
+      return data.ip;
+    } catch (error) {
+      console.error("Failed to fetch IP:", error);
+      return null;
+    }
+  };
+
+  // ✅ IP-based location lookup (fallback)
+const getLocationFromIP = async () => {
+  try {
+    console.log("⚡ Falling back to IP-based location...");
+    const ip = await getVisitorIP();
+    if (!ip) throw new Error("No IP found");
+
+    const response = await fetch(`https://ipapi.co/${ip}/json/`);
+    const data = await response.json();
+
+    console.log("📍 IP-based location data:", data);
+
+    const locationData = {
+      loaded: true,
+      coordinates: {
+        lat: data.latitude,
+        lng: data.longitude,
+      },
+      address: `${data.city}, ${data.region}, ${data.country_name}`,
+      ip,
+      error: null,
+      timestamp: Date.now(),
+    };
+
+    setLocation(locationData);
+    localStorage.setItem(LOCATION_CACHE_KEY, JSON.stringify(locationData));
+  } catch (error) {
+    console.error("Failed to fetch location from IP:", error);
+    setLocation((prev) => ({
+      ...prev,
+      loaded: true,
+      error: { message: "Could not determine location from IP" },
+    }));
+  }
+};
+
+
   const getStateFromCoordinates = async (lat, lng) => {
     try {
-      console.log('Fetching state for coords:', lat, lng);
       const response = await fetch(
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`
       );
       const data = await response.json();
-      console.log('Reverse geocode response:', data);
-
       return (
         data.address?.state ||
         data.address?.county ||
         data.address?.city ||
         data.address?.town ||
         data.address?.village ||
-        'Unknown Location'
+        "Unknown Location"
       );
     } catch (error) {
-      console.error('Error getting location details:', error);
-      return 'Location Unavailable';
+      console.error("Error getting location details:", error);
+      return "Location Unavailable";
     }
   };
 
+  // ✅ Success handler for Geolocation
   const onSuccess = async (position) => {
+    const coords = {
+      lat: position.coords.latitude,
+      lng: position.coords.longitude,
+    };
+
     try {
-      const coords = {
-        lat: position.coords.latitude,
-        lng: position.coords.longitude,
-      };
-      console.log('Got coordinates:', coords);
-
-      // ✅ Check cache first
-      const cached = localStorage.getItem(LOCATION_CACHE_KEY);
-      if (cached) {
-        try {
-          const parsed = JSON.parse(cached);
-          if (
-            parsed.coordinates?.lat === coords.lat &&
-            parsed.coordinates?.lng === coords.lng &&
-            parsed.timestamp &&
-            Date.now() - parsed.timestamp < CACHE_EXPIRY_MS
-          ) {
-            console.log('Using cached location:', parsed);
-            setLocation({
-              loaded: true,
-              coordinates: coords,
-              address: parsed.address, // ✅ plain string
-              error: null,
-            });
-            return;
-          }
-        } catch (e) {
-          console.error('Error reading location cache', e);
-        }
-      }
-
-      // ✅ Fetch new reverse geocode
+      const ip = await getVisitorIP();
       const state = await getStateFromCoordinates(coords.lat, coords.lng);
 
       const locationData = {
         loaded: true,
         coordinates: coords,
-        address: state, // ✅ plain string only
+        address: state,
+        ip,
         error: null,
+        timestamp: Date.now(),
       };
 
       setLocation(locationData);
-
-      localStorage.setItem(
-        LOCATION_CACHE_KEY,
-        JSON.stringify({
-          ...locationData,
-          timestamp: Date.now(),
-        })
-      );
-    } catch (error) {
-      console.error('Error processing location:', error);
+      localStorage.setItem(LOCATION_CACHE_KEY, JSON.stringify(locationData));
+    } catch (err) {
+      console.error("Error processing location:", err);
       setLocation((prev) => ({
         ...prev,
         loaded: true,
-        error: { message: 'Could not determine location name' },
+        error: { message: "Could not determine location" },
       }));
     }
   };
 
+  // ✅ Error handler → fallback to IP
   const onError = (error) => {
-    console.error('Geolocation error:', error);
-    let errorMessage = error.message || 'Unknown error';
-
-    switch (error.code) {
-      case error.PERMISSION_DENIED:
-        errorMessage =
-          'Location access was denied. Please enable location services for this website.';
-        break;
-      case error.POSITION_UNAVAILABLE:
-        errorMessage = 'Location information is unavailable.';
-        break;
-      case error.TIMEOUT:
-        errorMessage = 'The request to get location timed out.';
-        break;
-      default:
-        errorMessage = 'An unknown error occurred while getting location.';
-        break;
-    }
-
-    setLocation((prev) => ({
-      ...prev,
-      loaded: true,
-      error: {
-        code: error.code,
-        message: errorMessage,
-      },
-    }));
+    console.warn("Geolocation error:", error);
+    getLocationFromIP(); // fallback
   };
 
+  // ✅ Request Geolocation on mount
   useEffect(() => {
     if (!navigator.geolocation) {
-      onError({
-        code: 0,
-        message: 'Geolocation not supported by your browser',
-      });
+      console.warn("Geolocation not supported, falling back to IP...");
+      getLocationFromIP();
       return;
     }
-
     navigator.geolocation.getCurrentPosition(onSuccess, onError, {
       enableHighAccuracy: true,
       timeout: 10000,
@@ -171,10 +155,11 @@ export const LocationProvider = ({ children }) => {
   );
 };
 
+// ✅ Custom Hook
 export const useLocation = () => {
   const context = useContext(LocationContext);
   if (!context) {
-    throw new Error('useLocation must be used within a LocationProvider');
+    throw new Error("useLocation must be used within a LocationProvider");
   }
   return context;
 };

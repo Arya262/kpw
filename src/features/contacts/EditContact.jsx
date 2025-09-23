@@ -19,12 +19,10 @@ export default function EditContact({ contact, closePopup, onSuccess }) {
   useEffect(() => {
     if (contact) {
       setName(contact.first_name || "");
-      
       setPhone(`${contact.country_code || ""}${contact.mobile_no || ""}`);
       setOptStatus(contact.is_active ? "Opted In" : "Opted Out");
     }
   }, [contact]);
-
 
   const validatePhoneNumber = () => {
     // Basic validation - detailed validation is handled by PhoneInputField
@@ -50,10 +48,19 @@ export default function EditContact({ contact, closePopup, onSuccess }) {
       return;
     }
 
-    // Extract country code and mobile number from the phone input
-    const phoneDigits = phone.replace(/\D/g, '');
-    const countryCode = phone.match(/^\+?\d{1,4}/)?.[0] || '';
-    const mobileNumber = phoneDigits.replace(countryCode.replace('+', ''), '');
+    // --- FIXED PHONE PARSING ---
+    const formattedPhone = phone.startsWith("+") ? phone : `+${phone}`;
+    const phoneDigits = formattedPhone.replace(/\D/g, "");
+
+    // Prefer contact's country_code if available
+    let countryCode = contact?.country_code || "";
+    if (!countryCode && formattedPhone.startsWith("+")) {
+      const match = formattedPhone.match(/^\+(\d{1,3})/);
+      countryCode = match ? `+${match[1]}` : "+91"; // fallback to +91
+    }
+
+    // Mobile number = remaining digits after country code
+    const mobileNumber = phoneDigits.slice(countryCode.replace("+", "").length);
 
     const requestBody = {
       contact_id: contact.contact_id,
@@ -62,8 +69,6 @@ export default function EditContact({ contact, closePopup, onSuccess }) {
       first_name: name.trim(),
       mobile_no: mobileNumber,
     };
-
-
 
     try {
       const response = await fetch(API_ENDPOINTS.CONTACTS.UPDATE, {
@@ -97,7 +102,9 @@ export default function EditContact({ contact, closePopup, onSuccess }) {
 
   return (
     <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-xl text-gray-500 p-6">
-      <h2 className="text-xl font-semibold mb-2 text-black text-left">Update Contact</h2>
+      <h2 className="text-xl font-semibold mb-2 text-black text-left">
+        Update Contact
+      </h2>
       <SuccessErrorMessage
         successMessage={successMessage}
         errorMessage={errorMessage}
@@ -122,7 +129,9 @@ export default function EditContact({ contact, closePopup, onSuccess }) {
         onClick={handleSubmit}
         disabled={loading}
         className={`mt-4 px-4 py-2 rounded mx-auto block cursor-pointer ${
-          loading ? "bg-gray-400 cursor-not-allowed text-white" : "bg-teal-600 text-white"
+          loading
+            ? "bg-gray-400 cursor-not-allowed text-white"
+            : "bg-teal-600 text-white"
         }`}
       >
         {loading ? "Updating..." : "Update"}

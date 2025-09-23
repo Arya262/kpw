@@ -1,4 +1,10 @@
-import { useState, useEffect, forwardRef, useImperativeHandle,useMemo, } from "react";
+import {
+  useState,
+  useEffect,
+  forwardRef,
+  useImperativeHandle,
+  useMemo,
+} from "react";
 import { useAuth } from "../../context/AuthContext";
 import FilterBar from "./components/FilterBar";
 import SearchBar from "./components/SearchBar";
@@ -24,22 +30,27 @@ const BroadcastDashboard = forwardRef(
     const [broadcasts, setBroadcasts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1, totalItems: 0, itemsPerPage: 10, });
+    const [pagination, setPagination] = useState({
+      currentPage: 1,
+      totalPages: 1,
+      totalItems: 0,
+      itemsPerPage: 10,
+    });
     const { user } = useAuth();
 
     const fetchBroadcasts = async (page = 1, limit = 10, search = "") => {
-      if (!user?.customer_id) return; 
+      if (!user?.customer_id) return;
 
       try {
         setLoading(true);
         setError(null);
 
-        console.log("📤 Fetching broadcasts with params:", {
-          customer_id: user?.customer_id,
-          page,
-          limit,
-          search,
-        });
+        // console.log("📤 Fetching broadcasts with params:", {
+        //   customer_id: user?.customer_id,
+        //   page,
+        //   limit,
+        //   search,
+        // });
 
         const response = await axios.get(API_ENDPOINTS.BROADCASTS.GET_ALL, {
           params: {
@@ -49,11 +60,11 @@ const BroadcastDashboard = forwardRef(
             ...(search ? { search } : {}),
           },
           withCredentials: true,
-          validateStatus: (status) => status < 500, 
+          validateStatus: (status) => status < 500,
         });
 
-        console.log("✅ API Response Status:", response.status);
-        console.log("📄 API Response Data:", response.data);
+        // console.log("✅ API Response Status:", response.status);
+        // console.log("📄 API Response Data:", response.data);
 
         if (response.status >= 400) {
           throw new Error(
@@ -61,56 +72,34 @@ const BroadcastDashboard = forwardRef(
           );
         }
 
-        const result = response.data;
-        const broadcastsData = Array.isArray(result.broadcasts)
-          ? result.broadcasts
-          : [];
-
-        console.log("📦 Broadcasts Data from API:", broadcastsData);
-
+        const result = response.data.data;
+        // Since "data" is already the array
+        const broadcastsData = Array.isArray(result) ? result : [];
+        // console.log(":package: Broadcasts Data from API:", broadcastsData);
         if (broadcastsData.length === 0) {
-          console.log("ℹ️ No broadcasts found for the current customer");
+          // console.log("ℹ️ No broadcasts found for the current customer");
         }
-
         setBroadcasts(broadcastsData);
-
-        setPagination((prev) => {
-          const newPagination = {
-            currentPage: result.pagination?.page || result.current_page || page,
-            totalPages:
-              result.pagination?.totalPages ||
-              result.last_page ||
-              (result.total ? Math.ceil(result.total / limit) : 1) ||
-              1,
-            totalItems:
-              result.pagination?.totalRecords ||
-              result.total ||
-              broadcastsData.length ||
-              0,
-            itemsPerPage: result.pagination?.limit || result.per_page || limit,
-          };
-          console.log("📊 Updated Pagination:", newPagination);
-          return newPagination;
-        });
+        // The API response has pagination data at response.data.pagination
+        const paginationData = response.data.pagination || {};
+        const newPagination = {
+          currentPage: paginationData.page || page,
+          totalPages: paginationData.totalPages || 1,
+          totalItems: paginationData.totalRecords || 0,
+          itemsPerPage: paginationData.limit || limit,
+          totalRecords: paginationData.totalRecords || 0,
+        };
+        // console.log("📊 Updated Pagination:", newPagination);
+        setPagination(newPagination);
 
         if (onBroadcastsUpdate) {
           onBroadcastsUpdate({
             broadcasts: broadcastsData,
             pagination: {
-              currentPage:
-                result.pagination?.page || result.current_page || page,
-              totalPages:
-                result.pagination?.totalPages ||
-                result.last_page ||
-                (result.total ? Math.ceil(result.total / limit) : 1) ||
-                1,
-              totalRecords:
-                result.pagination?.totalRecords ||
-                result.total ||
-                broadcastsData.length ||
-                0,
-              itemsPerPage:
-                result.pagination?.limit || result.per_page || limit,
+              currentPage: paginationData.page || page,
+              totalPages: paginationData.totalPages || 1,
+              totalRecords: paginationData.totalRecords || 0,
+              itemsPerPage: paginationData.limit || limit,
             },
           });
         }
@@ -155,7 +144,7 @@ const BroadcastDashboard = forwardRef(
           pagination.itemsPerPage,
           search
         );
-      }, 400); 
+      }, 400);
       return () => clearTimeout(timeout);
     }, [
       pagination.currentPage,
@@ -163,7 +152,6 @@ const BroadcastDashboard = forwardRef(
       search,
       user?.customer_id,
     ]);
-
 
     const statuses = broadcasts.reduce(
       (acc, b) => {
@@ -233,8 +221,7 @@ const BroadcastDashboard = forwardRef(
       <div
         className={`w-full ${
           broadcasts.length > 0 ? "bg-white shadow-sm" : ""
-        } rounded-xl mt-4 shadow-sm min-h-fit`}
-      >
+        } rounded-xl mt-4 shadow-sm min-h-fit`}>
         <div className="flex items-center shadow-2xl p-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full overflow-x-auto scrollbar-hide">
             <FilterBar

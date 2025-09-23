@@ -87,7 +87,7 @@ const Chat = () => {
         setShowUserDetails(false);
       }
     };
-    document.addEventListener("click", handleClickOutside, true); 
+    document.addEventListener("click", handleClickOutside, true);
     return () => document.removeEventListener("click", handleClickOutside, true);
   }, []);
 
@@ -105,9 +105,9 @@ const Chat = () => {
       setSelectedContact((prev) =>
         prev
           ? {
-              ...prev,
-              lastMessageTime: new Date().toISOString(),
-            }
+            ...prev,
+            lastMessageTime: new Date().toISOString(),
+          }
           : prev
       );
     }
@@ -166,24 +166,18 @@ const Chat = () => {
     };
   }, [width]);
 
-  const filteredContacts = useMemo(() => {
-    return contacts.filter(c =>
-      c.name?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [contacts, searchQuery]);
-
   const handleSelectContact = useCallback((contact, e) => {
     if (isSelectMode) {
 
       e?.preventDefault();
       toggleContactSelection(contact);
     } else {
-    
-      const fullContact = contacts.find(c => 
+
+      const fullContact = contacts.find(c =>
         (c.conversation_id && c.conversation_id === contact.conversation_id) ||
         (c.phone_number && c.phone_number === contact.phone_number)
       );
-      
+
       selectContact(fullContact || contact);
       if (isMobile) setShowMobileChat(true);
     }
@@ -191,22 +185,22 @@ const Chat = () => {
 
   const handleDeleteSelected = useCallback(async () => {
     if (selectedContacts.size === 0) return;
-    
+
     try {
       const contactIds = Array.from(selectedContacts);
       const contactsToDelete = contacts.filter(c => contactIds.includes(c.conversation_id));
-      
+
       for (const contact of contactsToDelete) {
         await deleteChat(contact);
       }
-      
+
       setSelectedContacts(new Set());
       setIsSelectMode(false);
-      
+
       if (selectedContact && contactIds.includes(selectedContact.conversation_id)) {
         setSelectedContact(null);
       }
-      
+
       toast.success(`${contactIds.length} conversation${contactIds.length > 1 ? 's' : ''} deleted`);
     } catch (error) {
       console.error('Error deleting conversations:', error);
@@ -224,42 +218,42 @@ const Chat = () => {
   }, [isSelectMode]);
 
   return (
-    <div className="flex flex-col md:flex-row w-full flex-1 min-h-0 h-full border border-gray-300 rounded-2xl bg-white overflow-hidden">
+    <div className="flex flex-col md:flex-row w-full flex-1 min-h-0 h-full md:border md:rounded-2xl border-gray-300 bg-white overflow-hidden">
       {/* Sidebar */}
-{loading ? (
-  <div className="basis-full md:basis-1/4 flex items-center justify-center p-6 border-r border-gray-200">
-    <Loader />
-  </div>
-) : (
-  (!isMobile || (isMobile && !showMobileChat)) && (
-    <div
-      className="relative border-r border-gray-200 overflow-y-auto"
-      style={{ width: isMobile ? "100%" : `${width}px` }}
-    >
-      <ChatSidebar
-        contacts={filteredContacts}
-        selectedContact={selectedContact}
-        searchQuery={searchQuery}
-        onSearchChange={handleSearchChange}
-        onSelectContact={handleSelectContact}
-        isSelectMode={isSelectMode}
-        selectedContacts={selectedContacts}
-        onToggleSelectMode={toggleSelectMode}
-        onDeleteSelected={handleDeleteSelected}
-        onToggleContactSelection={toggleContactSelection}
-        fetchContacts={fetchContacts}
-      />
+      {loading ? (
+        <div className="basis-full md:basis-1/4 flex items-center justify-center p-6 border-r border-gray-200">
+          <Loader />
+        </div>
+      ) : (
+        (!isMobile || (isMobile && !showMobileChat)) && (
+          <div
+            className="relative border-r border-gray-200 overflow-y-auto"
+            style={{ width: isMobile ? "100%" : `${width}px` }}
+          >
+            <ChatSidebar
+              contacts={contacts}
+              selectedContact={selectedContact}
+              searchQuery={searchQuery}
+              onSearchChange={handleSearchChange}
+              onSelectContact={handleSelectContact}
+              isSelectMode={isSelectMode}
+              selectedContacts={selectedContacts}
+              onToggleSelectMode={toggleSelectMode}
+              onDeleteSelected={handleDeleteSelected}
+              onToggleContactSelection={toggleContactSelection}
+              fetchContacts={fetchContacts}
+            />
 
-      {/* Drag handle (WhatsApp style) */}
-      <div
-        className="absolute top-0 right-0 h-full w-[4px] cursor-col-resize group"
-        onMouseDown={startResizing}
-      >
-        <div className="h-full w-[2px] mx-auto bg-gray-300 group-hover:bg-gray-500 transition-colors" />
-      </div>
-    </div> 
-  )
-)}
+            {/* Drag handle (WhatsApp style) */}
+            <div
+              className="absolute top-0 right-0 h-full w-[4px] cursor-col-resize group"
+              onMouseDown={startResizing}
+            >
+              <div className="h-full w-[2px] mx-auto bg-gray-300 group-hover:bg-gray-500 transition-colors" />
+            </div>
+          </div>
+        )
+      )}
 
       {/* Main Chat Area */}
       {(!isMobile || (isMobile && showMobileChat)) && (

@@ -15,17 +15,6 @@ export default function BulkContactForm({
   setFieldMapping,
 }) {
   const { user } = useAuth();
-  const roleMap = {
-    main: "Owner",
-    owner: "Owner",
-    admin: "Admin",
-    manager: "Manager",
-    user: "User",
-    viewer: "Viewer",
-  };
-  const role = roleMap[user?.role?.toLowerCase?.()] || "Viewer";
-  const permissions = ROLE_PERMISSIONS[role];
-  if (!permissions || !permissions.canBulkUpload) return null;
 
   const [csvHeaders, setCsvHeaders] = useState([]);
   // const [fieldMapping, setFieldMapping] = useState({});

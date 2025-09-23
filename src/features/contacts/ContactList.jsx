@@ -14,9 +14,10 @@ import Loader from "../../components/Loader";
 import Pagination from "../shared/Pagination";
 import { formatDate } from "../../utils/formatters";
 import ConfirmationDialog from "../shared/ExitConfirmationDialog";
-import { Navigate, useNavigate } from "react-router-dom";
-import BroadcastPages from "../broadcast/BroadcastPages";
-import { Phone } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import GroupNameDialog from "./components/GroupNameDialog";
+import { Send, Users, Download } from "lucide-react";
+import FilterDialog from "../../components/FilterDialog";
 
 const DeleteConfirmationDialog = ({
   showDeleteDialog,
@@ -29,9 +30,7 @@ const DeleteConfirmationDialog = ({
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === "Escape") {
-        cancelDelete();
-      }
+      if (e.key === "Escape") cancelDelete();
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
@@ -46,8 +45,7 @@ const DeleteConfirmationDialog = ({
   return (
     <div
       className="fixed inset-0 bg-[#000]/50  flex items-center justify-center z-50"
-      onMouseDown={(e) => e.stopPropagation()}
-    >
+      onMouseDown={(e) => e.stopPropagation()}>
       <div
         ref={dialogRef}
         className="bg-white rounded-xl p-6 w-full max-w-sm shadow-lg transform transition-all duration-300 scale-100"
@@ -110,32 +108,71 @@ const DeleteConfirmationDialog = ({
   );
 };
 
+
 export default function ContactList() {
   const navigate = useNavigate();
-  const [contacts, setContacts] = useState([]);
-  const [filter, setFilter] = useState("All");
-  const [loading, setLoading] = useState(true);
-  const [selectedContacts, setSelectedContacts] = useState({});
-  const [selectAll, setSelectAll] = useState(false);
-  const [isPopupOpen, setIsPopupOpen] = useState(false);
-  const [isCrossHighlighted, setIsCrossHighlighted] = useState(false);
-  const [showExitDialog, setShowExitDialog] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [error, setError] = useState(null);
-  const popupRef = useRef(null);
   const { user } = useAuth();
   const permissions = getPermissions(user);
-  const [editContact, setEditContact] = useState(null);
-  const [deleteContact, setDeleteContact] = useState(null);
+
+  const [contacts, setContacts] = useState([]);
+  const [allContacts, setAllContacts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [filter, setFilter] = useState("All");
+  const [advancedFilter, setAdvancedFilter] = useState({
+    field: 'none',
+    value: ''
+  });
+  const [showAdvancedFilter, setShowAdvancedFilter] = useState(false);
+  const [filterDialogOpen, setFilterDialogOpen] = useState(false);
+  const [filterOptions, setFilterOptions] = useState({
+    // Basic filters
+    name: '',
+    phone: '',
+    email: '',
+    status: '',
+    date: '',
+    group: '',
+    
+    // Advanced filters
+    lastSeenQuick: '',
+    lastSeenFrom: '',
+    lastSeenTo: '',
+    createdAtQuick: '',
+    createdAtFrom: '',
+    createdAtTo: '',
+    optedIn: 'All',
+    incomingBlocked: 'All',
+    readStatus: 'All',
+    attribute: '',
+    operator: 'is',
+    attributeValue: ''
+  });
   const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
     totalItems: 0,
     itemsPerPage: 10,
   });
-  const [allContacts, setAllContacts] = useState([]);
+  
+  const [isPopupOpen, setIsPopupOpen] = useState(false);
+  const [editContact, setEditContact] = useState(null);
+  const [deleteContact, setDeleteContact] = useState(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showExitDialog, setShowExitDialog] = useState(false);
+  const [showGroupDialog, setShowGroupDialog] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [exportFormat, setExportFormat] = useState('csv');
+  
+  const [selectAll, setSelectAll] = useState(false);
+  const [selectAllAcrossPages, setSelectAllAcrossPages] = useState(false);
+  const [selectedContacts, setSelectedContacts] = useState({});
+  
+  const popupRef = useRef(null);
+  const [isCrossHighlighted, setIsCrossHighlighted] = useState(false);
+  
   const handleApiError = (err, fallbackMessage) => {
     console.error(err);
     const msg = err?.message || fallbackMessage;
@@ -149,15 +186,6 @@ export default function ContactList() {
 
     try {
       setLoading(true);
-      setError(null);
-
-      console.log("📤 Fetching contacts with params:", {
-        customer_id: user?.customer_id,
-        page,
-        limit,
-        search,
-      });
-
       const response = await axios.get(API_ENDPOINTS.CONTACTS.GET_ALL, {
         params: {
           customer_id: user?.customer_id,
@@ -166,7 +194,6 @@ export default function ContactList() {
           ...(search ? { search } : {}),
         },
         withCredentials: true,
-        validateStatus: (status) => status < 500,
       });
 
       console.log("✅ API Response Status:", response.status);
@@ -179,7 +206,7 @@ export default function ContactList() {
       const result = response.data;
       const contacts = Array.isArray(result.data) ? result.data : [];
 
-      console.log("📦 Contacts Data from API:", contacts);
+      // console.log("📦 Contacts Data from API:", contacts);
 
       const transformedContacts = contacts.map((item) => ({
         ...item,
@@ -189,9 +216,6 @@ export default function ContactList() {
         number: `${item.country_code || ""} ${item.mobile_no}`,
         fullName: `${item.first_name} ${item.last_name || ""}`.trim(),
       }));
-
-      console.log("🔄 Transformed Contacts:", transformedContacts);
-
       // Update displayed contacts for current page
       setContacts(transformedContacts);
 
@@ -202,35 +226,19 @@ export default function ContactList() {
         return Array.from(map.values());
       });
 
-      // Update pagination
-      setPagination((prev) => {
-        const newPagination = {
-          currentPage: result.pagination?.page || result.current_page || page,
-          totalPages:
-            result.pagination?.totalPages ||
-            result.last_page ||
-            (result.total ? Math.ceil(result.total / limit) : 1) ||
-            1,
-          totalItems:
-            result.pagination?.totalRecords ||
-            result.total ||
-            contacts.length ||
-            0,
-          itemsPerPage: result.pagination?.limit || result.per_page || limit,
-        };
-        console.log("📊 Updated Pagination:", newPagination);
-        return newPagination;
-      });
+      // Update pagination from API response
+      const paginationData = response.data.pagination || {};
+      const newPagination = {
+        currentPage: paginationData.page || page,
+        totalPages: paginationData.totalPages || 1,
+        totalItems: paginationData.total || 0,
+        itemsPerPage: paginationData.limit || limit,
+      };
+      // console.log("📊 Updated Pagination:", newPagination);
+      setPagination(newPagination);
     } catch (err) {
       const errorMessage =
-        err.response?.data?.message ||
-        err.message ||
-        "Failed to fetch contacts";
-      console.error("❌ Error fetching contacts:", {
-        error: err,
-        response: err.response?.data,
-        status: err.response?.status,
-      });
+        err.response?.data?.message || err.message || "Failed to fetch contacts";
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -246,16 +254,137 @@ export default function ContactList() {
     return () => clearTimeout(timeout);
   }, [searchTerm, pagination.itemsPerPage]);
 
+  const filterByDateRange = (date, quickFilter, fromDate, toDate) => {
+    if (!quickFilter && !fromDate && !toDate) return true;
+    
+    const contactDate = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Apply quick filters if set
+    if (quickFilter) {
+      const startDate = new Date(today);
+      
+      switch(quickFilter) {
+        case 'In 24hr':
+          startDate.setDate(today.getDate() - 1);
+          return contactDate >= startDate;
+        case 'This Week':
+          const day = today.getDay();
+          const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+          startDate.setDate(diff);
+          return contactDate >= startDate;
+        case 'This Month':
+          startDate.setDate(1);
+          return contactDate >= startDate;
+        case 'Today':
+          return contactDate >= today;
+        default:
+          return true;
+      }
+    }
+    
+    // Apply custom date range if set
+    if (fromDate || toDate) {
+      const from = fromDate ? new Date(fromDate) : null;
+      const to = toDate ? new Date(toDate) : null;
+      
+      if (from && to) {
+        from.setHours(0, 0, 0, 0);
+        to.setHours(23, 59, 59, 999);
+        return contactDate >= from && contactDate <= to;
+      } else if (from) {
+        from.setHours(0, 0, 0, 0);
+        return contactDate >= from;
+      } else if (to) {
+        to.setHours(23, 59, 59, 999);
+        return contactDate <= to;
+      }
+    }
+    
+    return true;
+  };
+
+  const filteredContacts = contacts.filter((contact) => {
+    // Apply status filter
+    const statusMatch = filter === "All" || contact.status === filter;
+    
+    // Apply basic filters
+    const nameMatch = !filterOptions.name || 
+      (contact.first_name + ' ' + (contact.last_name || '')).toLowerCase().includes(filterOptions.name.toLowerCase());
+    
+    const phoneMatch = !filterOptions.phone || 
+      (contact.mobile_no || '').includes(filterOptions.phone);
+      
+    const emailMatch = !filterOptions.email || 
+      (contact.email || '').toLowerCase().includes(filterOptions.email.toLowerCase());
+    
+    const groupMatch = !filterOptions.group || 
+      (contact.group_name || '').toLowerCase() === filterOptions.group.toLowerCase();
+    
+    // Apply advanced filters
+    const lastSeenMatch = filterByDateRange(
+      contact.last_seen_at || contact.updated_at,
+      filterOptions.lastSeenQuick,
+      filterOptions.lastSeenFrom,
+      filterOptions.lastSeenTo
+    );
+    
+    const createdAtMatch = filterByDateRange(
+      contact.created_at,
+      filterOptions.createdAtQuick,
+      filterOptions.createdAtFrom,
+      filterOptions.createdAtTo
+    );
+    
+    const optedInMatch = filterOptions.optedIn === 'All' || 
+      (filterOptions.optedIn === 'Yes' && contact.opted_in === true) ||
+      (filterOptions.optedIn === 'No' && contact.opted_in !== true);
+    
+    const blockedMatch = filterOptions.incomingBlocked === 'All' ||
+      (filterOptions.incomingBlocked === 'Yes' && contact.is_blocked === true) ||
+      (filterOptions.incomingBlocked === 'No' && contact.is_blocked !== true);
+    
+    const readStatusMatch = filterOptions.readStatus === 'All' ||
+      (filterOptions.readStatus === 'Read' && contact.is_read === true) ||
+      (filterOptions.readStatus === 'Unread' && contact.is_read !== true);
+    
+    // Apply attribute filter if set
+    let attributeMatch = true;
+    if (filterOptions.attribute && filterOptions.attributeValue) {
+      const attributeValue = contact.attributes?.[filterOptions.attribute] || '';
+      const searchValue = filterOptions.attributeValue.toLowerCase();
+      
+      switch(filterOptions.operator) {
+        case 'is':
+          attributeMatch = attributeValue.toLowerCase() === searchValue;
+          break;
+        case 'isNot':
+          attributeMatch = attributeValue.toLowerCase() !== searchValue;
+          break;
+        case 'contains':
+          attributeMatch = attributeValue.toLowerCase().includes(searchValue);
+          break;
+        default:
+          attributeMatch = true;
+      }
+    }
+    
+    // Combine all filters
+    return statusMatch && nameMatch && phoneMatch && emailMatch && groupMatch &&
+           lastSeenMatch && createdAtMatch && optedInMatch && blockedMatch && 
+           readStatusMatch && attributeMatch;
+  });
+  
+  // Use filteredContacts directly since search is handled by the API
+  const displayedContacts = filteredContacts;
+  
+  const filterButtons = ["All", "Opted-in", "Opted-Out"];
   const filterCounts = {
     All: pagination.totalItems,
     "Opted-in": contacts.filter((c) => c.status === "Opted-in").length,
     "Opted-Out": contacts.filter((c) => c.status === "Opted-Out").length,
   };
-
-  const filteredContacts = contacts.filter((c) => {
-    if (filter === "All") return true;
-    return c.status === filter;
-  });
 
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= pagination.totalPages) {
@@ -273,12 +402,6 @@ export default function ContactList() {
     fetchContacts(1, newItemsPerPage);
   };
 
-  const displayedContacts = filteredContacts.filter(
-    (c) =>
-      c.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.number.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   const canEditContact = (contact) => {
     if (!permissions.canEdit) return false;
     if (user?.role?.toLowerCase?.() === "user") {
@@ -294,35 +417,28 @@ export default function ContactList() {
     return true;
   };
 
-  const filterButtons = ["All", "Opted-in", "Opted-Out"];
+  const handleCheckboxChange = (contactId, isChecked) => {
+    setSelectedContacts((prev) => {
+      const updated = { ...prev };
+      if (selectAllAcrossPages) {
+        if (!isChecked) updated[contactId] = false;
+        else delete updated[contactId];
+      } else {
+        if (isChecked) updated[contactId] = true;
+        else delete updated[contactId];
+      }
+      return updated;
+    });
+  };
 
   const handleSelectAllChange = (event) => {
-    if (!permissions.canDelete) return;
     const checked = event.target.checked;
     setSelectAll(checked);
-
-    if (checked) {
-      const newSelected = {};
-      displayedContacts.forEach((contact) => {
-        if (canDeleteContact(contact)) {
-          newSelected[contact.contact_id] = true;
-        }
-      });
-      setSelectedContacts(newSelected);
-    } else {
-      setSelectedContacts({});
-    }
+    setSelectAllAcrossPages(checked);
+    setSelectedContacts({});
   };
 
-  const handleCheckboxChange = (contactId, isChecked) => {
-    const contact = displayedContacts.find((c) => c.contact_id === contactId);
-    if (!contact || !canDeleteContact(contact)) return;
 
-    setSelectedContacts((prev) => ({
-      ...prev,
-      [contactId]: isChecked,
-    }));
-  };
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -349,10 +465,16 @@ export default function ContactList() {
   const closePopup = () => setIsPopupOpen(false);
 
   useEffect(() => {
-    const total = displayedContacts.length;
-    const selected = Object.keys(selectedContacts).length;
-    setSelectAll(selected === total && total > 0);
-  }, [selectedContacts, displayedContacts.length]);
+    if (allContacts.length === 0) {
+      setSelectAll(false);
+      setSelectAllAcrossPages(false);
+      return;
+    }
+    const allSelected = allContacts.every((c) =>
+      selectAllAcrossPages ? selectedContacts[c.contact_id] !== false : selectedContacts[c.contact_id]
+    );
+    setSelectAll(allSelected && !selectAllAcrossPages);
+  }, [selectedContacts, allContacts, selectAllAcrossPages]);
 
   const handleCloseAndNavigate = () => {
     if (!permissions.canAccessModals) return;
@@ -375,24 +497,83 @@ export default function ContactList() {
       toast.error("You do not have permission to delete contacts.");
       return;
     }
+    
+    // Calculate the actual number of selected contacts
+    const selectedCount = selectAllAcrossPages 
+      ? pagination.totalItems - Object.values(selectedContacts).filter(val => val === false).length
+      : Object.values(selectedContacts).filter(Boolean).length;
+      
+    if (selectedCount === 0) {
+      toast.error("Please select at least one contact to delete.");
+      return;
+    }
+    
     setShowDeleteDialog(true);
   };
 
-  //brodcast button handler
-  const handleAddbroadcast = async () => {
-    const selectedContactIds = Object.entries(selectedContacts)
-      .filter(([contactId, isSelected]) => isSelected)
-      .map(([contactId]) => contactId);
+    // Store selected contacts for group creation
+  const [selectedContactsForGroup, setSelectedContactsForGroup] = useState({
+    ids: [],
+    list: []
+  });
+
+  // Check if any contacts are selected
+  const hasSelectedContacts = selectAllAcrossPages 
+    ? true // If selectAllAcrossPages is true, we're selecting all contacts
+    : Object.values(selectedContacts).some(Boolean);
+
+  // Broadcast button handler
+  const handleAddbroadcast = async (createGroup = true) => {
+    let selectedContactIds = [];
+    let allFetchedContacts = [];
+    
+    if (selectAllAcrossPages) {
+      try {
+        setLoading(true);
+        // Fetch all contacts without pagination
+        const response = await axios.get(API_ENDPOINTS.CONTACTS.GET_ALL, {
+          params: {
+            customer_id: user?.customer_id,
+            limit: 1000, 
+          },
+          withCredentials: true,
+        });
+        
+        if (response.data && Array.isArray(response.data.data)) {
+          allFetchedContacts = response.data.data.map(item => ({
+            ...item,
+            contact_id: item.contact_id || item.id,
+          }));
+          selectedContactIds = allFetchedContacts
+            .filter(contact => selectedContacts[contact.contact_id] !== false)
+            .map(contact => contact.contact_id);
+        }
+      } catch (error) {
+        console.error('Error fetching all contacts:', error);
+        toast.error('Failed to fetch all contacts. Please try again.');
+        return;
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      // Normal selection mode
+      selectedContactIds = Object.entries(selectedContacts)
+        .filter(([contactId, isSelected]) => isSelected)
+        .map(([contactId]) => contactId);
+      allFetchedContacts = contacts; // Use current page contacts for normal selection
+    }
 
     if (selectedContactIds.length === 0) {
       toast.error("Please select at least one contact.");
       return;
     }
 
-    // Build selected contacts from ALL fetched contacts
-    const selectedContactList = selectedContactIds
-      .map((id) => allContacts.find((c) => c.contact_id == id))
-      .filter(Boolean) // skip any missing contacts
+    // Build selected contacts list
+    const selectedContactList = (selectAllAcrossPages
+      ? allFetchedContacts.filter(contact => selectedContactIds.includes(contact.contact_id))
+      : selectedContactIds
+          .map((id) => contacts.find((c) => c.contact_id == id))
+          .filter(Boolean))
       .map((contact) => ({
         contact_id: contact.contact_id,
         Name: `${contact.first_name || ""} ${contact.last_name || ""}`.trim(),
@@ -403,13 +584,37 @@ export default function ContactList() {
     console.log("Selected contact IDs:", selectedContactIds);
     console.log("Selected Contacts:", selectedContactList);
 
-    const groupName = prompt("Enter a name for the contact group:");
+    if (createGroup) {
+      // Original flow: Create a group first
+      setSelectedContactsForGroup({
+        ids: selectedContactIds,
+        list: selectedContactList,
+      });
+      toast.success(`Selected ${selectedContactIds.length} contact${selectedContactIds.length !== 1 ? 's' : ''} for broadcast`);
+      setShowGroupDialog(true);
+    } else {
+      // New flow: Go directly to broadcast with selected contacts
+      navigate("/broadcast", {
+        state: {
+          openForm: true,
+          contacts: selectedContactList,
+          directBroadcast: true
+        },
+      });
+    }
+  };
+
+  // Handle group creation after group name is confirmed
+  const handleCreateGroup = async (groupName) => {
     if (!groupName || groupName.trim() === "") {
       toast.error("Group name is required.");
       return;
     }
 
+    const { ids: selectedContactIds, list: selectedContactList } = selectedContactsForGroup;
+
     try {
+      setIsDeleting(true);
       const formData = new FormData();
       formData.append("customer_id", user?.customer_id);
       formData.append("group_name", groupName.trim());
@@ -436,6 +641,7 @@ export default function ContactList() {
       }
 
       toast.success("Group created successfully!");
+      setShowGroupDialog(false);
 
       navigate("/broadcast", {
         state: {
@@ -451,6 +657,8 @@ export default function ContactList() {
     } catch (err) {
       console.error("Error creating group:", err);
       toast.error(err.message || "Could not create group.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -472,66 +680,201 @@ export default function ContactList() {
       toast.error("You do not have permission to delete contacts.");
       return;
     }
-    const selectedIds = Object.entries(selectedContacts)
-      .filter(([contactId, isSelected]) => isSelected)
-      .map(([contactId]) => contactId);
+  
+    const selectedIds = Object.keys(selectedContacts).filter((id) =>
+      selectAllAcrossPages ? selectedContacts[id] !== false : selectedContacts[id]
+    );
 
+    let payload;
+    if (selectAllAcrossPages) {
+      // When selecting all, we need to get all contact IDs from the server
+      try {
+        const response = await axios.get(API_ENDPOINTS.CONTACTS.GET_ALL, {
+          params: {
+            customer_id: user?.customer_id,
+            limit: 1000, // Set a high limit to get all contacts
+          },
+          withCredentials: true,
+        });
+        
+        if (response.data && Array.isArray(response.data.data)) {
+          const allContactIds = response.data.data
+            .map(contact => contact.contact_id || contact.id)
+            .filter(id => selectedContacts[id] !== false); // Exclude explicitly unchecked
+            
+          payload = {
+            contact_ids: allContactIds,
+            customer_id: user?.customer_id
+          };
+        } else {
+          throw new Error('Failed to fetch contacts for deletion');
+        }
+      } catch (error) {
+        console.error('Error fetching contacts for deletion:', error);
+        toast.error('Failed to fetch contacts for deletion');
+        return;
+      }
+    } else {
+      // Normal selection mode
+      payload = {
+        contact_ids: selectedIds,
+        customer_id: user?.customer_id
+      };
+    }
+  
     try {
       setIsDeleting(true);
-      setError(null);
-
       const response = await fetch(`${API_ENDPOINTS.CONTACTS.DELETE}`, {
         method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contact_ids: selectedIds,
-          customer_id: user?.customer_id,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
         credentials: "include",
       });
-
+  
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || "Failed to delete contacts");
       }
-
+  
       await fetchContacts();
       setSelectedContacts({});
       setSelectAll(false);
-      const deletedCount = selectedIds.length;
+      setSelectAllAcrossPages(false);
+  
       toast.success(
-        `${deletedCount} contact${
-          deletedCount > 1 ? "s" : ""
-        } deleted successfully!`,
-        {
-          position: "top-right",
-          autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-          theme: "light",
-        }
+        selectAllAcrossPages
+          ? `All ${pagination.totalItems} contacts deleted successfully!`
+          : `${selectedIds.length} contact${
+              selectedIds.length > 1 ? "s" : ""
+            } deleted successfully!`
       );
     } catch (error) {
       console.error("Error deleting contacts:", error);
       setError(error.message || "Failed to delete contacts. Please try again.");
-      toast.error(
-        error.message || "Failed to delete contacts. Please try again.",
-        {
-          position: "top-right",
-          autoClose: 5000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-          theme: "light",
-        }
-      );
+      toast.error(error.message || "Failed to delete contacts. Please try again.");
     } finally {
       setIsDeleting(false);
+    }
+  };
+  
+
+  // Function to handle export confirmation
+  const handleExportConfirm = async () => {
+    setShowExportDialog(false);
+    try {
+      if (exportFormat === 'csv') {
+        await exportContactsToCSV();
+      } else if (exportFormat === 'excel') {
+        await exportContactsToExcel();
+      } else if (exportFormat === 'pdf') {
+        await exportContactsToPDF();
+      }
+    } catch (error) {
+      console.error('Error during export:', error);
+      toast.error('Failed to export contacts');
+    }
+  };
+
+  // Function to fetch all contacts for export (handles pagination)
+  const fetchAllContacts = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(API_ENDPOINTS.CONTACTS.GET_ALL, {
+        params: {
+          customer_id: user?.customer_id,
+          limit: 1000, // Fetch all contacts in a single request
+        },
+        withCredentials: true,
+      });
+
+      if (response.status >= 400) {
+        throw new Error(response.data?.message || "Failed to fetch contacts");
+      }
+
+      const result = response.data;
+      const allContacts = Array.isArray(result.data) ? result.data : [];
+      
+      return allContacts.map((item) => ({
+        ...item,
+        status: "Opted-in",
+        customer_id: user?.customer_id,
+        date: formatDate(item.created_at),
+        number: `${item.country_code || ""} ${item.mobile_no}`,
+        fullName: `${item.first_name} ${item.last_name || ""}`.trim(),
+      }));
+    } catch (error) {
+      console.error('Error fetching all contacts:', error);
+      toast.error('Failed to fetch contacts for export');
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Function to get contacts to export
+  const getContactsToExport = async () => {
+    if (selectAllAcrossPages) {
+      // If "Select all" is checked, fetch all contacts from the server
+      const allContacts = await fetchAllContacts();
+      return allContacts;
+    } else if (Object.keys(selectedContacts).length > 0) {
+      // If specific contacts are selected on the current page
+      return contacts.filter(contact => selectedContacts[contact.contact_id]);
+    } else {
+      // If no selection, export all visible contacts on the current page
+      return [...displayedContacts];
+    }
+  };
+
+  // Function to export contacts to CSV
+  const exportContactsToCSV = async () => {
+    try {
+      const contactsToExport = await getContactsToExport();
+      if (contactsToExport.length === 0) {
+        toast.warning("No contacts to export");
+        return;
+      }
+
+      // Create CSV header
+      const headers = [
+        'First Name',
+        'Last Name',
+        'Phone',
+        'Status',
+        'Created At',
+        'Country Code'
+      ];
+
+      // Create CSV content
+      const csvContent = [
+        headers.join(','),
+        ...contactsToExport.map(contact => {
+          return [
+            `"${contact.first_name || ''}"`,
+            `"${contact.last_name || ''}"`,
+            `"${contact.mobile_no || ''}"`,
+            `"${contact.status || ''}"`,
+            `"${contact.created_at || ''}"`,
+            `"${contact.country_code || ''}"`
+          ].join(',');
+        })
+      ].join('\n');
+
+      // Create download link
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `contacts_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast.success(`Exported ${contactsToExport.length} contacts to CSV`);
+    } catch (error) {
+      console.error('Error exporting contacts:', error);
+      toast.error('Failed to export contacts. Please try again.');
     }
   };
 
@@ -657,21 +1000,27 @@ export default function ContactList() {
             <h2 className="text-lg sm:text-xl font-bold">Contacts</h2>
 
             {permissions.canSeeFilters && (
-              <div className="flex gap-2 flex-wrap">
+              <div className="flex gap-2 flex-wrap items-center">
                 {filterButtons.map((btn) => (
                   <button
                     key={btn}
                     onClick={() => setFilter(btn)}
                     className={`px-3 sm:px-4 py-2 min-h-[38px] rounded-md text-sm font-medium transition cursor-pointer 
-                ${
-                  filter === btn
-                    ? "bg-[#0AA89E] text-white"
-                    : "text-gray-700 hover:text-[#0AA89E]"
-                }`}
+                      ${filter === btn ? "bg-[#0AA89E] text-white" : "text-gray-700 hover:text-[#0AA89E]"}`}
                   >
                     {btn} ({filterCounts[btn]})
                   </button>
                 ))}
+                
+                <button
+                  onClick={() => setFilterDialogOpen(true)}
+                  className="flex items-center gap-1 px-3 py-2 min-h-[38px] rounded-md text-sm font-medium transition cursor-pointer border border-gray-300 text-gray-700 hover:border-[#0AA89E] hover:text-[#0AA89E]"
+                >
+                  <span>Filter</span>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                  </svg>
+                </button>
               </div>
             )}
           </div>
@@ -713,6 +1062,24 @@ export default function ContactList() {
           </div>
         </div>
       </div>
+
+      <FilterDialog
+        isOpen={filterDialogOpen}
+        onClose={() => setFilterDialogOpen(false)}
+        filterOptions={filterOptions}
+        onFilterChange={(newOptions) => setFilterOptions(newOptions)}
+        onReset={() => {
+          setFilterOptions({
+            name: '',
+            phone: '',
+            email: '',
+            status: '',
+            date: '',
+            group: ''
+          });
+        }}
+        onApply={() => setFilterDialogOpen(false)}
+      />
       <div className="overflow-x-auto">
         <div className="min-w-[900px] bg-white rounded-2xl shadow-[0px_-0.91px_3.66px_0px_#00000042] overflow-hidden ">
           <table className="w-full text-sm text-center overflow-hidden table-auto">
@@ -720,36 +1087,67 @@ export default function ContactList() {
               <tr>
                 {permissions.canDelete ? (
                   <th className="px-2 py-3 sm:px-6">
-                    <div className="flex items-center justify-center h-full">
-                      <input
-                        type="checkbox"
-                        className="form-checkbox w-4 h-4"
-                        checked={selectAll}
-                        onChange={handleSelectAllChange}
-                      />
-                    </div>
-                  </th>
+                  <div className="flex items-center justify-center h-full">
+                    <input
+                      type="checkbox"
+                      className="form-checkbox w-4 h-4"
+                      onChange={handleSelectAllChange}
+                      ref={(el) => {
+                        if (el) {
+                          const someUnchecked =
+                          selectAllAcrossPages &&
+                          Object.values(selectedContacts).some((val) => val === false);
+                        el.indeterminate = !selectAllAcrossPages && !selectAll && someUnchecked;
+                        }
+                      }}        
+                    />
+                  </div>
+                </th>
                 ) : (
                   <th className="px-2 py-3 sm:px-6"></th>
                 )}
                 {permissions.canDelete && 
-                Object.values(selectedContacts).some(Boolean) ? (
+                (selectAllAcrossPages || Object.values(selectedContacts).some(Boolean)) ? (
                   <th colSpan="6" className="px-2 py-3 sm:px-6">
                     <div className="flex justify-end gap-6">
+                      <div className="flex gap-3">
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleAddbroadcast(false)}
+                className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!hasSelectedContacts || !permissions.canAdd}
+                title="Send broadcast to selected contacts directly"
+              >
+                <Send className="w-4 h-4 text-white" />
+                Send Broadcast
+              </button>
+              <button
+                onClick={() => handleAddbroadcast(true)}
+                className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!hasSelectedContacts || !permissions.canAdd}
+                title="Create a group first, then broadcast"
+              >
+                <Users className="w-4 h-4 text-white" />
+                Create Group & Broadcast
+              </button>
+            </div>
+                      <button
+                        onClick={() => setShowExportDialog(true)}
+                        disabled={isDeleting || (!selectAllAcrossPages && Object.values(selectedContacts).filter(Boolean).length === 0)}
+                        className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200"
+                        title="Export selected contacts"
+                      >
+                        <Download className="w-4 h-4" />
+                        Export {selectAllAcrossPages ? `All (${pagination.totalItems})` : Object.values(selectedContacts).filter(Boolean).length > 0 ? `(${Object.values(selectedContacts).filter(Boolean).length})` : ''}
+                      </button>
                       <button
                         onClick={handleDeleteClick}
                         disabled={isDeleting}
-                        className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200"
-                      >
-                        Delete
-                      </button>
-                      <button
-                        onClick={handleAddbroadcast}
-                        className="text-white border border-teal-500 bg-teal-500 px-4 py-2 rounded-md text-sm font-medium"
-                      >
-                        Send
+                        className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                        {`Delete ${selectAllAcrossPages ? `All (${pagination.totalItems})` : `(${Object.values(selectedContacts).filter(Boolean).length})`}`}
                       </button>
                     </div>
+              </div>
                   </th>
                 ) : (
                   <>
@@ -797,11 +1195,15 @@ export default function ContactList() {
                   </td>
                 </tr>
               ) : (
-                displayedContacts.map((contact, idx) => (
+                displayedContacts.map((contact) => (
                   <ContactRow
-                    key={contact.id || idx}
+                  key={contact.contact_id}
                     contact={contact}
-                    isChecked={!!selectedContacts[contact.contact_id]}
+                    isChecked={
+                      selectAllAcrossPages
+                        ? selectedContacts[contact.contact_id] !== false
+                        : !!selectedContacts[contact.contact_id]
+                    }
                     onCheckboxChange={handleCheckboxChange}
                     onEditClick={
                       permissions.canEdit && canEditContact(contact)
@@ -824,6 +1226,20 @@ export default function ContactList() {
           </table>
         </div>
       </div>
+      {/* Select all across pages prompt */}
+      {selectAll && !selectAllAcrossPages && (
+        <div className="p-2 text-sm bg-yellow-100 rounded-md mt-2 text-gray-700">
+          All {displayedContacts.length} contacts on this page are selected.{" "}
+          <button
+            className="underline ml-1 text-teal-600"
+            onClick={() => setSelectAllAcrossPages(true)}
+          >
+            Select all {pagination.totalItems} contacts
+          </button>
+        </div>
+      )}
+
+
       {pagination.totalItems > 0 && (
         <div className="border-t border-gray-200">
           <Pagination
@@ -869,7 +1285,10 @@ export default function ContactList() {
       )}
       <DeleteConfirmationDialog
         showDeleteDialog={showDeleteDialog && permissions.canDelete}
-        selectedCount={Object.keys(selectedContacts).length}
+        selectedCount={selectAllAcrossPages 
+          ? pagination.totalItems - Object.values(selectedContacts).filter(val => val === false).length
+          : Object.values(selectedContacts).filter(Boolean).length
+        }
         cancelDelete={cancelDelete}
         confirmDelete={confirmDelete}
         isDeleting={isDeleting}
@@ -880,6 +1299,70 @@ export default function ContactList() {
         onCancel={cancelExit}
         onConfirm={confirmExit}
       />
+      {/* Export Dialog */}
+      {showExportDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Export</h3>
+              <button 
+                onClick={() => setShowExportDialog(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="space-y-4">
+              <p className="text-gray-700">Choose your preferred file format</p>
+              <div className="space-y-2">
+                <label className="flex items-center space-x-2 p-2 rounded hover:bg-gray-100 cursor-pointer">
+                  <input
+                    type="radio"
+                    className="form-radio text-blue-600"
+                    checked={exportFormat === 'csv'}
+                    onChange={() => setExportFormat('csv')}
+                  />
+                  <span>CSV (.csv)</span>
+                </label>
+                <label className="flex items-center space-x-2 p-2 rounded hover:bg-gray-100 cursor-pointer">
+                  <input
+                    type="radio"
+                    className="form-radio text-blue-600"
+                    checked={exportFormat === 'excel'}
+                    onChange={() => setExportFormat('excel')}
+                  />
+                  <span>Excel (.xlsx)</span>
+                </label>
+                <label className="flex items-center space-x-2 p-2 rounded hover:bg-gray-100 cursor-pointer">
+                  <input
+                    type="radio"
+                    className="form-radio text-blue-600"
+                    checked={exportFormat === 'pdf'}
+                    onChange={() => setExportFormat('pdf')}
+                  />
+                  <span>PDF (.pdf)</span>
+                </label>
+              </div>
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => setShowExportDialog(false)}
+                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleExportConfirm}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center space-x-2"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Download</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ToastContainer
         position="top-right"
         autoClose={3000}
@@ -922,6 +1405,13 @@ export default function ContactList() {
             isDeleting={isDeleting}
           />
         )}
+      
+      <GroupNameDialog
+        isOpen={showGroupDialog}
+        onClose={() => setShowGroupDialog(false)}
+        onConfirm={handleCreateGroup}
+        isSubmitting={isDeleting}
+      />
     </>
   );
 }

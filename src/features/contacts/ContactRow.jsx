@@ -4,7 +4,7 @@ import OptionsDropdown from "../shared/OptionsDropdown";
 
 export default function ContactRow({
   contact,
-  isChecked,
+  isChecked, // parent decides if this row is checked
   onCheckboxChange,
   onEditClick,
   onDeleteClick,
@@ -15,7 +15,7 @@ export default function ContactRow({
   const handleChat = () => {
     const contactForChat = {
       id: contact.customer_id,
-      contact_id: contact.contact_id || contact.id, 
+      contact_id: contact.contact_id || contact.id,
       conversation_id: null,
       name: contact.fullName,
       mobile_no: contact.number,
@@ -26,9 +26,9 @@ export default function ContactRow({
       lastMessageType: null,
       lastMessageTime: contact.updated_at,
       isWithin24Hours: contact.is_within_24h,
-      isNewChat: true
+      isNewChat: true,
     };
-  
+
     navigate("/chats", {
       state: { contact: contactForChat },
     });
@@ -36,8 +36,7 @@ export default function ContactRow({
 
   const handleCheckboxChange = (e) => {
     e.stopPropagation();
-    // Toggle the current checked state
-    onCheckboxChange(contact.contact_id, !isChecked);
+    onCheckboxChange(contact.contact_id, e.target.checked);
   };
 
   const handleDeleteClick = (e) => {
@@ -60,7 +59,7 @@ export default function ContactRow({
           <input
             type="checkbox"
             className="form-checkbox w-4 h-4"
-            checked={isChecked}
+            checked={isChecked || false}
             onChange={handleCheckboxChange}
           />
         </div>
@@ -105,19 +104,12 @@ export default function ContactRow({
               stroke="currentColor"
               strokeWidth="2"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M5 12h14M12 5l7 7-7 7"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7" />
             </svg>
             <span className="text-sm font-medium">Send Message</span>
           </button>
 
-          <OptionsDropdown
-            onEdit={handleEditClick}
-            onDelete={handleDeleteClick}
-          />
+          <OptionsDropdown onEdit={handleEditClick} onDelete={handleDeleteClick} />
         </div>
       </td>
     </tr>

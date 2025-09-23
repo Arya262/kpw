@@ -1,42 +1,25 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { HiDotsVertical } from "react-icons/hi";
-import { IoSearch } from "react-icons/io5";
 import { useNavigate } from "react-router-dom";
 import DeleteConfirmationDialog from "../shared/DeleteConfirmationDialog";
 import { toast } from "react-toastify";
 import { Edit2, Trash2 } from "lucide-react";
 import { formatDate } from "../../utils/formatters";
-
+import FilterBar from "../broadcast/components/FilterBar";
+import SearchBar from "../broadcast/components/SearchBar";
 const Table = ({
   templates = [],
   onDelete,
   onEdit,
   canEdit,
   canDelete,
-  onAddTemplate,
-  vendorIcon,
   pagination,
-  searchTerm: propSearchTerm = "",
+  totalRecords,
+  searchTerm,
   onSearchChange,
 }) => {
   const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState("All");
-  const [searchTerm, setSearchTerm] = useState(propSearchTerm);
-  const [showMobileSearch, setShowMobileSearch] = useState(false);
-  
-  // Sync local search term with prop
-  useEffect(() => {
-    setSearchTerm(propSearchTerm);
-  }, [propSearchTerm]);
-  
-  const handleSearchChange = (e) => {
-    const value = e.target.value;
-    setSearchTerm(value);
-    if (onSearchChange) {
-      onSearchChange(value);
-    }
-  };
-  const [localTemplates, setLocalTemplates] = useState([]);
   const [menuOpen, setMenuOpen] = useState(null);
   const [shouldFlipUp, setShouldFlipUp] = useState({});
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -47,27 +30,18 @@ const Table = ({
   const dropdownRefs = useRef({});
   const rowRefs = useRef({});
 
-  useEffect(() => {
-    setLocalTemplates(templates);
-  }, [templates]);
-
-  const filteredCounts = useMemo(() => {
-    const approved = localTemplates.filter(
-      (t) => t.status?.toLowerCase() === "approved"
-    ).length;
-    const pending = localTemplates.filter(
-      (t) => t.status?.toLowerCase() === "pending"
-    ).length;
-    const failed = localTemplates.filter(
-      (t) => t.status?.toLowerCase() === "failed"
-    ).length;
+  // ✅ counts for filter bar
+const filteredCounts = useMemo(() => {
+    const approved = templates.filter(t => t.status?.toLowerCase() === "approved").length;
+    const pending = templates.filter(t => t.status?.toLowerCase() === "pending").length;
+    const failed = templates.filter(t => t.status?.toLowerCase() === "failed").length;
     return {
-      all: localTemplates.length,
+      all: totalRecords || templates.length, // ✅ totalRecords from API
       approved,
       pending,
       failed,
     };
-  }, [localTemplates]);
+  }, [templates, totalRecords]);
 
   const filters = [
     { label: "All", count: filteredCounts.all },
@@ -76,29 +50,27 @@ const Table = ({
     { label: "Failed", count: filteredCounts.failed },
   ];
 
-  const statusFilteredTemplates = useMemo(() => {
-    if (activeFilter === "All") return localTemplates;
-    return localTemplates.filter(
+  // ✅ status filter applied locally
+  const displayedTemplates = useMemo(() => {
+    if (activeFilter === "All") return templates;
+    return templates.filter(
       (t) => t.status?.toLowerCase().trim() === activeFilter.toLowerCase()
     );
-  }, [localTemplates, activeFilter]);
+  }, [templates, activeFilter]);
 
-  // Use the templates directly since search is now handled server-side
-  const filteredTemplates = templates;
-
-  // Selection logic
+  // ✅ selection logic
   useEffect(() => {
-    const total = filteredTemplates.length;
+    const total = displayedTemplates.length;
     const selected = Object.values(selectedRows).filter(Boolean).length;
     setSelectAll(selected === total && total > 0);
-  }, [selectedRows, filteredTemplates.length]);
+  }, [selectedRows, displayedTemplates.length]);
 
   const handleSelectAllChange = (event) => {
     const checked = event.target.checked;
     setSelectAll(checked);
     const newSelected = {};
     if (checked) {
-      filteredTemplates.forEach((_, idx) => {
+      displayedTemplates.forEach((_, idx) => {
         newSelected[idx] = true;
       });
     }
@@ -107,73 +79,47 @@ const Table = ({
 
   const handleCheckboxChange = (idx, event) => {
     const isChecked = event.target.checked;
-    // console.log('Checkbox changed - Index:', idx, 'Checked:', isChecked);
-    setSelectedRows((prev) => {
-      const newState = {
-        ...prev,
-        [idx]: isChecked,
-      };
-      // console.log('Selected Rows:', newState);
-      return newState;
-    });
+    setSelectedRows((prev) => ({
+      ...prev,
+      [idx]: isChecked,
+    }));
   };
 
-  // Permission-aware handlers
+  // ✅ bulk delete trigger
   const handleDeleteSelected = () => {
-    // console.log('Delete Selected clicked');
-    // console.log('Selected Rows:', selectedRows);
-    
     if (!canDelete) {
-      console.log('Delete permission denied');
       toast.error("You do not have permission to delete templates.", {
         position: "top-right",
         autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
       });
       return;
     }
-    
+
     const selectedTemplates = Object.entries(selectedRows)
       .filter(([_, isSelected]) => isSelected)
-      .map(([idx]) => filteredTemplates[parseInt(idx)])
-      .filter(template => template);
-      
+      .map(([idx]) => displayedTemplates[parseInt(idx)])
+      .filter((t) => t);
+
     if (selectedTemplates.length === 0) {
-      console.log('No valid templates selected for deletion');
-      toast.error("No templates selected for deletion.", {
-        position: "top-right",
-        autoClose: 3000,
-      });
+      toast.error("No templates selected for deletion.", { autoClose: 3000 });
       return;
     }
-    
-    // Set the first selected template to show in the dialog
-    // and store all selected template IDs in the state
+
     setSelectedTemplate({
       ...selectedTemplates[0],
-      _selectedIds: selectedTemplates.map(t => t.id)
+      _selectedIds: selectedTemplates.map((t) => t.id),
     });
     setShowDeleteDialog(true);
   };
 
   const handleDeleteClick = (template) => {
-    // console.log('Delete clicked for template:', template);
     if (!canDelete) {
-      console.log('Delete permission denied');
       toast.error("You do not have permission to delete templates.", {
         position: "top-right",
         autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
       });
       return;
     }
-    // console.log('Setting template for deletion:', { id: template.id, name: template.element_name });
     setSelectedTemplate(template);
     setShowDeleteDialog(true);
     setMenuOpen(null);
@@ -184,38 +130,27 @@ const Table = ({
       toast.error("You do not have permission to edit templates.", {
         position: "top-right",
         autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
       });
       return;
     }
     setMenuOpen(null);
-    if (onEdit) {
-      onEdit(template);
-    }
+    if (onEdit) onEdit(template);
   };
 
   const handleDeleteConfirm = async () => {
     if (!selectedTemplate) return;
-    
     try {
       setIsDeleting(true);
-      // Check if we have multiple templates to delete (from checkbox selection)
       const idsToDelete = selectedTemplate._selectedIds || [selectedTemplate.id];
       const success = await onDelete(idsToDelete);
-      
       if (success) {
-        // Clear selection if deletion was successful
         setSelectedRows({});
         setSelectAll(false);
       }
-      
       setShowDeleteDialog(false);
       setSelectedTemplate(null);
     } catch (error) {
-      console.error('Error in handleDeleteConfirm:', error);
+      console.error("Error in handleDeleteConfirm:", error);
     } finally {
       setIsDeleting(false);
     }
@@ -227,18 +162,12 @@ const Table = ({
   };
 
   const toggleMenu = (index) => {
-    if (menuOpen === index) {
-      setMenuOpen(null);
-      return;
-    }
-    setMenuOpen(index);
-    // Calculate if dropdown should flip up
+    setMenuOpen(menuOpen === index ? null : index);
     const rowEl = rowRefs.current[index];
     const dropdownEl = dropdownRefs.current[index];
     if (rowEl) {
       const rect = rowEl.getBoundingClientRect();
       const windowHeight = window.innerHeight;
-      // Estimate dropdown height (or use actual if available)
       const dropdownHeight = dropdownEl ? dropdownEl.offsetHeight : 120;
       const spaceBelow = windowHeight - rect.bottom;
       setShouldFlipUp((prev) => ({
@@ -250,7 +179,6 @@ const Table = ({
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      // Check all dropdown refs
       const refs = Object.values(dropdownRefs.current);
       if (refs.some((ref) => ref && ref.contains(event.target))) return;
       setMenuOpen(null);
@@ -264,119 +192,37 @@ const Table = ({
       toast.error("Only approved templates can be used to send campaigns.", {
         position: "top-right",
         autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
       });
       return;
     }
     navigate("/broadcast", {
-      state: {
-        selectedTemplate: template,
-        openForm: true,
-      },
+      state: { selectedTemplate: template, openForm: true },
     });
   };
 
   return (
     <div className="overflow-x-auto">
-      <div className="w-full font-sans rounded-[16px] scrollbar-hide scroll-smooth bg-white shadow-[0px_0.91px_3.66px_0px_#00000042] overflow-hidden">
-        {/* Header Filters and Search */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 p-2 sm:p-3 md:p-4">
-          <div className="flex-shrink-0 pl-2 pr-3">
-            <p className="font-semibold text-base sm:text-lg md:text-xl text-nowrap">
-              Templates List
-            </p>
+      <div className="flex items-center shadow-2xl p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+          {/* FilterBar: scrollable only on mobile */}
+          <div className="w-full sm:w-auto overflow-x-auto sm:overflow-x-visible scrollbar-hide">
+            <FilterBar
+              filters={filters}
+              activeFilter={activeFilter}
+              setActiveFilter={setActiveFilter}
+            />
           </div>
-          <div className="flex items-center gap-2 sm:gap-3 flex-grow w-full">
-            <div className="sm:hidden w-full overflow-x-scroll scrollbar-hide">
-              <div className="flex items-center gap-2 scroll-snap-x-mandatory">
-                {filters.map((f, i) => (
-                  <button
-                    key={i}
-                    className={`px-4 py-2 min-h-[40px] rounded-md text-sm font-medium transition 
-                      ${
-                        activeFilter === f.label
-                          ? "bg-[#0AA89E] text-white"
-                          : "text-gray-700 hover:text-[#0AA89E]"
-                      }`}
-                    onClick={() => setActiveFilter(f.label)}
-                  >
-                    {f.label} ({f.count})
-                  </button>
-                ))}
-                <div className="flex items-center">
-                  <button
-                    onClick={() => setShowMobileSearch((prev) => !prev)}
-                    className="flex items-center justify-center h-9 w-9 border border-gray-300 rounded-md"
-                    aria-label="Toggle search input"
-                  >
-                    <IoSearch className="w-4 h-4 text-gray-400" />
-                  </button>
-                </div>
-              </div>
-            </div>
-            <div className="hidden sm:flex items-center gap-2 flex-shrink-0 overflow-x-auto">
-              {filters.map((f, i) => (
-                <button
-                  key={i}
-                  className={`px-4 py-2 min-h-[40px] rounded-md text-sm font-medium transition 
-                    ${
-                      activeFilter === f.label
-                        ? "bg-[#0AA89E] text-white"
-                        : "text-gray-700 hover:text-[#0AA89E]"
-                    }`}
-                  onClick={() => setActiveFilter(f.label)}
-                >
-                  {f.label} ({f.count})
-                </button>
-              ))}
-            </div>
-            <div className="relative w-full sm:w-64">
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={handleSearchChange}
-                placeholder="Search by name or category..."
-                className="w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-[#0AA89E] focus:border-[#0AA89E] text-sm"
-                aria-label="Search templates"
-              />
-              <IoSearch className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            </div>
-            {/* Add New Templates Button */}
-            {onAddTemplate && (
-              <button
-                className={`ml-2 flex items-center gap-2 px-4 py-2 rounded cursor-pointer 
-                  ${
-                    canEdit || canDelete || onAddTemplate
-                      ? "bg-[#0AA89E] text-white"
-                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                  }`}
-                onClick={() => {
-                  if (onAddTemplate) {
-                    onAddTemplate();
-                  } else {
-                    // Show error if no permission
-                    toast.error("You do not have permission to add templates.");
-                  }
-                }}
-                disabled={!onAddTemplate}
-                title={
-                  onAddTemplate
-                    ? "Add a new template"
-                    : "You do not have permission to add templates"
-                }
-              >
-                <img src={vendorIcon} alt="plus sign" className="w-5 h-5" />
-                Add New Templates
-              </button>
-            )}
+
+          {/* SearchBar: fixed */}
+          <div className="w-full sm:w-auto">
+            <SearchBar search={searchTerm} setSearch={onSearchChange} />
           </div>
         </div>
+      </div>
+      <div className="w-full font-sans scrollbar-hide scroll-smooth bg-white shadow-[0px_0.91px_3.66px_0px_#00000042] overflow-hidden">
         <div className="overflow-x-auto">
-          <div className="min-w-[900px] bg-white rounded-2xl shadow-[0px_-0.91px_3.66px_0px_#00000042] overflow-hidden">
-            <table className="w-full text-sm text-center overflow-hidden table-auto">
+          <div className="min-w-[900px] bg-white shadow-[0px_-0.91px_3.66px_0px_#00000042] overflow-hidden">
+            <table className="w-full text-sm text-center table-auto">
               <thead className="bg-[#F4F4F4] border-b-2 shadow-sm border-gray-300">
                 <tr>
                   <th className="px-2 py-3 sm:px-6">
@@ -393,7 +239,8 @@ const Table = ({
                     <th colSpan="6" className="px-4 py-2">
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium text-gray-700">
-                          {Object.values(selectedRows).filter(Boolean).length} template(s) selected
+                          {Object.values(selectedRows).filter(Boolean).length}{" "}
+                          template(s) selected
                         </span>
                         <button
                           onClick={handleDeleteSelected}
@@ -402,13 +249,31 @@ const Table = ({
                         >
                           {isDeleting ? (
                             <>
-                              <svg className="animate-spin h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              <svg
+                                className="animate-spin h-3 w-3 text-white"
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                              >
+                                <circle
+                                  className="opacity-25"
+                                  cx="12"
+                                  cy="12"
+                                  r="10"
+                                  stroke="currentColor"
+                                  strokeWidth="4"
+                                ></circle>
+                                <path
+                                  className="opacity-75"
+                                  fill="currentColor"
+                                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                ></path>
                               </svg>
                               Deleting...
                             </>
-                          ) : 'Delete Selected'}
+                          ) : (
+                            "Delete Selected"
+                          )}
                         </button>
                       </div>
                     </th>
@@ -437,7 +302,7 @@ const Table = ({
                 </tr>
               </thead>
               <tbody className="max-h-[calc(100vh-300px)] overflow-y-auto">
-                {filteredTemplates.length === 0 ? (
+                {displayedTemplates.length === 0 ? (
                   <tr>
                     <td
                       colSpan="7"
@@ -452,7 +317,7 @@ const Table = ({
                     </td>
                   </tr>
                 ) : (
-                  filteredTemplates.map((template, idx) => (
+                  displayedTemplates.map((template, idx) => (
                     <tr
                       key={template.id || idx}
                       ref={(el) => (rowRefs.current[idx] = el)}
@@ -474,17 +339,18 @@ const Table = ({
                       <td className="px-2 py-4 text-[12px] sm:text-[16px] font-semibold rounded text-center">
                         <span
                           className={`px-3 py-1 rounded-full inline-block text-center min-w-[100px] font-medium
-                                       shadow-sm transition-colors duration-200
-                                            ${
-                                              template.status?.toLowerCase() === "approved"
-                                                ? "text-green-800 bg-green-200"
-                                                : template.status?.toLowerCase() === "pending"
-                                                ? "text-yellow-800 bg-yellow-200"
-                                                : template.status?.toLowerCase() === "failed"
-                                                ? "text-red-800 bg-red-200"
-                                                : "text-gray-800 bg-gray-200"
-                                            }
-                                    `}>
+      shadow-sm transition-colors duration-200
+      ${
+        template.status?.toLowerCase() === "approved"
+          ? "text-green-800 bg-green-200"
+          : template.status?.toLowerCase() === "pending"
+          ? "text-yellow-800 bg-yellow-200"
+          : template.status?.toLowerCase() === "failed"
+          ? "text-red-800 bg-red-200"
+          : "text-gray-800 bg-gray-200"
+      }
+    `}
+                        >
                           {template.status}
                         </span>
                       </td>

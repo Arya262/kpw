@@ -1,30 +1,45 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
+import axios from "axios";
 import { API_ENDPOINTS } from "../config/api";
 import { toast } from "react-toastify";
 import { defaultToastConfig } from "../utils/toastConfig";
-import axios from "axios";
-export const useTemplates = (customerId) => {
-  const [searchTerm, setSearchTerm] = useState("");
+import { useAuth } from "../context/AuthContext";
+
+export const useTemplates = () => {
+  const { user } = useAuth();
+  const customer_id = user?.customer_id;
+
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  // Pagination state
+  const [searchTerm, setSearchTerm] = useState("");
   const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
     totalItems: 0,
+    totalRecords: 0,
     itemsPerPage: 10,
   });
 
-  const fetchTemplates = useCallback(async (page = 1, limit = 10, search = "") => {
-    if (!customerId) return;
-    
+  // 🔄 Normalizer for template objects
+  const normalizeTemplate = (t) => ({
+    ...t,
+    container_meta: {
+      ...t.container_meta,
+      sampleText: t.container_meta?.sampleText || t.container_meta?.sample_text,
+    },
+  });
+
+  // 📥 Fetch templates
+  const fetchTemplates = async (page = 1, limit = 10, search = "") => {
+    if (!customer_id) return;
+
     try {
       setLoading(true);
       setError(null);
 
       console.log("📤 Fetching templates with params:", {
-        customer_id: customerId,
+        customer_id,
         page,
         limit,
         search,
@@ -32,7 +47,7 @@ export const useTemplates = (customerId) => {
 
       const response = await axios.get(API_ENDPOINTS.TEMPLATES.GET_ALL, {
         params: {
-          customer_id: customerId,
+          customer_id,
           page,
           limit,
           ...(search ? { search } : {}),
@@ -51,62 +66,75 @@ export const useTemplates = (customerId) => {
       const result = response.data;
       const templates = Array.isArray(result.templates) ? result.templates : [];
 
-      const normalized = templates.map((t) => ({
-        ...t,
-        container_meta: {
-          ...t.container_meta,
-          sampleText:
-            t.container_meta?.sampleText || t.container_meta?.sample_text,
-        },
-      }));
-
+      const normalized = templates.map(normalizeTemplate);
       setTemplates(normalized);
 
-      // Update pagination from API response
       setPagination((prev) => ({
-        currentPage: result.pagination?.page || result.current_page || page,
+        currentPage: result.pagination?.page ?? result.current_page ?? page,
         totalPages:
-          result.pagination?.totalPages ||
-          result.last_page ||
-          (result.total ? Math.ceil(result.total / limit) : 1) ||
+          result.pagination?.totalPages ??
+          result.last_page ??
+          (result.total ? Math.ceil(result.total / limit) : 1) ??
           1,
-        totalItems: result.pagination?.totalRecords || result.total || templates.length || 0,
-        itemsPerPage: result.pagination?.limit || result.per_page || limit,
+        totalItems:
+          result.pagination?.totalRecords ??
+          result.total ??
+          templates.length ??
+          0,
+        totalRecords: result.pagination?.totalRecords ?? 0, 
+        itemsPerPage: result.pagination?.limit ?? result.per_page ?? limit,
       }));
     } catch (err) {
       const errorMessage =
         err.response?.data?.message || err.message || "Failed to fetch templates";
-      console.error("❌ Error fetching templates:", err);
+
+      console.error("❌ Error fetching templates:", {
+        error: err,
+        response: err.response?.data,
+        status: err.response?.status,
+      });
+
       setError(errorMessage);
-      toast.error(errorMessage);
+
+      // Avoid spamming toasts while searching
+      if (!search) toast.error(errorMessage, defaultToastConfig);
     } finally {
       setLoading(false);
     }
-  }, [customerId]);
+  };
 
-  // Debounced search using setTimeout
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      fetchTemplates(1, pagination.itemsPerPage, searchTerm);
-    }, 500);
-    return () => clearTimeout(timeout);
-  }, [searchTerm, pagination.itemsPerPage]);
-
-  // ✅ update template
-  const updateTemplate = async (updatedTemplate) => {
-    try {
-      setTemplates(prev => 
-        prev.map(t => t.id === updatedTemplate.id ? { ...t, ...updatedTemplate } : t)
-      );
-      return true;
-    } catch (error) {
-      console.error("Update template error:", error);
-      toast.error("Failed to update template", defaultToastConfig);
-      return false;
+  // 📄 Handle pagination
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= pagination.totalPages) {
+      setPagination((prev) => ({ ...prev, currentPage: newPage }));
     }
   };
 
-  // ✅ add template
+const handleItemsPerPageChange = (newItemsPerPage) => {
+ setPagination((prev) => ({
+   ...prev,
+   itemsPerPage: newItemsPerPage,
+   currentPage: 1,
+ }));
+};
+
+  useEffect(() => {
+  const timeout = setTimeout(() => {
+
+   fetchTemplates(
+    searchTerm ? 1 : pagination.currentPage, 
+    pagination.itemsPerPage,
+     searchTerm
+   );
+   if (searchTerm) {
+     setPagination((prev) => ({ ...prev, currentPage: 1 }));
+   }
+  }, 500);
+
+  return () => clearTimeout(timeout);
+}, [pagination.currentPage, pagination.itemsPerPage, searchTerm]);
+
+
   const addTemplate = async (newTemplate) => {
     const isMedia = ["IMAGE", "VIDEO", "DOCUMENT"].includes(
       newTemplate.templateType?.toUpperCase()
@@ -117,7 +145,7 @@ export const useTemplates = (customerId) => {
 
     const requestBody = {
       ...newTemplate,
-      customer_id: customerId,
+      customer_id,
       header: newTemplate.header || null,
       footer: newTemplate.footer || null,
       buttons: newTemplate.buttons || [],
@@ -127,21 +155,20 @@ export const useTemplates = (customerId) => {
     };
 
     try {
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(requestBody),
+      const response = await axios.post(endpoint, requestBody, {
+        withCredentials: true,
       });
 
-      const data = await response.json();
-      if (data.success) {
-        setTemplates((prev) => [...prev, data.template || newTemplate]);
+      if (response.data.success) {
+        const createdTemplate = normalizeTemplate(
+          response.data.template || newTemplate
+        );
+        setTemplates((prev) => [...prev, createdTemplate]);
         toast.success("Template created successfully!", defaultToastConfig);
         return true;
       } else {
         toast.error(
-          data.message || data.error || "Failed to create template",
+          response.data.message || response.data.error || "Failed to create template",
           defaultToastConfig
         );
         return false;
@@ -153,65 +180,45 @@ export const useTemplates = (customerId) => {
     }
   };
 
-  // ✅ delete template
-  const deleteTemplate = async (templateName, id, customer_id) => {
-  try {
-    const response = await fetch(API_ENDPOINTS.TEMPLATES.DELETE(), {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ elementName: templateName, customer_id }),
-    });
 
-    const data = await response.json();
+  const deleteTemplate = async (templateName, id) => {
+    try {
+      const response = await axios.delete(API_ENDPOINTS.TEMPLATES.DELETE(), {
+        data: { elementName: templateName, customer_id },
+        withCredentials: true,
+      });
 
-    if (data.success) {
-      setTemplates((prev) => prev.filter((t) => t.id !== id));
-      toast.success("Template deleted successfully", defaultToastConfig);
-      return true;
-    } else {
-      toast.error(data.error || "Failed to delete template", defaultToastConfig);
+      if (response.data.success) {
+        setTemplates((prev) => prev.filter((t) => t.id !== id));
+        toast.success("Template deleted successfully", defaultToastConfig);
+        return true;
+      } else {
+        toast.error(
+          response.data.error || "Failed to delete template",
+          defaultToastConfig
+        );
+        return false;
+      }
+    } catch (err) {
+      console.error("Delete template error:", err);
+      toast.error("An error occurred while deleting", defaultToastConfig);
       return false;
     }
-  } catch (err) {
-    console.error("Delete template error:", err);
-    toast.error("An error occurred while deleting", defaultToastConfig);
-    return false;
-  }
-};
-  // Handle page change
-  const handlePageChange = (page) => {
-    setPagination(prev => ({ ...prev, currentPage: page }));
-    fetchTemplates(page, pagination.itemsPerPage);
   };
 
-  // Handle items per page change
-  const handleItemsPerPageChange = (newItemsPerPage) => {
-    const newPagination = {
-      ...pagination,
-      itemsPerPage: newItemsPerPage,
-      currentPage: 1, // Reset to first page when items per page changes
-    };
-    setPagination(newPagination);
-    fetchTemplates(1, newItemsPerPage);
-  };
-
-  return { 
-    templates, 
-    loading, 
-    error, 
-    addTemplate, 
-    updateTemplate,
-    deleteTemplate, 
-    // Pagination
-    currentPage: pagination.currentPage,
-    totalPages: pagination.totalPages,
-    totalItems: pagination.totalItems,
-    itemsPerPage: pagination.itemsPerPage,
-    onPageChange: handlePageChange,
-    onItemsPerPageChange: handleItemsPerPageChange,
-    searchTerm,
-    setSearchTerm,
-    fetchTemplates
+  // 🎯 Return grouped state + actions
+  return {
+    data: { templates, loading, error },
+    pagination: {
+      currentPage: pagination.currentPage,
+      totalPages: pagination.totalPages,
+      totalItems: pagination.totalItems,
+      itemsPerPage: pagination.itemsPerPage,
+      totalRecords: pagination.totalRecords,
+      onPageChange: handlePageChange,
+      onItemsPerPageChange: handleItemsPerPageChange,
+    },
+    search: { searchTerm, setSearchTerm },
+    actions: { fetchTemplates, addTemplate, deleteTemplate },
   };
 };
