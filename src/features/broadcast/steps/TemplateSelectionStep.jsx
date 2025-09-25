@@ -94,7 +94,7 @@ const TemplateSelectionStep = ({
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto scrollbar-hide">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {approvedTemplates.map((template) => (
               <div
                 key={template.id || template.element_name}
@@ -175,9 +175,6 @@ const TemplateSelectionStep = ({
         </div>
       )}
       
-      {validationErrors.template && (
-        <p className="text-red-500 text-sm">{validationErrors.template}</p>
-      )}
     </div>
   );
 };

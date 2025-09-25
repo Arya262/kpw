@@ -1,7 +1,6 @@
 import React from "react";
 
 const InformationCards = ({ formData }) => {
-  console.log('InformationCards formData:', formData);
   return (
   <div className="bg-green-50 border border-green-200 rounded-lg p-5">
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">

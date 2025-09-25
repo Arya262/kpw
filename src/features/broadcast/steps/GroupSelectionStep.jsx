@@ -175,8 +175,8 @@ const GroupSelectionStep = ({
             <Box 
               border="1px solid #E5E7EB" 
               borderRadius="8px" 
-              height="300px" 
-              overflow="auto" 
+              minHeight="300px" 
+              maxHeight="400px"
               p={2} 
               display="flex" 
               flexDirection="column" 

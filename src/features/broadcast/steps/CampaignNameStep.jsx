@@ -21,8 +21,6 @@ const CampaignNameStep = ({
       placeholder="Enter Campaign Name" 
       value={formData.broadcastName} 
       onChange={handleInputChange} 
-      error={Boolean(validationErrors.broadcastName)} 
-      helperText={validationErrors.broadcastName} 
       fullWidth 
       disabled={isSubmitting} 
       inputProps={{ maxLength: 30 }} 

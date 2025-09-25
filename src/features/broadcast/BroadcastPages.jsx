@@ -10,7 +10,7 @@ import { API_ENDPOINTS } from "../../config/api";
 import { useAuth } from "../../context/AuthContext";
 
 const BroadcastPages = ({ onClose, showCustomAlert, onBroadcastCreated }) => {
-  const [step, setStep] = useState(1); // New state for managing steps
+  const [step, setStep] = useState(1);
   const location = useLocation();
   const navigate = useNavigate();
   const modalRef = useRef(null);
@@ -185,8 +185,8 @@ const [formData, setFormData] = useState({
   
     try {
       const isDirectBroadcast = formData.isDirectBroadcast;
-      console.log("📤 Preparing broadcast data...");
-      console.log("Is direct broadcast:", isDirectBroadcast);
+      // console.log("📤 Preparing broadcast data...");
+      // console.log("Is direct broadcast:", isDirectBroadcast);
   
       const broadcastData = {
         customer_id: user?.customer_id,
@@ -218,12 +218,9 @@ const [formData, setFormData] = useState({
         broadcastData.template_id = formData.selectedTemplate.id;
         broadcastData.template_name = formData.selectedTemplate.element_name;
       }
-  
-      // ✅ Single API endpoint
       const endpoint = API_ENDPOINTS.BROADCASTS.GET_CUSTOMERS;
-  
-      console.log("🌐 Sending request to:", endpoint);
-      console.log("📤 Request payload:", JSON.stringify(broadcastData, null, 2));
+
+      // console.log("📤 Request payload:", JSON.stringify(broadcastData, null, 2));
   
       const response = await fetch(endpoint, {
         method: "POST",
@@ -232,9 +229,9 @@ const [formData, setFormData] = useState({
         body: JSON.stringify(broadcastData),
       });
   
-      console.log("📥 Response status:", response.status, response.statusText);
+      // console.log("📥 Response status:", response.status, response.statusText);
   
-      // ✅ Parse JSON only once
+    
       let result;
       try {
         result = await response.json();
@@ -242,7 +239,7 @@ const [formData, setFormData] = useState({
         throw new Error("Invalid JSON response from server");
       }
   
-      console.log("📩 Response data:", result);
+      // console.log("📩 Response data:", result);
   
       if (!response.ok) {
         throw new Error(result.message || "Failed to create broadcast");
@@ -259,7 +256,7 @@ const [formData, setFormData] = useState({
       navigate("/broadcast", { replace: true });
   
     } catch (err) {
-      console.error("❌ Error saving broadcast:", err);
+      // console.error("❌ Error saving broadcast:", err);
       setError("Unable to save broadcast. Please try again later.");
       setAlertMessage("Failed to save broadcast. Please try again.");
       setShowAlert(true);
@@ -317,28 +314,28 @@ const [formData, setFormData] = useState({
 
   return (
     <>
-      <div className="flex items-center justify-center font-poppins">
-          <BroadcastForm
-            formData={formData}
-            setFormData={setFormData}
-            handleInputChange={handleInputChange}
-            step={step}
-            setStep={setStep}
-            handleRadioChange={handleRadioChange}
-            handleMediaChange={handleMediaChange}
-            selectedDate={selectedDate}
-            setSelectedDate={setSelectedDate}
-            isTemplateOpen={isTemplateOpen}
-            openTemplate={openTemplate}
-            closeTemplate={closeTemplate}
-            SendTemplate={SendTemplate}
-            loading={loading}
-            error={error}
-            customerLists={customerLists}
-            onSubmit={handleSubmit}
-            isSubmitting={isSubmitting}
-            onTemplateSelect={handleTemplateSelect}
-          />
+      <div className="p-3 sm:p-4 md:p-6 font-poppins">
+        <BroadcastForm
+          formData={formData}
+          setFormData={setFormData}
+          handleInputChange={handleInputChange}
+          step={step}
+          setStep={setStep}
+          handleRadioChange={handleRadioChange}
+          handleMediaChange={handleMediaChange}
+          selectedDate={selectedDate}
+          setSelectedDate={setSelectedDate}
+          isTemplateOpen={isTemplateOpen}
+          openTemplate={openTemplate}
+          closeTemplate={closeTemplate}
+          SendTemplate={SendTemplate}
+          loading={loading}
+          error={error}
+          customerLists={customerLists}
+          onSubmit={handleSubmit}
+          isSubmitting={isSubmitting}
+          onTemplateSelect={handleTemplateSelect}
+        />
       </div>
       <ConfirmationDialog
         showExitDialog={showExitDialog}

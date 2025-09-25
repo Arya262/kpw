@@ -3,12 +3,14 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axios from "axios";
 import { API_ENDPOINTS } from "./config/api";
-import { handleError, handleSuccess, handleApiError, USER_MESSAGES } from './utils/errorHandling';
+import { handleError, USER_MESSAGES } from "./utils/errorHandling";
+
 const ForgotPassword = () => {
   const [identifier, setIdentifier] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Validation for email or mobile
   const validateInput = (value) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const mobileRegex = /^[6-9]\d{9}$/;
@@ -34,9 +36,14 @@ const ForgotPassword = () => {
     setLoading(true);
 
     try {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const isEmail = emailRegex.test(identifier);
+
+      const payload = isEmail ? { email: identifier } : { mobile: identifier };
+
       const response = await axios.post(
-        API_ENDPOINTS.AUTH.FORGOT_PASSWORD, // Ensure you have this in your config
-        { identifier },
+        API_ENDPOINTS.AUTH.FORGOT_PASSWORD,
+        payload,
         { headers: { "Content-Type": "application/json" } }
       );
 
@@ -44,8 +51,9 @@ const ForgotPassword = () => {
 
       if (success) {
         toast.success(message || "Reset link or OTP sent successfully.");
+        setIdentifier(""); // clear input
       } else {
-        toast.error("No account found with that email or mobile number.");
+        toast.error(message || "No account found with that email or mobile number.");
       }
     } catch (err) {
       console.error("Forgot Password error:", err);
@@ -67,11 +75,12 @@ const ForgotPassword = () => {
         </p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block mb-1 text-sm font-medium">
+            <label htmlFor="identifier" className="block mb-1 text-sm font-medium">
               Email / Mobile No
             </label>
             <input
               type="text"
+              id="identifier"
               name="identifier"
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
@@ -79,8 +88,13 @@ const ForgotPassword = () => {
                 error ? "border-red-500" : "border-gray-300"
               }`}
               placeholder="Enter your email or mobile number"
+              aria-describedby="identifier-error"
             />
-            {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+            {error && (
+              <p id="identifier-error" className="text-red-500 text-sm mt-1">
+                {error}
+              </p>
+            )}
           </div>
           <button
             type="submit"

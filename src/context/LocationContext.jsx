@@ -42,14 +42,14 @@ export const LocationProvider = ({ children }) => {
   // ✅ IP-based location lookup (fallback)
 const getLocationFromIP = async () => {
   try {
-    console.log("⚡ Falling back to IP-based location...");
+    // console.log("⚡ Falling back to IP-based location...");
     const ip = await getVisitorIP();
     if (!ip) throw new Error("No IP found");
 
     const response = await fetch(`https://ipapi.co/${ip}/json/`);
     const data = await response.json();
 
-    console.log("📍 IP-based location data:", data);
+    // console.log("📍 IP-based location data:", data);
 
     const locationData = {
       loaded: true,
@@ -130,14 +130,14 @@ const getLocationFromIP = async () => {
 
   // ✅ Error handler → fallback to IP
   const onError = (error) => {
-    console.warn("Geolocation error:", error);
+    // console.warn("Geolocation error:", error);
     getLocationFromIP(); // fallback
   };
 
   // ✅ Request Geolocation on mount
   useEffect(() => {
     if (!navigator.geolocation) {
-      console.warn("Geolocation not supported, falling back to IP...");
+      // console.warn("Geolocation not supported, falling back to IP...");
       getLocationFromIP();
       return;
     }

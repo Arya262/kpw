@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { API_ENDPOINTS } from "../../../config/api";
 import { useAuth } from "../../../context/AuthContext";
 import pricingData from "../../../pricing.json";
+import { toast } from "react-toastify";
 export const useBroadcastForm = (formData, setFormData, customerLists, onTemplateSelect, step, setStep, selectedDate, setSelectedDate) => {
   const [templates, setTemplates] = useState([]);
   const [templatesLoading, setTemplatesLoading] = useState(true);
@@ -113,7 +114,7 @@ export const useBroadcastForm = (formData, setFormData, customerLists, onTemplat
 
   // Log formData changes for debugging
   useEffect(() => {
-    console.log('formData updated:', formData);
+    // console.log('formData updated:', formData);
   }, [formData]);
 
   // Initial data fetching
@@ -157,15 +158,15 @@ export const useBroadcastForm = (formData, setFormData, customerLists, onTemplat
   // Cost calculation
   useEffect(() => {
     if (!formData.selectedTemplate) {
-      console.log('No template selected, setting cost to 0');
+      // console.log('No template selected, setting cost to 0');
       setEstimatedCost(0);
       return;
     }
     
-    console.log('--- Cost Calculation Debug ---');
-    console.log('Selected template:', formData.selectedTemplate);
-    console.log('Selected groups:', selectedGroups);
-    console.log('Direct contacts:', formData.directContacts);
+    // console.log('--- Cost Calculation Debug ---');
+    // console.log('Selected template:', formData.selectedTemplate);
+    // console.log('Selected groups:', selectedGroups);
+    // console.log('Direct contacts:', formData.directContacts);
     
     // Calculate total contacts (from groups or direct contacts)
     let contactCount = 0;
@@ -178,32 +179,32 @@ export const useBroadcastForm = (formData, setFormData, customerLists, onTemplat
       contactCount = totalSelectedContacts;
     }
     
-    console.log('Total selected contacts:', contactCount);
+    // console.log('Total selected contacts:', contactCount);
 
     // Get category and country with fallbacks
     const category = formData.selectedTemplate.category?.toLowerCase() || "marketing";
     const country = formData.country || "India";
     
-    console.log('Using category:', category, 'country:', country);
+    // console.log('Using category:', category, 'country:', country);
 
     // Get pricing data
     const countryPricing = pricingData[country] || pricingData["All other countries"];
-    console.log('Available pricing data:', countryPricing);
+    // console.log('Available pricing data:', countryPricing);
 
     // Find matching category (case-insensitive)
     const matchingCategory = Object.keys(countryPricing || {}).find(
       key => key.toLowerCase() === category.toLowerCase()
     ) || "marketing";
     
-    console.log('Matching category:', matchingCategory);
+    // console.log('Matching category:', matchingCategory);
     
     // Get cost per message
     const costPerMessage = countryPricing?.[matchingCategory] ?? 0.88;
-    console.log('Cost per message:', costPerMessage);
+    // console.log('Cost per message:', costPerMessage);
     
     // Calculate total cost
     const calculatedCost = contactCount * costPerMessage;
-    console.log('Calculated cost:', calculatedCost, 'for', contactCount, 'contacts');
+    // console.log('Calculated cost:', calculatedCost, 'for', contactCount, 'contacts');
     
     setEstimatedCost(calculatedCost);
   }, [formData.selectedTemplate, formData.group_id, formData.country, totalSelectedContacts]);
@@ -230,6 +231,8 @@ export const useBroadcastForm = (formData, setFormData, customerLists, onTemplat
       case 1:
         if (!formData.broadcastName?.trim()) {
           newErrors.broadcastName = "Campaign name is required";
+          // Show popup only when navigating Next on Step 1
+          toast.error("Campaign name is required", { toastId: "broadcastNameRequiredStep1" });
         }
         break;
       case 2:
@@ -244,6 +247,8 @@ export const useBroadcastForm = (formData, setFormData, customerLists, onTemplat
       case 3:
         if (!formData.selectedTemplate) {
           newErrors.template = "Please select a template";
+          // Show popup only when navigating Next on Step 3
+          toast.error("Please select a template", { toastId: "templateRequiredStep3" });
         }
         break;
       case 4:

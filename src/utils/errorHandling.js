@@ -1,10 +1,5 @@
 import { toast } from 'react-toastify';
 
-/**
- * Centralized error handling utility
- * Provides consistent user-friendly error messages while logging technical details for developers
- */
-
 // Common user-friendly error messages
 export const USER_MESSAGES = {
   // Generic messages
@@ -90,8 +85,7 @@ export const handleApiError = (error, response = null, operation = 'operation') 
     statusText: response?.statusText,
     timestamp: new Date().toISOString(),
   });
-  
-  // Determine user message based on error type
+
   let userMessage = USER_MESSAGES.GENERIC_ERROR;
   
   if (!navigator.onLine) {

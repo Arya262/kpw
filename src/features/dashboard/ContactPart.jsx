@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Avatar } from "../chats/chatSiderbar";
+import { Avatar } from "../chats/chatSidebar";
 import { useAuth } from "../../context/AuthContext";
 import { useChatLogic } from "../../hooks/useChatLogic"; // adjust path
 

@@ -211,8 +211,7 @@ React.useEffect(() => {
                       y1="13.4457"
                       x2="166.004"
                       y2="13.4457"
-                      gradientUnits="userSpaceOnUse"
-                    >
+                      gradientUnits="userSpaceOnUse">
                       <stop stopColor="#EFD175" />
                       <stop offset="0.0244" stopColor="#DFB95F" />
                       <stop offset="0.0575" stopColor="#CD9F48" />
@@ -243,20 +242,16 @@ React.useEffect(() => {
               </div>
             </div>
           </div>
-
           {/* Bottom Wave */}
           <svg
             className="absolute inset-x-0 bottom-0 w-full h-[70px] sm:h-[50px]"
             viewBox="0 0 1440 450"
-            preserveAspectRatio="none"
-          >
+            preserveAspectRatio="none">
             <path
               fill="#ffffff"
-              d="M0,250 C500,-300,1080,1000,1440,20 L1440,500 L0,500 Z"
-            />
+              d="M0,250 C500,-300,1080,1000,1440,20 L1440,500 L0,500 Z"/>
           </svg>
         </div>
-
         {/* Login Form */}
         <div className="px-5  pb-6 md:px-10 md:pb-10 font-semibold">
           <form onSubmit={handleSubmit} className="flex flex-col space-y-3">

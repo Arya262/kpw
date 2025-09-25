@@ -14,13 +14,13 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
     <BrowserRouter>
       <AuthProvider>
+      <SocketProvider>
         <NotificationProvider> 
           <LocationProvider>
-            <SocketProvider>
               <App />
-            </SocketProvider>
           </LocationProvider>
         </NotificationProvider>
+      </SocketProvider>
       </AuthProvider>
     </BrowserRouter>
   </GoogleOAuthProvider>

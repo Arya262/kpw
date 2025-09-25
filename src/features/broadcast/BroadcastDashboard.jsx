@@ -45,13 +45,6 @@ const BroadcastDashboard = forwardRef(
         setLoading(true);
         setError(null);
 
-        // console.log("📤 Fetching broadcasts with params:", {
-        //   customer_id: user?.customer_id,
-        //   page,
-        //   limit,
-        //   search,
-        // });
-
         const response = await axios.get(API_ENDPOINTS.BROADCASTS.GET_ALL, {
           params: {
             customer_id: user?.customer_id,
@@ -63,9 +56,6 @@ const BroadcastDashboard = forwardRef(
           validateStatus: (status) => status < 500,
         });
 
-        // console.log("✅ API Response Status:", response.status);
-        // console.log("📄 API Response Data:", response.data);
-
         if (response.status >= 400) {
           throw new Error(
             response.data?.message || "Failed to fetch broadcasts"
@@ -73,14 +63,12 @@ const BroadcastDashboard = forwardRef(
         }
 
         const result = response.data.data;
-        // Since "data" is already the array
         const broadcastsData = Array.isArray(result) ? result : [];
-        // console.log(":package: Broadcasts Data from API:", broadcastsData);
         if (broadcastsData.length === 0) {
           // console.log("ℹ️ No broadcasts found for the current customer");
         }
         setBroadcasts(broadcastsData);
-        // The API response has pagination data at response.data.pagination
+
         const paginationData = response.data.pagination || {};
         const newPagination = {
           currentPage: paginationData.page || page,
@@ -89,7 +77,7 @@ const BroadcastDashboard = forwardRef(
           itemsPerPage: paginationData.limit || limit,
           totalRecords: paginationData.totalRecords || 0,
         };
-        // console.log("📊 Updated Pagination:", newPagination);
+       
         setPagination(newPagination);
 
         if (onBroadcastsUpdate) {
@@ -136,6 +124,12 @@ const BroadcastDashboard = forwardRef(
     useImperativeHandle(ref, () => ({
       fetchBroadcasts,
     }));
+
+useEffect(() => {
+  if (search) {
+    setPagination((prev) => ({ ...prev, currentPage: 1 }));
+  }
+}, [search]);
 
     useEffect(() => {
       const timeout = setTimeout(() => {
@@ -189,7 +183,6 @@ const BroadcastDashboard = forwardRef(
       },
     ];
 
-    // 🔹 Optimized filtering with useMemo
     const filteredData = useMemo(() => {
       const searchText = search.toLowerCase();
       return broadcasts.filter((broadcast) => {
@@ -203,7 +196,6 @@ const BroadcastDashboard = forwardRef(
       });
     }, [broadcasts, search, activeFilter]);
 
-    // 🔹 Mobile view detection
     useEffect(() => {
       const handleResize = () => {
         setIsMobileView(window.innerWidth < 1000);
@@ -223,7 +215,7 @@ const BroadcastDashboard = forwardRef(
           broadcasts.length > 0 ? "bg-white shadow-sm" : ""
         } rounded-xl mt-4 shadow-sm min-h-fit`}>
         <div className="flex items-center shadow-2xl p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full overflow-x-auto scrollbar-hide">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full scrollbar-hide">
             <FilterBar
               filters={filters}
               activeFilter={activeFilter}

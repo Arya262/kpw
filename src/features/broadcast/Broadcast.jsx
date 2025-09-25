@@ -123,10 +123,11 @@ const Broadcast = () => {
         theme="light"
       />
 
-      <div className="flex items-center justify-between">
+
+      <div className="flex items-center justify-between p-2.5">
         <h2 className="text-xl pt-0 font-semibold">Campaigns</h2>
         <button
-          className="bg-[#0AA89E] hover:bg-teal-600 text-white flex items-center gap-2 px-4 py-2 rounded cursor-pointer"
+          className="bg-gradient-to-r from-[#0AA89E] to-cyan-500 text-white flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl shadow-lg hover:shadow-xl  transition-all cursor-pointer"
           onClick={handleAddBroadcast}
         >
           <img src={vendor} alt="plus sign" className="w-5 h-5" />
@@ -149,7 +150,7 @@ const Broadcast = () => {
 
       {showPopup && (
         <div
-          className="fixed inset-0 bg-[#000]/50 flex items-center justify-center z-50 transition-all duration-300"
+          className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 transition-all duration-300"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setHighlightCancel(true);
@@ -158,34 +159,53 @@ const Broadcast = () => {
           }}
         >
           <div
-            className={`bg-white rounded-lg w-full 
-              max-w-full sm:max-w-4xl 
-              max-h-[85vh] sm:max-h-[90vh]
-              overflow-y-auto relative sm:animate-slideUp 
-              border ${highlightCancel ? "border-teal-500" : "border-gray-300"} 
+            className={`bg-white w-full 
+              max-w-full sm:max-w-5xl md:max-w-6xl lg:max-w-7xl
+              h-[95vh] sm:h-auto sm:max-h-[95vh]
+              rounded-t-2xl sm:rounded-xl
+              overflow-hidden relative shadow-2xl
+              border ${highlightCancel ? "border-red-500" : "border-gray-200"} 
               transition-all duration-300
-              mx-2 sm:mx-0`}
+              flex flex-col`}
             onClick={(e) => e.stopPropagation()}
           >
-            <button
-              onClick={() => setShowPopup(false)}
-              className={`absolute top-2 right-4 text-gray-600 hover:text-black text-3xl font-bold 
-                w-8 h-8 flex items-center justify-center pb-2 rounded-full transition-colors cursor-pointer
-                ${
-                  highlightCancel
-                    ? "bg-red-500 text-white hover:text-white"
-                    : "bg-gray-100"
-                }`}
-              aria-label="Close"
-            >
-              ×
-            </button>
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 sm:p-3 border-b border-gray-200 bg-gray-50 rounded-t-2xl sm:rounded-t-xl flex-shrink-0">
+              <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-teal-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <img src={vendor} alt="campaign" className="w-4 h-4 sm:w-6 sm:h-6" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900 truncate">Create New Campaign</h2>
+                  <p className="text-xs sm:text-sm text-gray-500 hidden sm:block">Set up and send your WhatsApp broadcast</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowPopup(false)}
+                className={`w-8 h-8 flex items-center justify-center rounded-full transition-all duration-200 flex-shrink-0
+                  ${highlightCancel
+                    ? "bg-red-500 text-white hover:bg-red-600"
+                    : "bg-gray-200 text-gray-600 hover:bg-gray-300 hover:text-gray-800"
+                  }`}
+                aria-label="Close modal"
+              >
+                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
 
-            <BroadcastPages
-              onClose={() => setShowPopup(false)}
-              onBroadcastCreated={handleBroadcastCreated}
-            />
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto min-h-0 scrollbar-hide">
+              <BroadcastPages
+                onClose={() => setShowPopup(false)}
+                onBroadcastCreated={handleBroadcastCreated}
+              />
+            </div>
           </div>
+          
+          {/* Date Picker Portal */}
+          <div id="datepicker-portal"></div>
         </div>
       )}
     </div>

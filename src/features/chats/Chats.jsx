@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import { useAuth } from "../../context/AuthContext";
 import { useLocation } from "react-router-dom";
 import { useSocket } from "../../context/SocketContext";
-import ChatSidebar from "./chatSiderbar";
+import ChatSidebar from "./chatSidebar";
 import ChatHeader from "./ChatHeader";
 import ChatMessageArea from "./ChatMessages";
 import MessageInput from "./MessageInput";
@@ -49,7 +49,7 @@ const Chat = () => {
     selectContact,
     sendMessage,
     deleteChat,
-    setupSocketListener,
+    setupChatEventListener,
   } = useChatLogic({
     user,
     socket,
@@ -92,9 +92,9 @@ const Chat = () => {
   }, []);
 
   useEffect(() => {
-    const cleanup = setupSocketListener?.();
+    const cleanup = setupChatEventListener?.();
     return cleanup;
-  }, [setupSocketListener]);
+  }, [setupChatEventListener]);
 
   const toggleUserDetails = useCallback(() => setShowUserDetails(prev => !prev), []);
 
@@ -117,10 +117,10 @@ const Chat = () => {
   const toggleContactSelection = useCallback((contact) => {
     setSelectedContacts((prev) => {
       const newSet = new Set(prev);
-      if (newSet.has(contact.conversation_id)) {
-        newSet.delete(contact.conversation_id);
+      if (newSet.has(contact.contact_id)) {
+        newSet.delete(contact.contact_id);
       } else {
-        newSet.add(contact.conversation_id);
+        newSet.add(contact.contact_id);
       }
       return newSet;
     });
@@ -174,8 +174,8 @@ const Chat = () => {
     } else {
 
       const fullContact = contacts.find(c =>
-        (c.conversation_id && c.conversation_id === contact.conversation_id) ||
-        (c.phone_number && c.phone_number === contact.phone_number)
+        (c.contact_id && c.contact_id === contact.contact_id) ||
+        (c.mobile_no && c.mobile_no === contact.mobile_no)
       );
 
       selectContact(fullContact || contact);
@@ -188,7 +188,7 @@ const Chat = () => {
 
     try {
       const contactIds = Array.from(selectedContacts);
-      const contactsToDelete = contacts.filter(c => contactIds.includes(c.conversation_id));
+      const contactsToDelete = contacts.filter(c => contactIds.includes(c.contact_id));
 
       for (const contact of contactsToDelete) {
         await deleteChat(contact);
@@ -197,7 +197,7 @@ const Chat = () => {
       setSelectedContacts(new Set());
       setIsSelectMode(false);
 
-      if (selectedContact && contactIds.includes(selectedContact.conversation_id)) {
+      if (selectedContact && contactIds.includes(selectedContact.contact_id)) {
         setSelectedContact(null);
       }
 
@@ -236,11 +236,6 @@ const Chat = () => {
               searchQuery={searchQuery}
               onSearchChange={handleSearchChange}
               onSelectContact={handleSelectContact}
-              isSelectMode={isSelectMode}
-              selectedContacts={selectedContacts}
-              onToggleSelectMode={toggleSelectMode}
-              onDeleteSelected={handleDeleteSelected}
-              onToggleContactSelection={toggleContactSelection}
               fetchContacts={fetchContacts}
             />
 
@@ -274,14 +269,14 @@ const Chat = () => {
               <div className="flex-1 flex flex-row min-h-0 h-full">
                 {/* Message + Input */}
                 <div className="flex-1 flex flex-col min-h-0 h-full">
-                  <div className="flex-1 overflow-y-auto">
+                  <div className="flex-1 min-h-0">
                     <ChatMessageArea
                       selectedContact={selectedContact}
                       messages={messages || []}
                       fetchMessagesForContact={fetchMessagesForContact}
                     />
                   </div>
-                  <div className="bg-white">
+                  <div className="bg-white flex-shrink-0">
                     <MessageInput
                       onSendMessage={
                         permissions.canSendMessages

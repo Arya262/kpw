@@ -4,22 +4,33 @@ import { API_BASE, API_ENDPOINTS } from "../config/api";
 import { useNotifications } from "../context/NotificationContext";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { 
+  normalizeMessageData, 
+  updateContactFromMessage as updateContactFromMessageUtil,
+  isMessageFromSelectedChat 
+} from "../utils/chatUtils";
 
 export const useChatLogic = ({
   user,
   socket,
   selectedContact,
-  setSelectedContact,
+  setSelectedContact, 
   setMessages,
   setContacts,
   contacts,
   permissions,
 }) => {
-  const { markConversationAsRead, setSelectedConversationId } =
-    useNotifications();
+  const { markConversationAsRead, setSelectedConversationId } = useNotifications();
   const selectedContactRef = useRef(selectedContact);
   const fetchedConversations = useRef(new Set());
-
+  // Deduplicate recently seen message ids to prevent late toasts after navigation
+  const recentMessageIds = useRef(new Set());
+  const addRecentMessageId = (id) => {
+    if (!id) return;
+    recentMessageIds.current.add(id);
+    // Auto-expire after 20s
+    setTimeout(() => recentMessageIds.current.delete(id), 20000);
+  };
   
   useEffect(() => {
     selectedContactRef.current = selectedContact;
@@ -28,8 +39,9 @@ export const useChatLogic = ({
   // WebSocket cleanup
   useEffect(() => {
     if (!socket) return;
+    // Do not disconnect the global socket here; SocketContext should manage lifecycle
     return () => {
-      socket.disconnect();
+      // no-op cleanup; listeners are handled where they are attached
     };
   }, [socket]);
 
@@ -239,47 +251,50 @@ export const useChatLogic = ({
     ]
   );
 
-  const handleIncomingMessage = useCallback(
-    (msg) => {
-      const isFromSelectedChat = selectedContactRef.current?.contact_id === msg.contact_id;
+  // Shared contact update logic using utility function
+  const updateContactFromMessage = useCallback((msg, isFromSelectedChat) => {
+    setContacts((prev) => updateContactFromMessageUtil(prev, msg, isFromSelectedChat));
+  }, [setContacts]);
 
-      if (!isFromSelectedChat) {
-        const contact = contacts.find((c) => c.contact_id === msg.contact_id);
-        if (contact) {
-          toast.info(`New message from ${contact.name}`);
-        }
-      }
+  // Handle incoming messages from custom events (dispatched by NotificationContext)
+  const handleChatMessage = useCallback((event) => {
+    const data = event.detail;
+    const msg = normalizeMessageData(data);
+    if (!msg) return;
 
-      setContacts((prev) =>
-        prev.map((c) => {
-          if (c.contact_id === msg.contact_id) {
-            return {
-              ...c,
-              lastMessage: msg.content || msg.element_name,
-              lastMessageType: msg.message_type,
-              lastMessageTime: msg.sent_at,
-              unreadCount: isFromSelectedChat ? 0 : (c.unreadCount || 0) + 1,
-            };
-          }
-          return c;
-        })
-      );
+    // Skip duplicate toasts for messages we've just seen
+    if (recentMessageIds.current.has(msg.message_id)) {
+      return;
+    }
 
-      if (isFromSelectedChat) {
-        setMessages((prev) => [...prev, msg]);
-        fetchedConversations.current.delete(msg.conversation_id);
-      }
-    },
-    [setContacts, setMessages, selectedContact, contacts]
-  );
+    const isFromSelectedChat = isMessageFromSelectedChat(selectedContactRef.current, msg);
 
-  const setupSocketListener = useCallback(() => {
-    if (!socket) return;
-    socket.on("newMessage", handleIncomingMessage);
+    // Show toast for non-selected chats only while on chats page
+    const isOnChatsPage = typeof window !== 'undefined' && window.location?.pathname?.startsWith('/chats');
+    if (!isFromSelectedChat && isOnChatsPage) {
+      const contact = contacts.find((c) => c.contact_id === msg.contact_id);
+      const fromName = contact?.name || msg?.sender_name || "New message";
+      addRecentMessageId(msg.message_id);
+    }
+
+    // Update contact list using shared utility
+    updateContactFromMessage(msg, isFromSelectedChat);
+
+    // Add message to current chat if it's from selected contact
+    if (isFromSelectedChat) {
+      setMessages((prev) => [...prev, msg]);
+      fetchedConversations.current.delete(msg.conversation_id);
+      addRecentMessageId(msg.message_id);
+    }
+  }, [contacts, updateContactFromMessage, setMessages]);
+
+  // Setup custom event listener for chat messages
+  const setupChatEventListener = useCallback(() => {
+    window.addEventListener('chatMessage', handleChatMessage);
     return () => {
-      socket.off("newMessage", handleIncomingMessage);
+      window.removeEventListener('chatMessage', handleChatMessage);
     };
-  }, [socket, handleIncomingMessage]);
+  }, [handleChatMessage]);
   // ===== Send Message (text or template) =====
 const sendMessage = useCallback(
   async (input) => {
@@ -355,7 +370,7 @@ const sendMessage = useCallback(
     }
 
     try {
-      console.log("🚀 Sending message payload:", newMessage);
+      // console.log("🚀 Sending message payload:", newMessage);
       const response = await axios.post(`${API_BASE}/sendmessage`, {
         ...newMessage,
         message_type: messageType,
@@ -387,7 +402,7 @@ const sendMessage = useCallback(
           )
       );
 
-      toast.success("Message sent successfully");
+      // toast.success("Message sent successfully");
     } catch (err) {
       console.error("❌ Error sending message:", err.response?.data || err);
       toast.error("Failed to send message");
@@ -462,6 +477,6 @@ const sendMessage = useCallback(
     selectContact,
     sendMessage,
     deleteChat,
-    setupSocketListener,
+    setupChatEventListener,
   };
 };

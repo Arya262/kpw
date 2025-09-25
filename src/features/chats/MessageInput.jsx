@@ -277,7 +277,7 @@ const MessageInput = ({ onSendMessage, selectedContact, canSendMessage }) => {
                   toast.error("Invalid template selected.");
                   return;
                 }
-                console.log("MessageInput payload:", filledTemplate);
+                // console.log("MessageInput payload:", filledTemplate);
                 onSendMessage({
                   template_name: filledTemplate.element_name,
                   parameters: filledTemplate.parameters || [],

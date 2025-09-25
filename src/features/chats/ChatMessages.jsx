@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useMemo, useCallback, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useMemo, useCallback, useState } from "react";
 import TextMessage from "./chatfeautures/TextMessage";
 import ImageMessage from "./chatfeautures/ImageMessage";
 import VideoMessage from "./chatfeautures/VideoMessage";
@@ -9,7 +9,7 @@ import LocationMessage from "./chatfeautures/LocationMessage";
 import ContactMessage from "./chatfeautures/ContactMessage";
 import DocumentMessage from "./chatfeautures/DocumentMessage";
 import { format, isToday, isYesterday } from "date-fns";
-
+import { ArrowDown } from "lucide-react";
 const ChatMessages = ({
   selectedContact,
   messages = [],
@@ -21,20 +21,26 @@ const ChatMessages = ({
   const [loadingOlder, setLoadingOlder] = useState(false);
   const prevMessagesLength = useRef(0);
   const prevContactId = useRef(null);
+  const firstLoadRef = useRef(false);
 
   // 🔹 New states for scroll button
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
   const scrollToBottom = (instant = false) => {
-    if (messagesEndRef.current) {
-      requestAnimationFrame(() => {
-        messagesEndRef.current.scrollIntoView({
+    const container = chatContainerRef.current;
+    if (!container) return;
+    requestAnimationFrame(() => {
+      try {
+        container.scrollTo({
+          top: container.scrollHeight,
           behavior: instant ? "auto" : "smooth",
-          block: "end",
         });
-      });
-    }
+      } catch (e) {
+        // Fallback for older browsers
+        container.scrollTop = container.scrollHeight;
+      }
+    });
   };
 
   // 🔹 Load older messages when user scrolls to top
@@ -80,21 +86,19 @@ const ChatMessages = ({
     };
   }, [handleScroll]);
 
-  // 🔹 Scroll to bottom when switching chat
-  useEffect(() => {
-    if (
-      selectedContact?.contact_id &&
-      messages.length > 0 &&
-      prevContactId.current !== selectedContact.contact_id
-    ) {
-      requestAnimationFrame(() => {
+  // 🔹 Mark first load on contact change and try to scroll immediately if messages already present
+  useLayoutEffect(() => {
+    if (selectedContact?.contact_id && prevContactId.current !== selectedContact.contact_id) {
+      firstLoadRef.current = true;
+      // If messages already present (fast path), scroll now
+      if (messages.length > 0) {
         scrollToBottom(true);
-      });
-      setUnreadCount(0); // reset unread when switching contact
+        setUnreadCount(0);
+        firstLoadRef.current = false;
+      }
     }
     prevContactId.current = selectedContact?.contact_id;
-    prevMessagesLength.current = messages.length;
-  }, [selectedContact?.contact_id, messages.length]);
+  }, [selectedContact?.contact_id]);
 
   // 🔹 Auto scroll when new messages arrive
   useEffect(() => {
@@ -111,7 +115,11 @@ const ChatMessages = ({
     const isNewMessage = messages.length > prevMessagesLength.current;
 
     if (isNewMessage && !loadingOlder) {
-      if (sentByUser || nearBottom || isTyping) {
+      if (firstLoadRef.current) {
+        scrollToBottom(true);
+        setUnreadCount(0);
+        firstLoadRef.current = false;
+      } else if (sentByUser || nearBottom || isTyping) {
         scrollToBottom();
       } else {
         setUnreadCount((prev) => prev + 1);
@@ -120,6 +128,33 @@ const ChatMessages = ({
 
     prevMessagesLength.current = messages.length;
   }, [messages, isTyping, loadingOlder]);
+
+  // 🔹 Re-scroll after images or media load to prevent layout push
+  useEffect(() => {
+    const container = chatContainerRef.current;
+    if (!container) return;
+    const imgs = Array.from(container.querySelectorAll('img'));
+    if (imgs.length === 0) return;
+
+    const onLoad = () => {
+      const nearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+      if (firstLoadRef.current || nearBottom) {
+        scrollToBottom(true);
+        firstLoadRef.current = false;
+      }
+    };
+    imgs.forEach((img) => {
+      if (img.complete) return;
+      img.addEventListener('load', onLoad);
+      img.addEventListener('error', onLoad);
+    });
+    return () => {
+      imgs.forEach((img) => {
+        img.removeEventListener('load', onLoad);
+        img.removeEventListener('error', onLoad);
+      });
+    };
+  }, [messages]);
 
   // 🔹 Group messages by date
   const getDateLabel = (date) => {
@@ -182,7 +217,7 @@ const ChatMessages = ({
   };
 
   return (
-    <div className="relative h-full">
+    <div className="relative h-full min-h-0">
       <div
         ref={chatContainerRef}
         className="flex flex-col min-h-0 h-full overflow-y-auto scrollbar-hide 
@@ -211,7 +246,7 @@ const ChatMessages = ({
           ))
         ) : (
           <p className="text-center text-gray-400 dark:text-gray-500 mt-4">
-            {selectedContact?.conversation_id
+            {selectedContact?.contact_id
               ? "No messages to display."
               : "This contact has no visible conversation."}
           </p>
@@ -222,14 +257,20 @@ const ChatMessages = ({
       {/* 🔹 Floating scroll button */}
       {showScrollButton && unreadCount > 0 && (
         <button
-          onClick={() => {
-            scrollToBottom(true);
-            setUnreadCount(0);
-          }}
-          className="absolute bottom-20 right-4 bg-green-500 text-white px-3 py-2 rounded-full shadow-lg flex items-center gap-1"
-        >
-          ⬇️ {unreadCount}
-        </button>
+        onClick={() => {
+          scrollToBottom(true);
+          setUnreadCount(0);
+        }}
+        className="absolute bottom-20 right-4 bg-[#0AA89E] hover:bg-[#099086] rounded-full shadow-lg flex items-center justify-center w-12 h-12 transition-transform transform hover:scale-110"
+      >
+        <ArrowDown className="w-6 h-6 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]" />
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow">
+            {unreadCount}
+          </span>
+        )}
+      </button>
+      
       )}
     </div>
   );

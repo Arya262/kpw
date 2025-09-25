@@ -94,79 +94,76 @@ const BroadcastForm = ({
   };
 
   return (
-    <div className="space-y-6 mt-2">
+    <div className="space-y-4">
       <StepIndicator step={step} getStepSequence={getStepSequence} />
       <InformationCards formData={{ ...formData, customerLists }} />
       
-      <div style={{ minHeight: 450, overflowY: "auto" }} className="scrollbar-hide">
-        {step === 1 && (
-          <CampaignNameStep 
-            formData={formData} 
-            handleInputChange={handleInputChange} 
-            validationErrors={validationErrors} 
-            isSubmitting={isSubmitting} 
-          />
-        )}
-        {step === 2 && (
-          <GroupSelectionStep 
-            formData={formData}
-            setFormData={setFormData}
-            customerLists={customerLists}
-            validationErrors={validationErrors}
-            isSubmitting={isSubmitting}
-            loading={loading}
-            customerSearchTerm={customerSearchTerm}
-            setCustomerSearchTerm={setCustomerSearchTerm}
-            filteredCustomerLists={filteredCustomerLists}
-            warningMessage={warningMessage}
-            setWarningMessage={setWarningMessage}
-            showList={showList}
-            setShowList={setShowList}
-          />
-        )}
-        {step === 3 && (
-          <TemplateSelectionStep 
-            templates={templates}
-            templatesLoading={templatesLoading}
-            templatesError={templatesError}
-            onTemplateSelect={onTemplateSelect}
-            validationErrors={validationErrors}
-            setValidationErrors={(errors) => setFormData(prev => ({ ...prev, errors }))}
-            pagination={pagination}
-            loadMoreTemplates={loadMoreTemplates}
-            templateSearchTerm={templateSearchTerm}
-            setTemplateSearchTerm={setTemplateSearchTerm}
-            setIsTemplateModalOpen={setIsTemplateModalOpen}
-            formData={formData}
-          />
-        )}
-        {step === 4 && (
-          <ScheduleCampaignStep 
-            formData={formData}
-            handleRadioChange={handleRadioChange}
-            selectedDate={selectedDate}
-            setSelectedDate={setSelectedDate}
-            validationErrors={validationErrors}
-            setValidationErrors={(errors) => setFormData(prev => ({ ...prev, errors }))}
-            isSubmitting={isSubmitting}
-          />
-        )}
-        {step === 5 && (
-          <PreviewStep 
-            formData={formData}
-            customerLists={customerLists}
-            selectedDate={selectedDate}
-          />
-        )}
+      <div className="border border-gray-200 rounded-lg bg-gray-50/30">
+        <div className="p-3 sm:p-4 md:p-6">
+          {step === 1 && (
+            <CampaignNameStep 
+              formData={formData} 
+              handleInputChange={handleInputChange} 
+              validationErrors={validationErrors} 
+              isSubmitting={isSubmitting} 
+            />
+          )}
+          {step === 2 && (
+            <GroupSelectionStep 
+              formData={formData}
+              setFormData={setFormData}
+              customerLists={customerLists}
+              validationErrors={validationErrors}
+              isSubmitting={isSubmitting}
+              loading={loading}
+              customerSearchTerm={customerSearchTerm}
+              setCustomerSearchTerm={setCustomerSearchTerm}
+              filteredCustomerLists={filteredCustomerLists}
+              warningMessage={warningMessage}
+              setWarningMessage={setWarningMessage}
+              showList={showList}
+              setShowList={setShowList}
+            />
+          )}
+          {step === 3 && (
+            <TemplateSelectionStep 
+              templates={templates}
+              templatesLoading={templatesLoading}
+              templatesError={templatesError}
+              onTemplateSelect={onTemplateSelect}
+              validationErrors={validationErrors}
+              setValidationErrors={(errors) => setFormData(prev => ({ ...prev, errors }))}
+              pagination={pagination}
+              loadMoreTemplates={loadMoreTemplates}
+              templateSearchTerm={templateSearchTerm}
+              setTemplateSearchTerm={setTemplateSearchTerm}
+              setIsTemplateModalOpen={setIsTemplateModalOpen}
+              formData={formData}
+            />
+          )}
+          {step === 4 && (
+            <ScheduleCampaignStep 
+              formData={formData}
+              handleRadioChange={handleRadioChange}
+              selectedDate={selectedDate}
+              setSelectedDate={setSelectedDate}
+              validationErrors={validationErrors}
+              setValidationErrors={(errors) => setFormData(prev => ({ ...prev, errors }))}
+              isSubmitting={isSubmitting}
+            />
+          )}
+          {step === 5 && (
+            <PreviewStep 
+              formData={formData}
+              customerLists={customerLists}
+              selectedDate={selectedDate}
+              estimatedCost={estimatedCost}
+              availableWCC={availableWCC}
+              totalSelectedContacts={totalSelectedContacts}
+            />
+          )}
+        </div>
       </div>
-      
-      {step === 5 && (
-        <CostInformation 
-          estimatedCost={estimatedCost} 
-          availableWCC={availableWCC} 
-          totalContacts={totalSelectedContacts}
-        />
-      )}
       
       <NavigationButtons 
         step={step}

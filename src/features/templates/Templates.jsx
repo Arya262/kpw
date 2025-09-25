@@ -20,8 +20,6 @@ import Pagination from "../shared/Pagination";
 const Templates = () => {
   const { user } = useAuth();
   const permissions = getPermissions(user);
-
-  // Destructure from the refactored hook
 const {
   data: { templates = [], loading, error },
   pagination: {
@@ -34,7 +32,7 @@ const {
     onItemsPerPageChange,
   },
   search: { searchTerm = "", setSearchTerm } = {},
-  actions: { addTemplate, deleteTemplate, fetchTemplates } = {},
+  actions: { addTemplate, deleteTemplate, fetchTemplates, fetchAllTemplates } = {},
 } = useTemplates();
 
   const [editingTemplate, setEditingTemplate] = useState(null);
@@ -101,20 +99,20 @@ const {
   return (
     <div className="flex flex-col gap-4 pt-2">
       <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop closeOnClick draggable pauseOnHover theme="light" />
-            <div className="flex items-center justify-between">
-        <h2 className="text-xl pt-0 font-semibold">Templates List</h2>
+<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+  <h2 className="text-xl pt-0 font-semibold">Templates List</h2>
 
-        {permissions.canAddTemplate && (
-          <button
-            className="ml-2 flex items-center gap-2 px-4 py-2 rounded bg-[#0AA89E] text-white"
-            onClick={() => setIsModalOpen(true)}
-            title="Add a new template"
-          >
-            <img src={vendor} alt="plus sign" className="w-5 h-5" />
-            Add New Template
-          </button>
-        )}
-      </div>
+  {permissions.canAddTemplate && (
+    <button
+      className="bg-gradient-to-r from-[#0AA89E] to-cyan-500 text-white flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer w-full sm:w-auto"
+      onClick={() => setIsModalOpen(true)}
+      title="Add a new template"
+    >
+      <img src={vendor} alt="plus sign" className="w-5 h-5" />
+      Add New Template
+    </button>
+  )}
+</div>
       {/* Summary cards */}
       <div className="hidden md:flex flex-col md:flex-row justify-start gap-4">
         {summaryCards.map((card, index) => (
@@ -164,32 +162,32 @@ const {
           <Loader />
         ) : (
           <Table
-  templates={templates}
-  onEdit={permissions.canEditTemplate ? handleEdit : undefined}
-  onDelete={permissions.canDeleteTemplate ? handleDelete : undefined}
-  canEdit={permissions.canEditTemplate}
-  canDelete={permissions.canDeleteTemplate}
-  onAddTemplate={permissions.canAddTemplate ? () => setIsModalOpen(true) : undefined}
-  vendorIcon={vendor}
-  searchTerm={searchTerm}
-  onSearchChange={setSearchTerm}
-  pagination={
-    <div className="mt-4">
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        totalItems={totalRecords} 
-        itemsPerPage={itemsPerPage}
-        onPageChange={onPageChange}
-        onItemsPerPageChange={onItemsPerPageChange}
-      />
-    </div>
-  }
-  totalRecords={totalRecords} 
-/>
+                templates={templates}
+                onEdit={permissions.canEditTemplate ? handleEdit : undefined}
+                onDelete={permissions.canDeleteTemplate ? handleDelete : undefined}
+                canEdit={permissions.canEditTemplate}
+                canDelete={permissions.canDeleteTemplate}
+                onAddTemplate={permissions.canAddTemplate ? () => setIsModalOpen(true) : undefined}
+                vendorIcon={vendor}
+                searchTerm={searchTerm}
+                onSearchChange={setSearchTerm}
+                fetchAllTemplates={fetchAllTemplates}
+                pagination={
+                  <div className="mt-4">
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      totalItems={totalRecords} 
+                      itemsPerPage={itemsPerPage}
+                      onPageChange={onPageChange}
+                      onItemsPerPageChange={onItemsPerPageChange}
+                    />
+                  </div>
+                }
+                totalRecords={totalRecords} 
+          />
         )}
       </ErrorBoundary>
-
       {/* Animated Add Modal */}
       <AnimatePresence>
         {isModalOpen && (
@@ -212,8 +210,7 @@ const {
               exit={{ x: "100%", opacity: 0 }}
               transition={{ type: "spring", stiffness: 120, damping: 20 }}
               className="fixed inset-0 flex items-center justify-center z-50"
-              onClick={(e) => e.stopPropagation()}
-            >
+              onClick={(e) => e.stopPropagation()}>
               <Modal
                 isOpen={isModalOpen}
                 onClose={() => {

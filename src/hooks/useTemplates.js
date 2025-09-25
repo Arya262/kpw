@@ -38,12 +38,12 @@ export const useTemplates = () => {
       setLoading(true);
       setError(null);
 
-      console.log("📤 Fetching templates with params:", {
-        customer_id,
-        page,
-        limit,
-        search,
-      });
+      // console.log("📤 Fetching templates with params:", {
+      //   customer_id,
+      //   page,
+      //   limit,
+      //   search,
+      // });
 
       const response = await axios.get(API_ENDPOINTS.TEMPLATES.GET_ALL, {
         params: {
@@ -53,13 +53,25 @@ export const useTemplates = () => {
           ...(search ? { search } : {}),
         },
         withCredentials: true,
-        validateStatus: (status) => status < 500,
+        // Consider 404 as a valid status to prevent it from being logged as an error
+        validateStatus: (status) => status === 404 || status < 400,
       });
 
-      console.log("✅ API Response Status:", response.status);
-      console.log("📄 API Response Data:", response.data);
+      // console.log("✅ API Response Status:", response.status);
+      // console.log("📄 API Response Data:", response.data);
 
-      if (response.status >= 400) {
+      if (response.status === 404) {
+        // Handle 404 specifically - no templates found for this customer
+        setTemplates([]);
+        setPagination(prev => ({
+          ...prev,
+          currentPage: 1,
+          totalPages: 1,
+          totalItems: 0,
+          totalRecords: 0
+        }));
+        return;
+      } else if (response.status >= 400) {
         throw new Error(response.data?.message || "Failed to fetch templates");
       }
 
@@ -96,10 +108,42 @@ export const useTemplates = () => {
 
       setError(errorMessage);
 
-      // Avoid spamming toasts while searching
-      if (!search) toast.error(errorMessage, defaultToastConfig);
+      // Only show error toast for non-404 errors and when not searching
+      if (err.response?.status !== 404 && !search) {
+        toast.error(errorMessage, defaultToastConfig);
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 📥 Fetch ALL templates (for select-all across pages use-cases)
+  const fetchAllTemplates = async (search = "", maxLimit = 1000) => {
+    if (!customer_id) return [];
+
+    try {
+      const response = await axios.get(API_ENDPOINTS.TEMPLATES.GET_ALL, {
+        params: {
+          customer_id,
+          page: 1,
+          limit: maxLimit,
+          ...(search ? { search } : {}),
+        },
+        withCredentials: true,
+        validateStatus: (status) => status < 500,
+      });
+
+      if (response.status >= 400) {
+        throw new Error(response.data?.message || "Failed to fetch templates");
+      }
+
+      const result = response.data;
+      const list = Array.isArray(result.templates) ? result.templates : [];
+      return list.map(normalizeTemplate);
+    } catch (err) {
+      console.error("❌ Error fetching all templates:", err);
+      // Don't toast here to avoid noise; caller can handle
+      return [];
     }
   };
 
@@ -219,6 +263,6 @@ const handleItemsPerPageChange = (newItemsPerPage) => {
       onItemsPerPageChange: handleItemsPerPageChange,
     },
     search: { searchTerm, setSearchTerm },
-    actions: { fetchTemplates, addTemplate, deleteTemplate },
+    actions: { fetchTemplates, fetchAllTemplates, addTemplate, deleteTemplate },
   };
 };

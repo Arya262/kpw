@@ -16,6 +16,7 @@ import { formatDate } from "../../utils/formatters";
 import ConfirmationDialog from "../shared/ExitConfirmationDialog";
 import { useNavigate } from "react-router-dom";
 import GroupNameDialog from "./components/GroupNameDialog";
+import ExportDialog from "./components/ExportDialog";
 import { Send, Users, Download } from "lucide-react";
 import FilterDialog from "../../components/FilterDialog";
 
@@ -134,7 +135,7 @@ export default function ContactList() {
     status: '',
     date: '',
     group: '',
-    
+
     // Advanced filters
     lastSeenQuick: '',
     lastSeenFrom: '',
@@ -155,7 +156,7 @@ export default function ContactList() {
     totalItems: 0,
     itemsPerPage: 10,
   });
-  
+
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [editContact, setEditContact] = useState(null);
   const [deleteContact, setDeleteContact] = useState(null);
@@ -165,14 +166,14 @@ export default function ContactList() {
   const [showGroupDialog, setShowGroupDialog] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [exportFormat, setExportFormat] = useState('csv');
-  
+
   const [selectAll, setSelectAll] = useState(false);
   const [selectAllAcrossPages, setSelectAllAcrossPages] = useState(false);
   const [selectedContacts, setSelectedContacts] = useState({});
-  
+
   const popupRef = useRef(null);
   const [isCrossHighlighted, setIsCrossHighlighted] = useState(false);
-  
+
   const handleApiError = (err, fallbackMessage) => {
     console.error(err);
     const msg = err?.message || fallbackMessage;
@@ -182,7 +183,7 @@ export default function ContactList() {
 
   // Fetch contacts with server-side search & pagination
   const fetchContacts = async (page = 1, limit = 10, search = "") => {
-    if (!user?.customer_id) return; 
+    if (!user?.customer_id) return;
 
     try {
       setLoading(true);
@@ -196,8 +197,8 @@ export default function ContactList() {
         withCredentials: true,
       });
 
-      console.log("✅ API Response Status:", response.status);
-      console.log("📄 API Response Data:", response.data);
+      // console.log("✅ API Response Status:", response.status);
+      // console.log("📄 API Response Data:", response.data);
 
       if (response.status >= 400) {
         throw new Error(response.data?.message || "Failed to fetch contacts");
@@ -256,16 +257,16 @@ export default function ContactList() {
 
   const filterByDateRange = (date, quickFilter, fromDate, toDate) => {
     if (!quickFilter && !fromDate && !toDate) return true;
-    
+
     const contactDate = new Date(date);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     // Apply quick filters if set
     if (quickFilter) {
       const startDate = new Date(today);
-      
-      switch(quickFilter) {
+
+      switch (quickFilter) {
         case 'In 24hr':
           startDate.setDate(today.getDate() - 1);
           return contactDate >= startDate;
@@ -283,12 +284,12 @@ export default function ContactList() {
           return true;
       }
     }
-    
+
     // Apply custom date range if set
     if (fromDate || toDate) {
       const from = fromDate ? new Date(fromDate) : null;
       const to = toDate ? new Date(toDate) : null;
-      
+
       if (from && to) {
         from.setHours(0, 0, 0, 0);
         to.setHours(23, 59, 59, 999);
@@ -301,27 +302,27 @@ export default function ContactList() {
         return contactDate <= to;
       }
     }
-    
+
     return true;
   };
 
   const filteredContacts = contacts.filter((contact) => {
     // Apply status filter
     const statusMatch = filter === "All" || contact.status === filter;
-    
+
     // Apply basic filters
-    const nameMatch = !filterOptions.name || 
+    const nameMatch = !filterOptions.name ||
       (contact.first_name + ' ' + (contact.last_name || '')).toLowerCase().includes(filterOptions.name.toLowerCase());
-    
-    const phoneMatch = !filterOptions.phone || 
+
+    const phoneMatch = !filterOptions.phone ||
       (contact.mobile_no || '').includes(filterOptions.phone);
-      
-    const emailMatch = !filterOptions.email || 
+
+    const emailMatch = !filterOptions.email ||
       (contact.email || '').toLowerCase().includes(filterOptions.email.toLowerCase());
-    
-    const groupMatch = !filterOptions.group || 
+
+    const groupMatch = !filterOptions.group ||
       (contact.group_name || '').toLowerCase() === filterOptions.group.toLowerCase();
-    
+
     // Apply advanced filters
     const lastSeenMatch = filterByDateRange(
       contact.last_seen_at || contact.updated_at,
@@ -329,33 +330,33 @@ export default function ContactList() {
       filterOptions.lastSeenFrom,
       filterOptions.lastSeenTo
     );
-    
+
     const createdAtMatch = filterByDateRange(
       contact.created_at,
       filterOptions.createdAtQuick,
       filterOptions.createdAtFrom,
       filterOptions.createdAtTo
     );
-    
-    const optedInMatch = filterOptions.optedIn === 'All' || 
+
+    const optedInMatch = filterOptions.optedIn === 'All' ||
       (filterOptions.optedIn === 'Yes' && contact.opted_in === true) ||
       (filterOptions.optedIn === 'No' && contact.opted_in !== true);
-    
+
     const blockedMatch = filterOptions.incomingBlocked === 'All' ||
       (filterOptions.incomingBlocked === 'Yes' && contact.is_blocked === true) ||
       (filterOptions.incomingBlocked === 'No' && contact.is_blocked !== true);
-    
+
     const readStatusMatch = filterOptions.readStatus === 'All' ||
       (filterOptions.readStatus === 'Read' && contact.is_read === true) ||
       (filterOptions.readStatus === 'Unread' && contact.is_read !== true);
-    
+
     // Apply attribute filter if set
     let attributeMatch = true;
     if (filterOptions.attribute && filterOptions.attributeValue) {
       const attributeValue = contact.attributes?.[filterOptions.attribute] || '';
       const searchValue = filterOptions.attributeValue.toLowerCase();
-      
-      switch(filterOptions.operator) {
+
+      switch (filterOptions.operator) {
         case 'is':
           attributeMatch = attributeValue.toLowerCase() === searchValue;
           break;
@@ -369,16 +370,16 @@ export default function ContactList() {
           attributeMatch = true;
       }
     }
-    
+
     // Combine all filters
     return statusMatch && nameMatch && phoneMatch && emailMatch && groupMatch &&
-           lastSeenMatch && createdAtMatch && optedInMatch && blockedMatch && 
-           readStatusMatch && attributeMatch;
+      lastSeenMatch && createdAtMatch && optedInMatch && blockedMatch &&
+      readStatusMatch && attributeMatch;
   });
-  
+
   // Use filteredContacts directly since search is handled by the API
   const displayedContacts = filteredContacts;
-  
+
   const filterButtons = ["All", "Opted-in", "Opted-Out"];
   const filterCounts = {
     All: pagination.totalItems,
@@ -497,28 +498,28 @@ export default function ContactList() {
       toast.error("You do not have permission to delete contacts.");
       return;
     }
-    
+
     // Calculate the actual number of selected contacts
-    const selectedCount = selectAllAcrossPages 
+    const selectedCount = selectAllAcrossPages
       ? pagination.totalItems - Object.values(selectedContacts).filter(val => val === false).length
       : Object.values(selectedContacts).filter(Boolean).length;
-      
+
     if (selectedCount === 0) {
       toast.error("Please select at least one contact to delete.");
       return;
     }
-    
+
     setShowDeleteDialog(true);
   };
 
-    // Store selected contacts for group creation
+  // Store selected contacts for group creation
   const [selectedContactsForGroup, setSelectedContactsForGroup] = useState({
     ids: [],
     list: []
   });
 
   // Check if any contacts are selected
-  const hasSelectedContacts = selectAllAcrossPages 
+  const hasSelectedContacts = selectAllAcrossPages
     ? true // If selectAllAcrossPages is true, we're selecting all contacts
     : Object.values(selectedContacts).some(Boolean);
 
@@ -526,7 +527,7 @@ export default function ContactList() {
   const handleAddbroadcast = async (createGroup = true) => {
     let selectedContactIds = [];
     let allFetchedContacts = [];
-    
+
     if (selectAllAcrossPages) {
       try {
         setLoading(true);
@@ -534,11 +535,11 @@ export default function ContactList() {
         const response = await axios.get(API_ENDPOINTS.CONTACTS.GET_ALL, {
           params: {
             customer_id: user?.customer_id,
-            limit: 1000, 
+            limit: 1000,
           },
           withCredentials: true,
         });
-        
+
         if (response.data && Array.isArray(response.data.data)) {
           allFetchedContacts = response.data.data.map(item => ({
             ...item,
@@ -572,8 +573,8 @@ export default function ContactList() {
     const selectedContactList = (selectAllAcrossPages
       ? allFetchedContacts.filter(contact => selectedContactIds.includes(contact.contact_id))
       : selectedContactIds
-          .map((id) => contacts.find((c) => c.contact_id == id))
-          .filter(Boolean))
+        .map((id) => contacts.find((c) => c.contact_id == id))
+        .filter(Boolean))
       .map((contact) => ({
         contact_id: contact.contact_id,
         Name: `${contact.first_name || ""} ${contact.last_name || ""}`.trim(),
@@ -581,8 +582,8 @@ export default function ContactList() {
         Phone: `${contact.mobile_no || ""}`.trim(),
       }));
 
-    console.log("Selected contact IDs:", selectedContactIds);
-    console.log("Selected Contacts:", selectedContactList);
+    // console.log("Selected contact IDs:", selectedContactIds);
+    // console.log("Selected Contacts:", selectedContactList);
 
     if (createGroup) {
       // Original flow: Create a group first
@@ -680,7 +681,7 @@ export default function ContactList() {
       toast.error("You do not have permission to delete contacts.");
       return;
     }
-  
+
     const selectedIds = Object.keys(selectedContacts).filter((id) =>
       selectAllAcrossPages ? selectedContacts[id] !== false : selectedContacts[id]
     );
@@ -696,12 +697,12 @@ export default function ContactList() {
           },
           withCredentials: true,
         });
-        
+
         if (response.data && Array.isArray(response.data.data)) {
           const allContactIds = response.data.data
             .map(contact => contact.contact_id || contact.id)
             .filter(id => selectedContacts[id] !== false); // Exclude explicitly unchecked
-            
+
           payload = {
             contact_ids: allContactIds,
             customer_id: user?.customer_id
@@ -721,7 +722,7 @@ export default function ContactList() {
         customer_id: user?.customer_id
       };
     }
-  
+
     try {
       setIsDeleting(true);
       const response = await fetch(`${API_ENDPOINTS.CONTACTS.DELETE}`, {
@@ -730,23 +731,22 @@ export default function ContactList() {
         body: JSON.stringify(payload),
         credentials: "include",
       });
-  
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || "Failed to delete contacts");
       }
-  
+
       await fetchContacts();
       setSelectedContacts({});
       setSelectAll(false);
       setSelectAllAcrossPages(false);
-  
+
       toast.success(
         selectAllAcrossPages
           ? `All ${pagination.totalItems} contacts deleted successfully!`
-          : `${selectedIds.length} contact${
-              selectedIds.length > 1 ? "s" : ""
-            } deleted successfully!`
+          : `${selectedIds.length} contact${selectedIds.length > 1 ? "s" : ""
+          } deleted successfully!`
       );
     } catch (error) {
       console.error("Error deleting contacts:", error);
@@ -756,7 +756,7 @@ export default function ContactList() {
       setIsDeleting(false);
     }
   };
-  
+
 
   // Function to handle export confirmation
   const handleExportConfirm = async () => {
@@ -793,7 +793,7 @@ export default function ContactList() {
 
       const result = response.data;
       const allContacts = Array.isArray(result.data) ? result.data : [];
-      
+
       return allContacts.map((item) => ({
         ...item,
         status: "Opted-in",
@@ -839,10 +839,11 @@ export default function ContactList() {
       const headers = [
         'First Name',
         'Last Name',
-        'Phone',
-        'Status',
-        'Created At',
-        'Country Code'
+        'Country Code',
+        'Mobile No',
+        // 'Status',
+        // 'Created At',
+        
       ];
 
       // Create CSV content
@@ -852,10 +853,11 @@ export default function ContactList() {
           return [
             `"${contact.first_name || ''}"`,
             `"${contact.last_name || ''}"`,
-            `"${contact.mobile_no || ''}"`,
-            `"${contact.status || ''}"`,
-            `"${contact.created_at || ''}"`,
-            `"${contact.country_code || ''}"`
+            `"${contact.country_code || ''}"`,
+            `"${contact.mobile_no || ''}"`
+            // `"${contact.status || ''}"`,
+            // `"${contact.created_at || ''}"`,
+            
           ].join(',');
         })
       ].join('\n');
@@ -870,7 +872,7 @@ export default function ContactList() {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      
+
       toast.success(`Exported ${contactsToExport.length} contacts to CSV`);
     } catch (error) {
       console.error('Error exporting contacts:', error);
@@ -981,46 +983,37 @@ export default function ContactList() {
 
   return (
     <>
-      <div className="flex-1">
+      <div className="flex-1 pt-2.5">
         {error && (
           <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded relative">
             {error}
             <button
               onClick={() => setError(null)}
-              className="absolute right-3 top-3 font-bold"
-            >
+              className="absolute right-3 top-3 font-bold">
               ×
             </button>
           </div>
         )}
-
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
           {/* Left Section: Title + Filters */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-wrap">
             <h2 className="text-lg sm:text-xl font-bold">Contacts</h2>
 
             {permissions.canSeeFilters && (
-              <div className="flex gap-2 flex-wrap items-center">
+              <div className="flex gap-2 flex-wrap">
                 {filterButtons.map((btn) => (
                   <button
                     key={btn}
                     onClick={() => setFilter(btn)}
                     className={`px-3 sm:px-4 py-2 min-h-[38px] rounded-md text-sm font-medium transition cursor-pointer 
-                      ${filter === btn ? "bg-[#0AA89E] text-white" : "text-gray-700 hover:text-[#0AA89E]"}`}
-                  >
+                ${
+                  filter === btn
+                    ? "bg-[#0AA89E] text-white"
+                    : "text-gray-700 hover:text-[#0AA89E]"
+                }`}>
                     {btn} ({filterCounts[btn]})
                   </button>
                 ))}
-                
-                <button
-                  onClick={() => setFilterDialogOpen(true)}
-                  className="flex items-center gap-1 px-3 py-2 min-h-[38px] rounded-md text-sm font-medium transition cursor-pointer border border-gray-300 text-gray-700 hover:border-[#0AA89E] hover:text-[#0AA89E]"
-                >
-                  <span>Filter</span>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                  </svg>
-                </button>
               </div>
             )}
           </div>
@@ -1049,7 +1042,7 @@ export default function ContactList() {
             )}
 
             <button
-              className="bg-[#0AA89E] hover:bg-[#0AA89E]/90 text-white flex items-center justify-center gap-2 px-4 py-2 rounded-md transition w-full sm:w-auto"
+              className="bg-gradient-to-r from-[#0AA89E] to-cyan-500 text-white flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl shadow-lg hover:shadow-xl  transition-all cursor-pointer"
               onClick={
                 permissions.canAdd && permissions.canAccessModals
                   ? openPopup
@@ -1087,67 +1080,77 @@ export default function ContactList() {
               <tr>
                 {permissions.canDelete ? (
                   <th className="px-2 py-3 sm:px-6">
-                  <div className="flex items-center justify-center h-full">
-                    <input
-                      type="checkbox"
-                      className="form-checkbox w-4 h-4"
-                      onChange={handleSelectAllChange}
-                      ref={(el) => {
-                        if (el) {
-                          const someUnchecked =
-                          selectAllAcrossPages &&
-                          Object.values(selectedContacts).some((val) => val === false);
-                        el.indeterminate = !selectAllAcrossPages && !selectAll && someUnchecked;
-                        }
-                      }}        
-                    />
-                  </div>
-                </th>
+                    <div className="flex items-center justify-center h-full">
+                      <input
+                        type="checkbox"
+                        className="form-checkbox w-4 h-4"
+                        onChange={handleSelectAllChange}
+                        ref={(el) => {
+                          if (el) {
+                            const someUnchecked =
+                              selectAllAcrossPages &&
+                              Object.values(selectedContacts).some((val) => val === false);
+                            el.indeterminate = !selectAllAcrossPages && !selectAll && someUnchecked;
+                          }
+                        }}
+                      />
+                    </div>
+                  </th>
                 ) : (
                   <th className="px-2 py-3 sm:px-6"></th>
                 )}
-                {permissions.canDelete && 
-                (selectAllAcrossPages || Object.values(selectedContacts).some(Boolean)) ? (
+                {permissions.canDelete &&
+                  (selectAllAcrossPages || Object.values(selectedContacts).some(Boolean)) ? (
                   <th colSpan="6" className="px-2 py-3 sm:px-6">
                     <div className="flex justify-end gap-6">
+                      {/* Selected count shown once outside buttons */}
+                      <div className="flex items-center text-sm text-gray-700">
+                        {selectAllAcrossPages ? (
+                          <span>
+                            Selected All ({pagination.totalItems - Object.values(selectedContacts).filter((val) => val === false).length})
+                          </span>
+                        ) : (
+                          <span>Selected ({Object.values(selectedContacts).filter(Boolean).length})</span>
+                        )}
+                      </div>
                       <div className="flex gap-3">
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleAddbroadcast(false)}
-                className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={!hasSelectedContacts || !permissions.canAdd}
-                title="Send broadcast to selected contacts directly"
-              >
-                <Send className="w-4 h-4 text-white" />
-                Send Broadcast
-              </button>
-              <button
-                onClick={() => handleAddbroadcast(true)}
-                className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={!hasSelectedContacts || !permissions.canAdd}
-                title="Create a group first, then broadcast"
-              >
-                <Users className="w-4 h-4 text-white" />
-                Create Group & Broadcast
-              </button>
-            </div>
-                      <button
-                        onClick={() => setShowExportDialog(true)}
-                        disabled={isDeleting || (!selectAllAcrossPages && Object.values(selectedContacts).filter(Boolean).length === 0)}
-                        className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200"
-                        title="Export selected contacts"
-                      >
-                        <Download className="w-4 h-4" />
-                        Export {selectAllAcrossPages ? `All (${pagination.totalItems})` : Object.values(selectedContacts).filter(Boolean).length > 0 ? `(${Object.values(selectedContacts).filter(Boolean).length})` : ''}
-                      </button>
-                      <button
-                        onClick={handleDeleteClick}
-                        disabled={isDeleting}
-                        className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200">
-                        {`Delete ${selectAllAcrossPages ? `All (${pagination.totalItems})` : `(${Object.values(selectedContacts).filter(Boolean).length})`}`}
-                      </button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleAddbroadcast(false)}
+                            className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={!hasSelectedContacts || !permissions.canAdd}
+                            title="Send broadcast to selected contacts directly"
+                          >
+                            <Send className="w-4 h-4 text-white" />
+                            Send Broadcast
+                          </button>
+                          <button
+                            onClick={() => handleAddbroadcast(true)}
+                            className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={!hasSelectedContacts || !permissions.canAdd}
+                            title="Create a group first, then broadcast"
+                          >
+                            <Users className="w-4 h-4 text-white" />
+                            Create Group & Broadcast
+                          </button>
+                        </div>
+                        <button
+                          onClick={() => setShowExportDialog(true)}
+                          disabled={isDeleting || (!selectAllAcrossPages && Object.values(selectedContacts).filter(Boolean).length === 0)}
+                          className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200"
+                          title="Export selected contacts"
+                        >
+                          <Download className="w-4 h-4" />
+                          Export
+                        </button>
+                        <button
+                          onClick={handleDeleteClick}
+                          disabled={isDeleting}
+                          className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                          Delete
+                        </button>
+                      </div>
                     </div>
-              </div>
                   </th>
                 ) : (
                   <>
@@ -1197,7 +1200,7 @@ export default function ContactList() {
               ) : (
                 displayedContacts.map((contact) => (
                   <ContactRow
-                  key={contact.contact_id}
+                    key={contact.contact_id}
                     contact={contact}
                     isChecked={
                       selectAllAcrossPages
@@ -1264,18 +1267,16 @@ export default function ContactList() {
         >
           <div
             ref={popupRef}
-            className={`bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto relative sm:animate-slideUp border ${
-              isCrossHighlighted ? "border-teal-500" : "border-gray-300"
-            } transition-all duration-300`}
+            className={`bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto relative sm:animate-slideUp border ${isCrossHighlighted ? "border-teal-500" : "border-gray-300"
+              } transition-all duration-300`}
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={handleCloseAndNavigate}
-              className={`absolute top-2 right-4 text-gray-600 hover:text-black text-3xl font-bold w-8 h-8 flex items-center justify-center pb-2 rounded-full transition-colors cursor-pointer ${
-                isCrossHighlighted
+              className={`absolute top-2 right-4 text-gray-600 hover:text-black text-3xl font-bold w-8 h-8 flex items-center justify-center pb-2 rounded-full transition-colors cursor-pointer ${isCrossHighlighted
                   ? "bg-red-500 text-white hover:text-white"
                   : "bg-gray-100"
-              }`}
+                }`}
             >
               ×
             </button>
@@ -1285,7 +1286,7 @@ export default function ContactList() {
       )}
       <DeleteConfirmationDialog
         showDeleteDialog={showDeleteDialog && permissions.canDelete}
-        selectedCount={selectAllAcrossPages 
+        selectedCount={selectAllAcrossPages
           ? pagination.totalItems - Object.values(selectedContacts).filter(val => val === false).length
           : Object.values(selectedContacts).filter(Boolean).length
         }
@@ -1300,68 +1301,16 @@ export default function ContactList() {
         onConfirm={confirmExit}
       />
       {/* Export Dialog */}
-      {showExportDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Export</h3>
-              <button 
-                onClick={() => setShowExportDialog(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="space-y-4">
-              <p className="text-gray-700">Choose your preferred file format</p>
-              <div className="space-y-2">
-                <label className="flex items-center space-x-2 p-2 rounded hover:bg-gray-100 cursor-pointer">
-                  <input
-                    type="radio"
-                    className="form-radio text-blue-600"
-                    checked={exportFormat === 'csv'}
-                    onChange={() => setExportFormat('csv')}
-                  />
-                  <span>CSV (.csv)</span>
-                </label>
-                <label className="flex items-center space-x-2 p-2 rounded hover:bg-gray-100 cursor-pointer">
-                  <input
-                    type="radio"
-                    className="form-radio text-blue-600"
-                    checked={exportFormat === 'excel'}
-                    onChange={() => setExportFormat('excel')}
-                  />
-                  <span>Excel (.xlsx)</span>
-                </label>
-                <label className="flex items-center space-x-2 p-2 rounded hover:bg-gray-100 cursor-pointer">
-                  <input
-                    type="radio"
-                    className="form-radio text-blue-600"
-                    checked={exportFormat === 'pdf'}
-                    onChange={() => setExportFormat('pdf')}
-                  />
-                  <span>PDF (.pdf)</span>
-                </label>
-              </div>
-              <div className="flex justify-end space-x-3 mt-6">
-                <button
-                  onClick={() => setShowExportDialog(false)}
-                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleExportConfirm}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center space-x-2"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Download</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <ExportDialog
+        isOpen={showExportDialog}
+        onClose={() => setShowExportDialog(false)}
+        exportFormat={exportFormat}
+        onFormatChange={setExportFormat}
+        onConfirm={handleExportConfirm}
+        selectedCount={selectAllAcrossPages ? 'all' : Object.values(selectedContacts).filter(Boolean).length}
+        totalCount={pagination.totalItems}
+        isExporting={isDeleting}
+      />
 
       <ToastContainer
         position="top-right"
@@ -1405,7 +1354,7 @@ export default function ContactList() {
             isDeleting={isDeleting}
           />
         )}
-      
+
       <GroupNameDialog
         isOpen={showGroupDialog}
         onClose={() => setShowGroupDialog(false)}

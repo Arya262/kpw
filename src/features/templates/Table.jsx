@@ -17,6 +17,7 @@ const Table = ({
   totalRecords,
   searchTerm,
   onSearchChange,
+  fetchAllTemplates, // optional helper to fetch all for select-all across pages
 }) => {
   const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState("All");
@@ -25,8 +26,9 @@ const Table = ({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
-  const [selectedRows, setSelectedRows] = useState({});
-  const [selectAll, setSelectAll] = useState(false);
+  const [selectedRows, setSelectedRows] = useState({}); // map of template.id -> boolean (true) or false (when select all across pages)
+  const [selectAll, setSelectAll] = useState(false); // current-page select all
+  const [selectAllAcrossPages, setSelectAllAcrossPages] = useState(false);
   const dropdownRefs = useRef({});
   const rowRefs = useRef({});
 
@@ -58,35 +60,43 @@ const filteredCounts = useMemo(() => {
     );
   }, [templates, activeFilter]);
 
-  // ✅ selection logic
+  // ✅ selection logic (only for current page mode)
   useEffect(() => {
+    if (selectAllAcrossPages) return;
     const total = displayedTemplates.length;
-    const selected = Object.values(selectedRows).filter(Boolean).length;
+    const selected = displayedTemplates.filter(t => selectedRows[t.id]).length;
     setSelectAll(selected === total && total > 0);
-  }, [selectedRows, displayedTemplates.length]);
+  }, [selectedRows, displayedTemplates, selectAllAcrossPages]);
 
   const handleSelectAllChange = (event) => {
     const checked = event.target.checked;
     setSelectAll(checked);
-    const newSelected = {};
-    if (checked) {
-      displayedTemplates.forEach((_, idx) => {
-        newSelected[idx] = true;
-      });
-    }
-    setSelectedRows(newSelected);
+    setSelectAllAcrossPages(checked);
+    // Reset selection map; in across-pages mode we track only exceptions (unchecked -> false)
+    // and in normal mode we track checked items (true)
+    setSelectedRows({});
   };
 
-  const handleCheckboxChange = (idx, event) => {
+  const handleCheckboxChange = (template, event) => {
     const isChecked = event.target.checked;
-    setSelectedRows((prev) => ({
-      ...prev,
-      [idx]: isChecked,
-    }));
+    const id = template.id;
+    setSelectedRows((prev) => {
+      const updated = { ...prev };
+      if (selectAllAcrossPages) {
+        // In select-all mode, unchecked becomes an explicit exception (false), checked removes exception
+        if (!isChecked) updated[id] = false;
+        else delete updated[id];
+      } else {
+        // Normal mode: store true for checked, remove for unchecked
+        if (isChecked) updated[id] = true;
+        else delete updated[id];
+      }
+      return updated;
+    });
   };
 
   // ✅ bulk delete trigger
-  const handleDeleteSelected = () => {
+  const handleDeleteSelected = async () => {
     if (!canDelete) {
       toast.error("You do not have permission to delete templates.", {
         position: "top-right",
@@ -95,19 +105,38 @@ const filteredCounts = useMemo(() => {
       return;
     }
 
-    const selectedTemplates = Object.entries(selectedRows)
-      .filter(([_, isSelected]) => isSelected)
-      .map(([idx]) => displayedTemplates[parseInt(idx)])
-      .filter((t) => t);
+    let idsToDelete = [];
+    if (selectAllAcrossPages) {
+      // Need to gather all template IDs then exclude exceptions
+      if (typeof fetchAllTemplates === 'function') {
+        const all = await fetchAllTemplates(searchTerm);
+        const exceptions = Object.entries(selectedRows)
+          .filter(([_, v]) => v === false)
+          .map(([id]) => id);
+        idsToDelete = all
+          .map(t => t.id)
+          .filter(id => !exceptions.includes(String(id)));
+      } else {
+        // Fallback: use currently displayedTemplates
+        idsToDelete = displayedTemplates.map(t => t.id);
+      }
+    } else {
+      // Normal per-page selection
+      idsToDelete = displayedTemplates
+        .filter(t => selectedRows[t.id])
+        .map(t => t.id);
+    }
 
-    if (selectedTemplates.length === 0) {
+    if (idsToDelete.length === 0) {
       toast.error("No templates selected for deletion.", { autoClose: 3000 });
       return;
     }
 
+    // Build a mock template just to reuse the confirm dialog component
     setSelectedTemplate({
-      ...selectedTemplates[0],
-      _selectedIds: selectedTemplates.map((t) => t.id),
+      id: idsToDelete[0],
+      element_name: (templates.find(t => t.id === idsToDelete[0]) || {}).element_name,
+      _selectedIds: idsToDelete,
     });
     setShowDeleteDialog(true);
   };
@@ -230,17 +259,25 @@ const filteredCounts = useMemo(() => {
                       <input
                         type="checkbox"
                         className="form-checkbox w-4 h-4"
-                        checked={selectAll}
+                        checked={selectAllAcrossPages ? true : selectAll}
                         onChange={handleSelectAllChange}
                       />
                     </div>
                   </th>
-                  {Object.values(selectedRows).some(Boolean) ? (
+                  {(selectAllAcrossPages || Object.values(selectedRows).some(Boolean)) ? (
                     <th colSpan="6" className="px-4 py-2">
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium text-gray-700">
-                          {Object.values(selectedRows).filter(Boolean).length}{" "}
-                          template(s) selected
+                          {(() => {
+                            if (selectAllAcrossPages) {
+                              const total = totalRecords || templates.length;
+                              const unselectedCount = Object.values(selectedRows).filter(v => v === false).length;
+                              return `${total - unselectedCount} template(s) selected across pages`;
+                            } else {
+                              const count = displayedTemplates.filter(t => selectedRows[t.id]).length;
+                              return `${count} template(s) selected`;
+                            }
+                          })()}
                         </span>
                         <button
                           onClick={handleDeleteSelected}
@@ -328,8 +365,8 @@ const filteredCounts = useMemo(() => {
                           <input
                             type="checkbox"
                             className="form-checkbox w-4 h-4"
-                            checked={!!selectedRows[idx]}
-                            onChange={(e) => handleCheckboxChange(idx, e)}
+                            checked={selectAllAcrossPages ? selectedRows[template.id] !== false : !!selectedRows[template.id]}
+                            onChange={(e) => handleCheckboxChange(template, e)}
                           />
                         </div>
                       </td>

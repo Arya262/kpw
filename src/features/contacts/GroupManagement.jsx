@@ -449,8 +449,9 @@ export default function GroupManagement() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedRows, setSelectedRows] = useState({});
   const [selectAll, setSelectAll] = useState(false);
+  const [selectAllAcrossPages, setSelectAllAcrossPages] = useState(false);
+  const [selectedGroups, setSelectedGroups] = useState({});
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [error, setError] = useState(null);
   const { user } = useAuth();
@@ -480,12 +481,12 @@ export default function GroupManagement() {
       setLoading(true);
       setError(null);
 
-      console.log("📤 Fetching groups with params:", {
-        customer_id: user?.customer_id,
-        page,
-        limit,
-        search,
-      });
+      // console.log("📤 Fetching groups with params:", {
+      //   customer_id: user?.customer_id,
+      //   page,
+      //   limit,
+      //   search,
+      // });
       
       // Debug: Log the full API endpoint and params
       const params = new URLSearchParams({
@@ -494,7 +495,7 @@ export default function GroupManagement() {
         limit,
         ...(search ? { search } : {}),
       });
-      console.log("🌐 Full API URL:", `${API_ENDPOINTS.GROUPS.GET_ALL}?${params.toString()}`);
+      // console.log("🌐 Full API URL:", `${API_ENDPOINTS.GROUPS.GET_ALL}?${params.toString()}`);
 
       const response = await axios.get(API_ENDPOINTS.GROUPS.GET_ALL, {
         params: {
@@ -504,35 +505,35 @@ export default function GroupManagement() {
           ...(search ? { search } : {}),
         },
         withCredentials: true,
-        validateStatus: (status) => status < 500, // Don't throw for 4xx errors
+        validateStatus: (status) => status < 500, 
       });
 
-      console.log("✅ API Response Status:", response.status);
-      console.log("📄 API Response Data:", response.data);
+      // console.log("✅ API Response Status:", response.status);
+      // console.log("📄 API Response Data:", response.data);
 
       if (response.status >= 400) {
         throw new Error(response.data?.message || "Failed to fetch groups");
       }
 
       const result = response.data;
-      console.log("🔍 Full API Response:", result);
+      // console.log("🔍 Full API Response:", result);
       
       const groupsData = Array.isArray(result.data) ? result.data : [];
-      console.log("📦 Groups Data from API:", groupsData);
+      // console.log("📦 Groups Data from API:", groupsData);
       
       // Debug: Check if search term is being used in the response
       if (search) {
-        console.log(`🔎 Checking search results for "${search}":`);
+        // console.log(`🔎 Checking search results for "${search}":`);
         const searchLower = search.toLowerCase();
         const matchingGroups = groupsData.filter(g => 
           g.group_name?.toLowerCase().includes(searchLower) || 
           g.description?.toLowerCase().includes(searchLower)
         );
-        console.log(`   Found ${matchingGroups.length} matching groups in response`);
+        // console.log(`   Found ${matchingGroups.length} matching groups in response`);
       }
 
       if (groupsData.length === 0) {
-        console.log("ℹ️ No groups found for the current customer");
+        // console.log("ℹ️ No groups found for the current customer");
       }
 
       const transformedGroups = groupsData.map((group) => ({
@@ -547,7 +548,7 @@ export default function GroupManagement() {
         file_name: group.file_name,
       }));
 
-      console.log("🔄 Transformed Groups:", transformedGroups);
+      // console.log("🔄 Transformed Groups:", transformedGroups);
 
       setGroups(transformedGroups);
 
@@ -559,7 +560,7 @@ export default function GroupManagement() {
         totalItems: paginationData.totalRecords || 0,
         itemsPerPage: paginationData.limit || limit,
       };
-      console.log("📊 Updated Pagination:", newPagination);
+      // console.log("📊 Updated Pagination:", newPagination);
       setPagination(newPagination);
     } catch (err) {
       const errorMessage =
@@ -738,39 +739,80 @@ export default function GroupManagement() {
       g.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       g.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
+  
+  // Derived selection helpers (mirror ContactList.jsx)
+  const explicitlyUnselectedCount = Object.values(selectedGroups).filter((v) => v === false).length;
+  const explicitlySelectedCount = Object.values(selectedGroups).filter(Boolean).length;
+  const selectedCount = selectAllAcrossPages
+    ? Math.max(0, (pagination.totalItems || 0) - explicitlyUnselectedCount)
+    : explicitlySelectedCount;
+  const hasSelection = selectAllAcrossPages ? true : selectedCount > 0;
+  
+  // Selection handling (mirrors ContactList.jsx)
   const handleSelectAllChange = (event) => {
     const checked = event.target.checked;
     setSelectAll(checked);
-    const newSelected = {};
-    if (checked) {
-      displayedGroups.forEach((_, idx) => {
-        newSelected[idx] = true;
-      });
-    }
-    setSelectedRows(newSelected);
+    setSelectAllAcrossPages(checked);
+    // Clear explicit selections; across-pages selection is implicit
+    setSelectedGroups({});
   };
 
-  const handleCheckboxChange = (idx, event) => {
-    setSelectedRows((prev) => ({
-      ...prev,
-      [idx]: event.target.checked,
-    }));
+  const handleCheckboxChange = (groupId, isChecked) => {
+    setSelectedGroups((prev) => {
+      const updated = { ...prev };
+      if (selectAllAcrossPages) {
+        if (!isChecked) updated[groupId] = false;
+        else delete updated[groupId];
+      } else {
+        if (isChecked) updated[groupId] = true;
+        else delete updated[groupId];
+      }
+      return updated;
+    });
   };
 
   useEffect(() => {
-    const total = displayedGroups.length;
-    const selected = Object.values(selectedRows).filter(Boolean).length;
-    setSelectAll(selected === total && total > 0);
-  }, [selectedRows, displayedGroups.length]);
+    if (groups.length === 0) {
+      setSelectAll(false);
+      setSelectAllAcrossPages(false);
+      return;
+    }
+    const allSelected = groups.every((g) =>
+      selectAllAcrossPages ? selectedGroups[g.id] !== false : selectedGroups[g.id]
+    );
+    // Match ContactList: header checkbox unchecked when across-pages is active
+    setSelectAll(allSelected && !selectAllAcrossPages);
+  }, [selectedGroups, groups, selectAllAcrossPages]);
 
   const handleDeleteSelected = async () => {
-    const selectedIds = Object.entries(selectedRows)
-      .filter(([_, isSelected]) => isSelected)
-      .map(([idx]) => displayedGroups[idx]?.id)
-      .filter(Boolean);
+    let selectedIds = [];
+    if (selectAllAcrossPages) {
+      try {
+        setIsDeleting(true);
+        const response = await axios.get(API_ENDPOINTS.GROUPS.GET_ALL, {
+          params: {
+            customer_id: user?.customer_id,
+            limit: 1000,
+          },
+          withCredentials: true,
+          validateStatus: (status) => status < 500,
+        });
+        const result = response.data;
+        const groupsData = Array.isArray(result.data) ? result.data : [];
+        selectedIds = groupsData
+          .map((g) => g.group_id)
+          .filter((id) => selectedGroups[id] !== false);
+      } catch (err) {
+        console.error('Error fetching all groups for deletion:', err);
+        toast.error('Failed to fetch groups for deletion');
+        setIsDeleting(false);
+        return;
+      }
+    } else {
+      selectedIds = Object.keys(selectedGroups).filter((id) => selectedGroups[id]);
+    }
+
     if (selectedIds.length === 0) return;
-    setIsDeleting(true);
     try {
       for (const groupId of selectedIds) {
         await fetch(`${API_ENDPOINTS.GROUPS.DELETE}`, {
@@ -784,12 +826,11 @@ export default function GroupManagement() {
         });
       }
       toast.success(
-        `${selectedIds.length} group${
-          selectedIds.length > 1 ? "s" : ""
-        } deleted successfully!`
+        `${selectedIds.length} group${selectedIds.length > 1 ? "s" : ""} deleted successfully!`
       );
-      setSelectedRows({});
+      setSelectedGroups({});
       setSelectAll(false);
+      setSelectAllAcrossPages(false);
       fetchGroups();
     } catch (error) {
       toast.error("Failed to delete selected groups");
@@ -800,7 +841,7 @@ export default function GroupManagement() {
   };
 
   return (
-    <div className="flex-1">
+    <div className="flex-1 pt-2.5">
       <ErrorDisplay error={error} setError={setError} />
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
         {/* Title */}
@@ -834,7 +875,7 @@ export default function GroupManagement() {
           </div>
           {/* Add Group Button */}
           <button
-            className={`bg-[#0AA89E] hover:bg-[#0AA89E]/90 text-white flex items-center justify-center gap-2 px-4 py-2 rounded-md transition w-full sm:w-auto`}
+            className={`bg-gradient-to-r from-[#0AA89E] to-cyan-500 text-white flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl shadow-lg hover:shadow-xl  transition-all cursor-pointer`}
             onClick={() => {
               if (!permissions.canManageGroups) {
                 toast.error("You do not have permission to add groups.");
@@ -866,27 +907,11 @@ export default function GroupManagement() {
                     />
                   </div>
                 </th>
-                {Object.values(selectedRows).some(Boolean) && (
-                  // <th colSpan="7" className="px-2 py-3 sm:px-6">
-                  //   <div className="flex justify-center">
-                  //     <button
-                  //       onClick={() => setShowDeleteDialog(true)}
-                  //       disabled={isDeleting}
-                  //       className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 disabled:opacity-50 cursor-pointer"
-                  //       aria-label={`Delete ${
-                  //         Object.values(selectedRows).filter(Boolean).length
-                  //       } selected groups`}
-                  //     >
-                  //       Delete Selected
-                  //     </button>
-                  //   </div>
-                  // </th>
-
+                {hasSelection && (
                   <th colSpan="6" className="px-4 py-2">
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium text-gray-700">
-                          {Object.values(selectedRows).filter(Boolean).length}{" "}
-                          template(s) selected
+                          {selectedCount} group{selectedCount === 1 ? "" : "s"} selected
                         </span>
                         <button
                           onClick={handleDeleteSelected}
@@ -924,7 +949,7 @@ export default function GroupManagement() {
                       </div>
                     </th>
                 )}
-                {!Object.values(selectedRows).some(Boolean) && (
+                {!hasSelection && (
                   <>
                     <th className="px-2 py-3 sm:px-6 text-center font-semibold font-sans text-gray-700">
                       LIST NAME
@@ -964,12 +989,12 @@ export default function GroupManagement() {
                   </td>
                 </tr>
               ) : (
-                displayedGroups.map((group, idx) => (
+                displayedGroups.map((group) => (
                   <GroupRow
                     key={group.id}
                     group={group}
-                    isChecked={!!selectedRows[idx]}
-                    onCheckboxChange={(e) => handleCheckboxChange(idx, e)}
+                    isChecked={selectAllAcrossPages ? selectedGroups[group.id] !== false : !!selectedGroups[group.id]}
+                    onCheckboxChange={(e) => handleCheckboxChange(group.id, e.target.checked)}
                     onEditClick={setEditingGroup}
                     onDeleteClick={setDeletingGroup}
                     isDeleting={isDeleting}
@@ -1001,13 +1026,7 @@ export default function GroupManagement() {
               Delete Confirmation
             </h3>
             <p className="text-gray-600 mb-6">
-              Are you sure you want to delete{" "}
-              {Object.values(selectedRows).filter(Boolean).length} selected
-              group
-              {Object.values(selectedRows).filter(Boolean).length > 1
-                ? "s"
-                : ""}
-              ? This action cannot be undone.
+              Are you sure you want to delete {selectedCount} selected group{selectedCount === 1 ? "" : "s"}? This action cannot be undone.
             </p>
             <div className="flex justify-end gap-3">
               <button

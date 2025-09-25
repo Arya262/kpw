@@ -224,7 +224,7 @@ const SendTemplate = ({ onSelect, onClose, returnFullTemplate = false }) => {
           },
         }
       );
-      console.log("Backend upload response:", response.data);
+      // console.log("Backend upload response:", response.data);
       if (!response.data.success) {
         throw new Error(response.data.message || "Failed to upload media.");
       }
@@ -356,7 +356,7 @@ const SendTemplate = ({ onSelect, onClose, returnFullTemplate = false }) => {
       dynamicFields: filledDynamicFields,
     };
 
-    console.log("Sending template data:", templateData);
+    // console.log("Sending template data:", templateData);
     onSelect(returnFullTemplate ? templateData : templateData.element_name);
   };
 

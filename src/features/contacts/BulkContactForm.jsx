@@ -20,7 +20,6 @@ export default function BulkContactForm({
   // const [fieldMapping, setFieldMapping] = useState({});
   const [isDragging, setIsDragging] = useState(false);
 
-  // Clear internal state when file is cleared from parent
   useEffect(() => {
     if (!file) {
       setCsvHeaders([]);

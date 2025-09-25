@@ -12,6 +12,12 @@ import { useAuth } from "./AuthContext";
 import notificationService from "../utils/notificationService";
 import axios from "axios";
 import { API_ENDPOINTS } from "../config/api";
+import { 
+  normalizeMessageData, 
+  extractConversationId, 
+  extractContactName, 
+  extractMessageText 
+} from "../utils/chatUtils";
 
 const NotificationContext = createContext(null);
 
@@ -34,6 +40,13 @@ export const NotificationProvider = ({ children }) => {
 
   const lastNotificationTime = useRef({});
   const lastSoundTime = useRef(0);
+  // Deduplicate notifications for the same message to avoid delayed re-toasts after navigation
+  const recentMessageIds = useRef(new Set());
+  const addRecentMessageId = (id) => {
+    if (!id) return;
+    recentMessageIds.current.add(id);
+    setTimeout(() => recentMessageIds.current.delete(id), 20000);
+  };
 
   useEffect(() => {
     // Set custom audio path relative to public directory
@@ -67,7 +80,7 @@ export const NotificationProvider = ({ children }) => {
 
   const markConversationAsRead = (conversationId) => {
     setUnreadConversations((prev) => {
-      if (!prev[conversationId]) return prev; // avoid negative counts
+      if (!prev[conversationId]) return prev;
       const newMap = { ...prev };
       const removedCount = newMap[conversationId];
       delete newMap[conversationId];
@@ -82,24 +95,13 @@ export const NotificationProvider = ({ children }) => {
     console.log("📩 Raw incoming data:", data);
     if (!data) return;
 
-    let message = data?.message || data?.data || data;
-    if (typeof message === "string") {
-      try {
-        message = JSON.parse(message);
-      } catch {
-        return;
-      }
-    }
+    const message = normalizeMessageData(data);
+    if (!message) return;
 
     console.log("📩 Parsed message:", message);
 
-    // ✅ Normalize conversationId
-    const conversationId =
-      message.conversation_id ||
-      message.chat_id ||
-      message.contact_id ||
-      "unknown";
-
+    // ✅ Normalize conversationId using shared utility
+    const conversationId = extractConversationId(message);
     if (conversationId === "unknown") {
       console.warn("⚠️ No conversation_id/chat_id/contact_id in message:", message);
       return;
@@ -112,20 +114,15 @@ export const NotificationProvider = ({ children }) => {
       return;
     }
 
-    const contactName =
-      message.contact_name ||
-      message.sender_name ||
-      message.name ||
-      message.from ||
-      message.customerName ||
-      "Unknown";
+    // Dedupe by message id to prevent late duplicate toasts after navigation
+    const messageId = message.message_id || message.id || `${conversationId}-${message.sent_at || message.time || Date.now()}`;
+    if (recentMessageIds.current.has(messageId)) {
+      return;
+    }
 
-    const messageText =
-      message.content ||
-      message.element_name ||
-      message.message ||
-      message.text ||
-      `New message from ${contactName}`;
+    // Extract contact name and message text using shared utilities
+    const contactName = extractContactName(message);
+    const messageText = extractMessageText(message, contactName);
 
     const now = Date.now();
     if (now - (lastNotificationTime.current[conversationId] || 0) < 2000) return;
@@ -133,7 +130,15 @@ export const NotificationProvider = ({ children }) => {
 
     await playSound();
 
-    notificationService.showInAppNotification(messageText, "info");
+    // Only show in-app (toast-like) notification while on chats page
+    const isOnChatsPage = typeof window !== 'undefined' && window.location?.pathname?.startsWith('/chats');
+    if (isOnChatsPage) {
+      notificationService.showInAppNotification(messageText, "info", {
+        key: `${conversationId}-${messageId}`,
+        force: false,
+      });
+      addRecentMessageId(messageId);
+    }
 
   if (isNotificationEnabled && !notificationService.isPageFocused()) {
     try {
@@ -185,7 +190,7 @@ export const NotificationProvider = ({ children }) => {
 
   useEffect(() => {
     const preloadSound = () => {
-      const s = new Audio("/notification.mp3");
+      const s = new Audio("/sound/notification.mp3");
       s.load();
       document.removeEventListener("click", preloadSound);
     };
@@ -195,12 +200,25 @@ export const NotificationProvider = ({ children }) => {
   useEffect(() => {
     if (!socket) return;
 
+    // console.log("[NotificationContext] Attaching socket listeners for chat events");
+
+    const onAny = (event, ...args) => {
+      try {
+        console.log("[Socket][onAny]", event, args?.[0]);
+      } catch (e) {
+        console.log("[Socket][onAny]", event);
+      }
+    };
+
     const handleMessage = (data) => {
+      console.log("[NotificationContext] newMessage received", data);
       handleIncomingMessage(data);
+      // Dispatch custom event for chat logic to handle
+      window.dispatchEvent(new CustomEvent('chatMessage', { detail: data }));
     };
 
     const handleAlert = (alert) => {
-      console.log("🔔 Received alert:", alert);
+      console.log("[NotificationContext] newMessageAlert received", alert);
       const { contact_id, name, content } = alert;
       const conversationId = String(contact_id);
 
@@ -209,23 +227,29 @@ export const NotificationProvider = ({ children }) => {
         return;
       }
 
-      handleIncomingMessage({
+      const messageData = {
         message: {
           conversation_id: conversationId,
           contact_name: name,
           content,
         },
-      });
+      };
+      
+      handleIncomingMessage(messageData);
+      // Dispatch custom event for chat logic
+      window.dispatchEvent(new CustomEvent('chatMessage', { detail: messageData }));
     };
 
     socket.off("newMessage");
     socket.off("newMessageAlert");
+    socket.onAny(onAny);
     socket.on("newMessage", handleMessage);
     socket.on("newMessageAlert", handleAlert);
 
     return () => {
       socket.off("newMessage", handleMessage);
       socket.off("newMessageAlert", handleAlert);
+      socket.offAny(onAny);
     };
   }, [socket]);
 
@@ -294,8 +318,8 @@ useEffect(() => {
   const toggleNotifications = async () => {
     const newState = !isNotificationEnabled;
     if (newState) {
-      const granted = await notificationService.requestPermission();
-      if (granted !== "granted") {
+      const granted = await notificationService.requestNotificationPermission();
+      if (!granted) {
         setIsNotificationEnabled(false);
         return;
       }

@@ -1,14 +1,102 @@
-import React from "react";
+import React, { useEffect, useState, useMemo } from "react"; 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Wallet, Megaphone, Zap, ShieldCheck, Settings } from "lucide-react";
+import { X, Wallet, Megaphone, Zap, ShieldCheck } from "lucide-react";
+import { useLocation as useAppLocation } from "../../context/LocationContext";
+import pricingData from "../../pricing.json";
+
+// Map category names to match the pricing.json keys
+const categoryMap = {
+  Marketing: "MARKETING",
+  Utility: "UTILITY",
+  Authentication: "AUTHENTICATION",
+};
+
+// Helper: calculate exact messages
+const getMessagesCount = (balance, price) => {
+  if (!price || price <= 0) return 0;
+  return Math.floor(balance / price);
+};
 
 const WalletDetailsModal = ({ isOpen, onClose, walletBalance }) => {
-  const categories = [
-    { name: "Marketing", price: 0.88, Icon: Megaphone },
-    { name: "Utility", price: 0.38, Icon: Zap },
-    { name: "Authentication", price: 0.35, Icon: ShieldCheck },
-    { name: "Service", price: 0.34, Icon: Settings },
-  ];
+  const { location } = useAppLocation();
+  const [ipData, setIpData] = useState(null);
+  const [countryName, setCountryName] = useState("India");
+  const [currency, setCurrency] = useState({ symbol: "₹", code: "INR" });
+
+  // Fetch IP data for country detection
+  useEffect(() => {
+    if (location?.loaded && !ipData) {
+      fetch("https://ipapi.co/json/")
+        .then((res) => res.json())
+        .then((data) => {
+          setIpData(data);
+          if (data.country_name) setCountryName(data.country_name);
+        })
+        .catch((err) => console.error("Error fetching IP data:", err));
+    }
+  }, [location, ipData]);
+
+  // Update currency based on country
+  useEffect(() => {
+    const isIndia = countryName === "India";
+    setCurrency({ symbol: isIndia ? "₹" : "$", code: isIndia ? "INR" : "USD" });
+  }, [countryName]);
+
+  // Get pricing for a category
+  const getPriceForCategory = (category) => {
+    const categoryKey = categoryMap[category];
+    if (!categoryKey) return 0;
+
+    // First try to find exact country match
+    let countryData = pricingData.find(
+      (item) => item.Country?.toLowerCase() === countryName.toLowerCase()
+    );
+
+    // If exact match not found, try to find a partial match (e.g., "United States" vs "United States of America")
+    if (!countryData) {
+      countryData = pricingData.find(
+        (item) => item.Country?.toLowerCase().includes(countryName.toLowerCase()) ||
+                 countryName.toLowerCase().includes(item.Country?.toLowerCase())
+      );
+    }
+
+    // If still not found, fall back to United States pricing
+    if (!countryData) {
+      countryData = pricingData.find(
+        (item) => item.Country?.toLowerCase() === "united states"
+      );
+      if (!countryData) return 0;
+    }
+
+    const priceKey = `${categoryKey}_${currency.code}`;
+    const price = countryData[priceKey];
+    
+    // For India, we have specific pricing in the original format
+    if (countryName.toLowerCase() === 'india') {
+      switch(category) {
+        case 'Marketing': return 0.88;
+        case 'Authentication':
+        case 'Utility': return 0.125;
+        default: return 0;
+      }
+    }
+    
+    return price || 0;
+  };
+
+  // Categories with dynamic pricing
+  const categories = useMemo(() => {
+    const cats = [
+      { name: "Marketing", Icon: Megaphone },
+      { name: "Utility", Icon: Zap },
+      { name: "Authentication", Icon: ShieldCheck },
+    ];
+    return cats.map((cat) => ({ ...cat, price: getPriceForCategory(cat.name) }));
+  }, [countryName, currency.code]);
+
+  // Optional: Adjust balance for GST
+  // const netBalance = walletBalance / 1.18; // uncomment if GST needs deduction
+  const netBalance = walletBalance;
 
   return (
     <AnimatePresence>
@@ -33,7 +121,9 @@ const WalletDetailsModal = ({ isOpen, onClose, walletBalance }) => {
             <div className="border-b border-gray-100 p-4 flex justify-between items-center">
               <div className="flex items-center gap-2">
                 <Wallet className="w-6 h-6 text-[#0AA89E]" />
-                <h2 className="text-xl font-semibold text-gray-800">Wallet & Messages</h2>
+                <h2 className="text-xl font-semibold text-gray-800">
+                  Wallet & Messages
+                </h2>
               </div>
               <button
                 onClick={onClose}
@@ -49,7 +139,9 @@ const WalletDetailsModal = ({ isOpen, onClose, walletBalance }) => {
               <div className="rounded-lg p-4 mb-6 bg-[#0bA89E]">
                 <p className="text-sm text-white mb-1">Available Balance</p>
                 <p className="text-2xl font-bold text-white">
-                  ₹{walletBalance.toFixed(2)}
+                  {currency.symbol}
+                  {walletBalance.toFixed(2)}
+                  <span className="text-sm font-normal ml-1">{currency.code}</span>
                 </p>
               </div>
 
@@ -72,28 +164,26 @@ const WalletDetailsModal = ({ isOpen, onClose, walletBalance }) => {
                     </div>
 
                     {/* Table Body */}
-                    {categories.map(({ name, price }, index) => {
-                      const messages = Math.floor(walletBalance / price);
-                      return (
-                        <motion.div
-                          key={name}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.05 }}
-                          className="px-4 py-2 flex justify-between items-center hover:bg-gray-50 transition-colors"
-                        >
-                          <span className="w-1/3 font-medium text-gray-800 flex gap-1 items-center">
-                            {name}
-                          </span>
-                          <span className="w-1/3 text-center text-sm text-gray-500">
-                            ₹{price.toFixed(2)}/msg
-                          </span>
-                          <span className="w-1/3 text-right text-gray-800 font-medium">
-                            {messages.toLocaleString()}
-                          </span>
-                        </motion.div>
-                      );
-                    })}
+                    {categories.map(({ name, price }, index) => (
+                      <motion.div
+                        key={name}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="px-4 py-2 flex justify-between items-center hover:bg-gray-50 transition-colors"
+                      >
+                        <span className="w-1/3 font-medium text-gray-800 flex gap-1 items-center">
+                          {name}
+                        </span>
+                        <span className="w-1/3 text-center text-sm text-gray-500">
+                          {currency.symbol}
+                          {Number(price).toFixed(currency.code === "USD" ? 4 : 2)}/msg
+                        </span>
+                        <span className="w-1/3 text-right text-gray-800 font-medium">
+                          {getMessagesCount(netBalance, price).toLocaleString()}
+                        </span>
+                      </motion.div>
+                    ))}
                   </div>
                 </div>
               </div>

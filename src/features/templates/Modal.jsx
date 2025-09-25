@@ -11,7 +11,6 @@ import ConfirmationDialog from "../shared/ExitConfirmationDialog";
 import { useAuth } from "../../context/AuthContext";
 import { API_ENDPOINTS } from "../../config/api";
 import Dropdown from "../../components/Dropdown";
-import RichTextEditor from "./RichTextEditor";
 
 const templateSchema = z.object({
   category: z.string().min(1, "Please select a template category"),
@@ -26,7 +25,7 @@ const templateSchema = z.object({
   language: z.string().min(1, "Please select a language"),
   header: z.string().max(60, "Header must be 60 characters or less").optional(),
   templateType: z
-    .enum(["Text", "Image", "Video", "Document"], {
+    .enum(["None","Text", "Image", "Video", "Document"], {
       required_error: "Please select a template type",
     })
     .optional(),
@@ -86,26 +85,27 @@ const TemplateModal = ({
   const [includeSecurityMessage, setIncludeSecurityMessage] = useState(false);
   const [includeExpiry, setIncludeExpiry] = useState(false);
   const [expiryMinutes, setExpiryMinutes] = useState(10);
+  const [mediaFileName, setMediaFileName] = useState("");
   // Upload file to server and return media identifier
   const uploadFile = async (file) => {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("customer_id", customerId);
     formData.append("fileType", file.type);
-
+  
     try {
       const response = await fetch(API_ENDPOINTS.TEMPLATES.UPLOAD_MEDIA, {
         method: "POST",
         body: formData,
       });
-
+  
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(
           errorData.message || `Upload failed: ${response.statusText}`
         );
       }
-
+  
       const data = await response.json();
       console.log("Upload API response:", data);
       const mediaIdentifier =
@@ -114,14 +114,21 @@ const TemplateModal = ({
         data.mediaId ||
         data.url ||
         data.fileUrl;
-
-      if (!mediaIdentifier) {
-        throw new Error("No media identifier returned from server");
+      const fileName = data.fileName;
+  
+      if (!mediaIdentifier && !fileName) {
+        throw new Error("No media identifier or fileName returned from server");
       }
       console.log("Media identifier returned:", mediaIdentifier);
-      return typeof mediaIdentifier === "string"
-        ? mediaIdentifier.split("\n")[0]
-        : mediaIdentifier;
+      console.log("File name returned:", fileName);
+  
+      // Return both as an object
+      return {
+        mediaIdentifier: typeof mediaIdentifier === "string"
+          ? mediaIdentifier.split("\n")[0]
+          : mediaIdentifier,
+        fileName,
+      };
     } catch (error) {
       throw new Error(`Upload failed: ${error.message}`);
     }
@@ -135,12 +142,12 @@ const TemplateModal = ({
     const validTypes = {
       Image: {
         types: ["image/jpeg", "image/png"],
-        maxSize: 5 * 1024 * 1024, // 5MB
+        maxSize: 5 * 1024 * 1024,
         extensions: [".jpeg", ".png"],
       },
       Video: {
         types: ["video/3gpp", "video/mp4"],
-        maxSize: 16 * 1024 * 1024, // 16MB
+        maxSize: 16 * 1024 * 1024,
         extensions: [".3gp", ".mp4"],
       },
       Document: {
@@ -218,10 +225,11 @@ const TemplateModal = ({
     setSelectedFile(file);
     setPreviewUrl(URL.createObjectURL(file));
     setIsUploading(true);
-
+  
     try {
-      const mediaId = await uploadFile(file);
-      setExampleMedia(mediaId);
+      const { mediaIdentifier, fileName } = await uploadFile(file);
+      setExampleMedia(mediaIdentifier);
+      setMediaFileName(fileName); 
       setErrors((prev) => ({ ...prev, file: null }));
       toast.success("File uploaded successfully!");
     } catch (error) {
@@ -234,7 +242,7 @@ const TemplateModal = ({
       setIsUploading(false);
     }
   };
-
+  
   const handleRetryUpload = async () => {
     if (!selectedFile) {
       toast.error("No file selected to retry");
@@ -242,8 +250,9 @@ const TemplateModal = ({
     }
     setIsUploading(true);
     try {
-      const mediaId = await uploadFile(selectedFile);
-      setExampleMedia(mediaId);
+      const { mediaIdentifier, fileName } = await uploadFile(selectedFile);
+      setExampleMedia(mediaIdentifier);
+      setMediaFileName(fileName); 
       setErrors((prev) => ({ ...prev, file: null }));
       toast.success("File uploaded successfully!");
     } catch (error) {
@@ -563,14 +572,14 @@ const TemplateModal = ({
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!validateForm()) return;
-
+  
     const generateSampleText = (formatString, samples) => {
       return formatString.replace(/{{\s*(\d+)\s*}}/g, (match, number) => {
         return samples[number] || match;
       });
     };
     const sampleText = generateSampleText(format, sampleValues);
-
+  
     const buttons =
       category === "AUTHENTICATION"
         ? [{ text: authButtonText, type: "COPY_CODE" }]
@@ -598,41 +607,42 @@ const TemplateModal = ({
               : []),
           ];
 
-    const isMediaTemplate = ["IMAGE", "VIDEO", "DOCUMENT"].includes(
-      templateType.toUpperCase()
-    );
-
-    const newTemplate = {
-      elementName: templateName,
-      content: format,
-      category,
-      templateType:
-        category === "AUTHENTICATION" ? "TEXT" : templateType.toUpperCase(),
-      languageCode: language,
-      buttons,
-      example: sampleText,
-      exampleMedia,
-      messageSendTTL: 3360,
-      container_meta: {
-        header: header
-          ? header
-          : isMediaTemplate
-          ? { type: templateType.toUpperCase(), media: { id: exampleMedia } }
-          : null,
-        footer: footer || null,
-        data: format,
-        sampleText,
-        sampleValues,
-      },
-      ...(category === "AUTHENTICATION" && {
-        authButtonText,
-        codeExpirationMinutes: expiryMinutes,
-        addSecurityRecommendation: includeSecurityMessage,
-      }),
-    };
-    console.log("Submitting template:", newTemplate);
-    onSubmit(newTemplate);
-  };
+          const isMediaTemplate = ["IMAGE", "VIDEO", "DOCUMENT"].includes(
+            templateType.toUpperCase()
+          );
+        
+          const newTemplate = {
+            elementName: templateName,
+            content: format,
+            category,
+            templateType:
+              category === "AUTHENTICATION" ? "TEXT" : templateType.toUpperCase(),
+            languageCode: language,
+            buttons,
+            example: sampleText,
+            exampleMedia,
+            media_url: mediaFileName, 
+            messageSendTTL: 3360,
+            container_meta: {
+              header: header
+                ? header
+                : isMediaTemplate
+                ? { type: templateType.toUpperCase(), media: { id: exampleMedia, media_url: mediaFileName } }
+                : null,
+              footer: footer || null,
+              data: format,
+              sampleText,
+              sampleValues,
+            },
+            ...(category === "AUTHENTICATION" && {
+              authButtonText,
+              codeExpirationMinutes: expiryMinutes,
+              addSecurityRecommendation: includeSecurityMessage,
+            }),
+          };
+          console.log("Submitting template:", newTemplate);
+          onSubmit(newTemplate);
+        };
 
   if (!isOpen) return null;
 
@@ -834,28 +844,27 @@ const TemplateModal = ({
                 <>
                   <div className="mb-5 border-t-2 pt-4 border-gray-200 ">
                     <div className="font-semibold mb-1">Template Type</div>
-                    <div className="flex gap-4">
-                      {["None", "Text", "Image", "Video", "Document"].map(
-                        (type) => (
-                          <label key={type} className="flex items-center gap-2">
-                            <input
-                              type="radio"
-                              name="templateType"
-                              checked={templateType === type}
-                              onChange={() => {
-                                setTemplateType(type);
-                                validateField("templateType", type);
-                                setSelectedFile(null);
-                                setPreviewUrl("");
-                                setExampleMedia("");
-                                setErrors((prev) => ({ ...prev, file: null }));
-                              }}
-                              aria-label={`Select ${type} template type`}
-                            />
-                            {type}
-                          </label>
-                        )
-                      )}
+                    <div className="grid grid-cols-2 sm:flex sm:flex-row gap-4">
+                      {["None", "Text", "Image", "Video", "Document"].map((type) => (
+                        <label key={type} className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="templateType"
+                            value={type}
+                            checked={templateType === type}
+                            onChange={(e) => {
+                              const selectedType = e.target.value;
+                              setTemplateType(selectedType);
+                              validateField("templateType", selectedType);
+                              setSelectedFile(null);
+                              setPreviewUrl("");
+                              setExampleMedia("");
+                              setErrors((prev) => ({ ...prev, file: null }));
+                            }}
+                          />
+                          {type}
+                        </label>
+                      ))}
                     </div>
                   </div>
 
@@ -982,37 +991,60 @@ const TemplateModal = ({
               <div className="mb-5 border-t-2 pt-4 border-gray-200">
                 <label
                   htmlFor="body"
-                  className="block w-full text-md font-semibold text-gray-700 mb-2"
+                  className="block w-full text-md font-semibold text-gray-700"
                 >
                   Body
                 </label>
-                
-                <RichTextEditor
-                  value={format}
-                  onChange={(html) => {
-                    setFormat(html);
-                    validateField("format", html);
-                  }}
+                <div className="flex justify-end mb-1">
+                  <span
+                    className={`text-xs ${
+                      format.length === 1024
+                        ? "text-red-500 font-semibold"
+                        : format.length >= 950
+                        ? "text-yellow-500"
+                        : "text-gray-400"
+                    }`}
+                  >
+                    {format.length}/1024
+                  </span>
+                </div>
+                <textarea
+                  id="body"
+                  className={`w-full border text-sm bg-gray-100 rounded p-4 pt-4 ${
+                    errors.format ? "border-red-500" : "border-transparent"
+                  } focus:outline-none focus:border-teal-500`}
+                  rows={4}
                   placeholder="Template Format (use {{1}}, {{2}}... for variables)"
+                  value={format}
                   maxLength={1024}
-                  className="relative"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      const selection = window.getSelection();
-                      if (selection.rangeCount) {
-                        const range = selection.getRangeAt(0);
-                        const br = document.createElement('br');
-                        range.deleteContents();
-                        range.insertNode(br);
-                        range.setStartAfter(br);
-                        range.setEndAfter(br);
-                        selection.removeAllRanges();
-                        selection.addRange(range);
-                      }
+                  style={{ resize: "vertical" }}
+                  onChange={(e) => {
+                    if (e.target.value.length <= 1024) {
+                      setFormat(e.target.value);
+                      validateField("format", e.target.value);
                     }
                   }}
-                />
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      const cursorPosition = e.target.selectionStart;
+                      const textBefore = format.substring(0, cursorPosition);
+                      const textAfter = format.substring(cursorPosition);
+                      const newText = textBefore + "\n" + textAfter;
+                      setFormat(newText);
+                      setTimeout(() => {
+                        e.target.setSelectionRange(
+                          cursorPosition + 1,
+                          cursorPosition + 1
+                        );
+                      }, 0);
+                    }
+                  }}
+                  aria-describedby={errors.format ? "format-error" : undefined}
+                ></textarea>
+                <p className="text-xs font-light text-gray-500 mb-2">
+                  Use text formatting - bold, italic, etc. Max 1024 characters.
+                </p>
                 {category === "AUTHENTICATION" && (
                   <div className="flex items-center mt-2">
                     <input

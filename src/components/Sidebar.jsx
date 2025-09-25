@@ -118,7 +118,6 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
 
   const handleMouseEnter = (e, itemName) => {
     if (window.innerWidth >= 1024) {
-      // Clear any pending close timeout
       if (closeTimeoutRef.current) {
         clearTimeout(closeTimeoutRef.current);
         closeTimeoutRef.current = null;
@@ -180,18 +179,18 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
       ref={sidebarRef}
       role="navigation"
       className={`
-        fixed top-0 left-0 z-50 lg:z-auto h-screen
-        bg-white text-black flex flex-col
-        transition-all duration-300 ease-in-out
-        group
-        ${isOpen ? "translate-x-0" : "-translate-x-full"}
-        lg:relative lg:translate-x-0 lg:top-0 lg:h-auto
-        lg:w-22 lg:hover:w-64
-        shadow-2xl lg:shadow-2xl
-        ${submenuHovered ? "lg:w-64" : "lg:w-20 lg:hover:w-64"}
-        ${className}
-      `}
-    >
+                    fixed top-0 left-0 z-50 lg:z-auto h-screen
+                    bg-white text-black flex flex-col
+                    transition-all duration-300 ease-in-out
+                    group
+                    ${isOpen ? "translate-x-0" : "-translate-x-full"}
+                    w-4/5 sm:w-72   // mobile 80%, small+ screens fixed 288px
+                    lg:relative lg:translate-x-0 lg:top-0 lg:h-auto
+                    lg:w-22 lg:hover:w-64
+                    shadow-2xl lg:shadow-2xl
+                    ${submenuHovered ? "lg:w-64" : "lg:w-20 lg:hover:w-64"}
+                    ${className}
+                  `}>
       <div className="px-4 py-5 border-b border-gray-200 lg:hidden shrink-0">
         <NavLink to="/" onClick={handleNavClick}>
           <img src="/logo.png" alt="Logo" className="h-8" />
@@ -209,41 +208,36 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
               key={item.name}
               className="relative"
               onMouseEnter={(e) => handleMouseEnter(e, item.name)}
-              onMouseLeave={handleMouseLeave}
-            >
+              onMouseLeave={handleMouseLeave}>
               <div
                 className={`flex items-center gap-4 px-4 py-3 rounded-xl font-medium text-base shadow-sm cursor-pointer transition-all duration-200
-                  ${
-                    isParentActive
-                      ? "bg-teal-500 text-white"
-                      : "bg-white hover:bg-gray-100 text-black"
+                  ${isParentActive
+                    ? "bg-teal-500 text-white"
+                    : "bg-white hover:bg-gray-100 text-black"
                   }
                 `}
-                onClick={() => toggleMobileSubmenu(item.name)}
-              >
+                onClick={() => toggleMobileSubmenu(item.name)}>
                 <span className="w-5 h-5 flex items-center justify-center">
                   {item.icon}
                 </span>
                 <span
                   className={`
-    whitespace-nowrap overflow-hidden 
-    transition-all duration-300 
-    ml-0 
-    opacity-100
-    group-hover:ml-1 group-hover:opacity-100
-    ${submenuHovered ? "lg:opacity-100 lg:ml-1" : ""}
-  `}
-                >
+                              whitespace-nowrap overflow-hidden 
+                              transition-all duration-300 
+                              ml-0 
+                              opacity-100
+                              group-hover:ml-1 group-hover:opacity-100
+                              ${submenuHovered ? "lg:opacity-100 lg:ml-1" : ""}
+                            `}>
                   {item.name}
                 </span>
-                <span className="lg:hidden">
+                <div className="ml-auto w-5 flex justify-center lg:hidden">
                   <ChevronDown
                     size={18}
-                    className={`transition-transform duration-200 ${
-                      activeSubmenu === item.name ? "rotate-180" : ""
-                    }`}
+                    className={`transition-transform duration-200 ${activeSubmenu === item.name ? "rotate-180" : ""
+                      }`}
                   />
-                </span>
+                </div>
               </div>
 
               {activeSubmenu === item.name && (
@@ -255,10 +249,9 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
                       end
                       onClick={handleNavClick}
                       className={({ isActive }) =>
-                        `flex items-center gap-4 px-4 py-3 rounded-xl font-medium text-base shadow-sm transition-all duration-200 ${
-                          isActive
-                            ? "bg-teal-500 text-white"
-                            : "bg-white text-black hover:bg-gray-100"
+                        `flex items-center gap-4 px-4 py-3 rounded-xl font-medium text-base shadow-sm transition-all duration-200 ${isActive
+                          ? "bg-teal-500 text-white"
+                          : "bg-white text-black hover:bg-gray-100"
                         }`
                       }
                     >
@@ -286,10 +279,9 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
                         end
                         onClick={handleNavClick}
                         className={({ isActive }) =>
-                          `flex items-center gap-4 px-3 py-3 my-2 rounded-xl font-large text-base shadow-sm transition-all duration-200 ${
-                            isActive
-                              ? "bg-teal-500 text-white"
-                              : "bg-white text-black hover:bg-gray-100"
+                          `flex items-center gap-4 px-3 py-3 my-2 rounded-xl font-large text-base shadow-sm transition-all duration-200 ${isActive
+                            ? "bg-teal-500 text-white"
+                            : "bg-white text-black hover:bg-gray-100"
                           }`
                         }
                       >
@@ -310,10 +302,9 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
               end
               onClick={handleNavClick}
               className={({ isActive }) =>
-                `group flex items-center gap-4 px-4 py-3 rounded-xl font-medium text-base shadow-sm transition-all duration-200 ${
-                  isActive
-                    ? "bg-teal-500 text-white"
-                    : "bg-white text-black hover:bg-gray-100"
+                `group flex items-center gap-4 px-4 py-3 rounded-xl font-medium text-base shadow-sm transition-all duration-200 ${isActive
+                  ? "bg-teal-500 text-white"
+                  : "bg-white text-black hover:bg-gray-100"
                 }`
               }
             >
@@ -330,13 +321,12 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
               </span>
               <span
                 className={`
-    whitespace-nowrap overflow-hidden 
-    transition-all duration-300 
-    ml-0 opacity-100
-    group-hover:ml-1 group-hover:opacity-100
-    ${submenuHovered ? "lg:opacity-100 lg:ml-1" : ""}
-  `}
-              >
+                            whitespace-nowrap overflow-hidden 
+                            transition-all duration-300 
+                            ml-0 opacity-100
+                            group-hover:ml-1 group-hover:opacity-100
+                            ${submenuHovered ? "lg:opacity-100 lg:ml-1" : ""}
+                          `}>
                 {item.name}
               </span>
             </NavLink>
