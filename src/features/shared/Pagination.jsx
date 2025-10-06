@@ -11,7 +11,7 @@ export default function Pagination({
 }) {
   const [activePage, setActivePage] = useState(currentPage || 1);
   const [windowStart, setWindowStart] = useState(1);
-  const windowSize = 3;
+  const windowSize = 5;
 
   // Sync with prop changes
   useEffect(() => {

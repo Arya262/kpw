@@ -2,8 +2,6 @@ import { useEffect, useRef, useCallback, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
-  Contact2,
-  FileText,
   MessageCircle,
   Megaphone,
   Settings,
@@ -18,24 +16,17 @@ import {
   Workflow,
 } from "lucide-react";
 import { useNotifications } from "../context/NotificationContext";
-import FloatingSubmenu from "./FloatingSubmenu";
 
 const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
   const sidebarRef = useRef(null);
   const location = useLocation();
   const { unreadCount } = useNotifications();
 
-  const [submenuPosition, setSubmenuPosition] = useState(null);
   const [activeSubmenu, setActiveSubmenu] = useState(null);
-  const [submenuHovered, setSubmenuHovered] = useState(false);
-  const closeTimeoutRef = useRef(null);
-  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
+  const submenuTimeout = useRef(null);
+
   const menuItems = [
-    {
-      name: "Dashboard",
-      icon: <LayoutDashboard size={22} />,
-      path: "/dashboard",
-    },
+    { name: "Dashboard", icon: <LayoutDashboard size={22} />, path: "/dashboard" },
     { name: "Campaign", icon: <Megaphone size={22} />, path: "/broadcast" },
     { name: "LiveChat", icon: <MessageCircle size={22} />, path: "/chats" },
     {
@@ -53,11 +44,7 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
       submenu: true,
       submenuItems: [
         { name: "Template List", path: "/templates", icon: <List size={20} /> },
-        {
-          name: "Explore Templates",
-          path: "/templates/explore",
-          icon: <Compass size={20} />,
-        },
+        { name: "Explore Templates", path: "/templates/explore", icon: <Compass size={20} /> },
       ],
     },
     { name: "Flow", icon: <Workflow size={22} />, path: "/flow" },
@@ -85,112 +72,58 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
   }, [handleClickOutside]);
 
   useEffect(() => {
-    if (isOpen && window.innerWidth < 1024) {
-      setIsOpen(false);
-    }
-  }, [location.pathname]);
-
-  useEffect(() => {
+    if (isOpen && window.innerWidth < 1024) setIsOpen(false);
     setActiveSubmenu(null);
   }, [location.pathname]);
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (closeTimeoutRef.current) {
-        clearTimeout(closeTimeoutRef.current);
-      }
-    };
-  }, []);
 
   const handleNavClick = () => {
-    const isDesktop = window.innerWidth >= 1024;
-    const shouldCloseOnDesktop = submenuHovered || activeSubmenu;
-
-    if (!isDesktop || shouldCloseOnDesktop) {
-      setIsOpen(false);
-    }
-
-    setSubmenuHovered(false);
+    setIsOpen(false);
     setActiveSubmenu(null);
-    setSubmenuPosition(null);
   };
 
-  const handleMouseEnter = (e, itemName) => {
+  // === Submenu Hover (Desktop) ===
+  const handleMouseEnter = (itemName) => {
     if (window.innerWidth >= 1024) {
-      if (closeTimeoutRef.current) {
-        clearTimeout(closeTimeoutRef.current);
-        closeTimeoutRef.current = null;
-      }
-
-      const rect = e.currentTarget.getBoundingClientRect();
-      setActiveSubmenu(itemName);
-      setSubmenuPosition({
-        top: rect.top,
-        left: 260,
-      });
+      clearTimeout(submenuTimeout.current);
+      submenuTimeout.current = setTimeout(() => {
+        setActiveSubmenu(itemName);
+      }, 200); // delay open
     }
   };
 
   const handleMouseLeave = () => {
     if (window.innerWidth >= 1024) {
-      // Set a timeout to close the submenu
-      closeTimeoutRef.current = setTimeout(() => {
-        if (!submenuHovered) {
-          setActiveSubmenu(null);
-          setSubmenuPosition(null);
-        }
-        closeTimeoutRef.current = null;
-      }, 150);
+      clearTimeout(submenuTimeout.current);
+      submenuTimeout.current = setTimeout(() => {
+        setActiveSubmenu(null);
+      }, 300); // delay close
     }
   };
 
-  const handleSubmenuMouseEnter = () => {
-    if (closeTimeoutRef.current) {
-      clearTimeout(closeTimeoutRef.current);
-      closeTimeoutRef.current = null;
-    }
-    setSubmenuHovered(true);
-  };
-
-  const handleSubmenuMouseLeave = () => {
-    setSubmenuHovered(false);
-    setActiveSubmenu(null);
-    setSubmenuPosition(null);
-  };
-
-  const toggleMobileSubmenu = (itemName) => {
+  // === Submenu Toggle (Mobile) ===
+  const toggleSubmenu = (itemName) => {
     if (window.innerWidth < 1024) {
       setActiveSubmenu(activeSubmenu === itemName ? null : itemName);
     }
   };
-
-  useEffect(() => {
-    if (submenuHovered || activeSubmenu) {
-      const timeout = setTimeout(() => setIsSidebarExpanded(true), 300);
-      return () => clearTimeout(timeout);
-    } else {
-      setIsSidebarExpanded(false);
-    }
-  }, [submenuHovered, activeSubmenu]);
 
   return (
     <div
       ref={sidebarRef}
       role="navigation"
       className={`
-                    fixed top-0 left-0 z-50 lg:z-auto h-screen
-                    bg-white text-black flex flex-col
-                    transition-all duration-300 ease-in-out
-                    group
-                    ${isOpen ? "translate-x-0" : "-translate-x-full"}
-                    w-4/5 sm:w-72   // mobile 80%, small+ screens fixed 288px
-                    lg:relative lg:translate-x-0 lg:top-0 lg:h-auto
-                    lg:w-22 lg:hover:w-64
-                    shadow-2xl lg:shadow-2xl
-                    ${submenuHovered ? "lg:w-64" : "lg:w-20 lg:hover:w-64"}
-                    ${className}
-                  `}>
+        fixed top-0 left-0 z-50 lg:z-auto h-screen
+        bg-white text-black flex flex-col
+        transition-all duration-700 ease-in-out
+        group
+        ${isOpen ? "translate-x-0" : "-translate-x-full"}
+        w-4/5 sm:w-72
+        lg:relative lg:translate-x-0 lg:top-0 lg:h-auto
+        lg:w-22 lg:hover:w-64
+        shadow-2xl lg:shadow-2xl
+        ${className}
+      `}
+    >
       <div className="px-4 py-5 border-b border-gray-200 lg:hidden shrink-0">
         <NavLink to="/" onClick={handleNavClick}>
           <img src="/logo.png" alt="Logo" className="h-8" />
@@ -207,41 +140,31 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
             <div
               key={item.name}
               className="relative"
-              onMouseEnter={(e) => handleMouseEnter(e, item.name)}
-              onMouseLeave={handleMouseLeave}>
+              onMouseEnter={() => handleMouseEnter(item.name)}
+              onMouseLeave={handleMouseLeave}
+            >
               <div
                 className={`flex items-center gap-4 px-4 py-3 rounded-xl font-medium text-base shadow-sm cursor-pointer transition-all duration-200
-                  ${isParentActive
-                    ? "bg-teal-500 text-white"
-                    : "bg-white hover:bg-gray-100 text-black"
-                  }
+                  ${isParentActive ? "bg-teal-500 text-white" : "bg-white hover:bg-gray-100 text-black"}
                 `}
-                onClick={() => toggleMobileSubmenu(item.name)}>
-                <span className="w-5 h-5 flex items-center justify-center">
-                  {item.icon}
-                </span>
-                <span
-                  className={`
-                              whitespace-nowrap overflow-hidden 
-                              transition-all duration-300 
-                              ml-0 
-                              opacity-100
-                              group-hover:ml-1 group-hover:opacity-100
-                              ${submenuHovered ? "lg:opacity-100 lg:ml-1" : ""}
-                            `}>
+                onClick={() => toggleSubmenu(item.name)}
+              >
+                <span className="w-5 h-5 flex items-center justify-center">{item.icon}</span>
+                <span className="whitespace-nowrap overflow-hidden transition-all duration-300 ml-0 opacity-100">
                   {item.name}
                 </span>
-                <div className="ml-auto w-5 flex justify-center lg:hidden">
+                <div className="ml-auto w-5 flex justify-center">
                   <ChevronDown
                     size={18}
-                    className={`transition-transform duration-200 ${activeSubmenu === item.name ? "rotate-180" : ""
-                      }`}
+                    className={`transition-transform duration-200 ${
+                      activeSubmenu === item.name ? "rotate-180" : ""
+                    }`}
                   />
                 </div>
               </div>
 
               {activeSubmenu === item.name && (
-                <div className="lg:hidden mt-1 flex flex-col gap-2">
+                <div className="flex flex-col w-full mt-2 gap-2 transition-all duration-300">
                   {item.submenuItems.map((sub) => (
                     <NavLink
                       key={sub.name}
@@ -249,49 +172,17 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
                       end
                       onClick={handleNavClick}
                       className={({ isActive }) =>
-                        `flex items-center gap-4 px-4 py-3 rounded-xl font-medium text-base shadow-sm transition-all duration-200 ${isActive
-                          ? "bg-teal-500 text-white"
-                          : "bg-white text-black hover:bg-gray-100"
+                        `flex items-center gap-4 px-4 py-3 rounded-xl font-medium text-base shadow-sm transition-all duration-200 ${
+                          isActive
+                            ? "bg-teal-500 text-white"
+                            : "bg-white text-black hover:bg-gray-100"
                         }`
                       }
                     >
-                      <span className="w-5 h-5 flex items-center justify-center">
-                        {sub.icon}
-                      </span>
+                      <span className="w-5 h-5 flex items-center justify-center">{sub.icon}</span>
                       <span>{sub.name}</span>
                     </NavLink>
                   ))}
-                </div>
-              )}
-
-              {activeSubmenu === item.name && (
-                <div className="hidden lg:block">
-                  <FloatingSubmenu
-                    position={submenuPosition}
-                    visible={true}
-                    onMouseEnter={handleSubmenuMouseEnter}
-                    onMouseLeave={handleSubmenuMouseLeave}
-                  >
-                    {item.submenuItems.map((sub) => (
-                      <NavLink
-                        key={sub.name}
-                        to={sub.path}
-                        end
-                        onClick={handleNavClick}
-                        className={({ isActive }) =>
-                          `flex items-center gap-4 px-3 py-3 my-2 rounded-xl font-large text-base shadow-sm transition-all duration-200 ${isActive
-                            ? "bg-teal-500 text-white"
-                            : "bg-white text-black hover:bg-gray-100"
-                          }`
-                        }
-                      >
-                        <span className="w-5 h-5 flex items-center justify-center">
-                          {sub.icon}
-                        </span>
-                        <span>{sub.name}</span>
-                      </NavLink>
-                    ))}
-                  </FloatingSubmenu>
                 </div>
               )}
             </div>
@@ -302,9 +193,10 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
               end
               onClick={handleNavClick}
               className={({ isActive }) =>
-                `group flex items-center gap-4 px-4 py-3 rounded-xl font-medium text-base shadow-sm transition-all duration-200 ${isActive
-                  ? "bg-teal-500 text-white"
-                  : "bg-white text-black hover:bg-gray-100"
+                `group flex items-center gap-4 px-4 py-3 rounded-xl font-medium text-base shadow-sm transition-all duration-200 ${
+                  isActive
+                    ? "bg-teal-500 text-white"
+                    : "bg-white text-black hover:bg-gray-100"
                 }`
               }
             >
@@ -319,14 +211,7 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
                   </span>
                 )}
               </span>
-              <span
-                className={`
-                            whitespace-nowrap overflow-hidden 
-                            transition-all duration-300 
-                            ml-0 opacity-100
-                            group-hover:ml-1 group-hover:opacity-100
-                            ${submenuHovered ? "lg:opacity-100 lg:ml-1" : ""}
-                          `}>
+              <span className="whitespace-nowrap overflow-hidden transition-all duration-300 ml-0 opacity-100">
                 {item.name}
               </span>
             </NavLink>

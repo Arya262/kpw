@@ -18,7 +18,7 @@ export default function SingleContactForm(props) {
   return (
     <>
       <PhoneInputField {...props} setPhone={handlePhoneChange} />
-      <OptStatusRadio {...props} />
+      {/* <OptStatusRadio {...props} /> */}
       <NameInput name={name} setName={setName} />
     </>
   );

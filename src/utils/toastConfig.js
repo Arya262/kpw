@@ -1,8 +1,16 @@
 import { toast } from "react-toastify";
 
+// ===== Responsive Position Helper =====
+const getResponsivePosition = () => {
+  if (typeof window !== "undefined" && window.innerWidth <= 768) {
+    return "top-center"; // Mobile
+  }
+  return "top-right"; // Desktop
+};
+
 // Default toast configuration
 export const defaultToastConfig = {
-  position: "top-right",
+  position: getResponsivePosition(),
   autoClose: 3000,
   hideProgressBar: false,
   newestOnTop: true,
@@ -41,13 +49,10 @@ export const showWarningToast = (message, options = {}) => {
 };
 
 // ===== Config Factory =====
-export const createToastConfig = (
-  autoClose = 3000,
-  position = "top-right"
-) => ({
+export const createToastConfig = (autoClose = 3000, position) => ({
   ...defaultToastConfig,
   autoClose,
-  position,
+  position: position || getResponsivePosition(),
 });
 
 // ===== Common Reusable Toasts =====

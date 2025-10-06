@@ -13,24 +13,14 @@ const Broadcast = () => {
   const broadcastDashboardRef = useRef(null);
   const [showPopup, setShowPopup] = useState(false);
   const [highlightCancel, setHighlightCancel] = useState(false);
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [deleteIndex, setDeleteIndex] = useState(null);
   const [broadcasts, setBroadcasts] = useState([]);
-  const [selectedRows, setSelectedRows] = useState({});
-  const [selectAll, setSelectAll] = useState(false);
+  const [pagination, setPagination] = useState(null);
 
   const location = useLocation();
   const { user } = useAuth();
   const permissions = getPermissions(user);
-  const [pagination, setPagination] = useState(null);
-  const canDeleteBroadcast = (broadcast) => {
-    if (!permissions.canDelete) return false;
-    if (user?.role?.toLowerCase?.() === "user") {
-      return broadcast.created_by === user?.id;
-    }
-    return true;
-  };
 
+  // Handle navigation state (formData, openForm)
   useEffect(() => {
     if (location.state?.formData) {
       broadcastDashboardRef.current?.fetchBroadcasts();
@@ -46,60 +36,22 @@ const Broadcast = () => {
       setShowPopup(true);
       window.history.replaceState({}, document.title);
     }
-  }, [location.state]);
+  }, [location.state, permissions]);
 
-  const handleSelectAllChange = (event) => {
-    const checked = event.target.checked;
-    setSelectAll(checked);
-    const newSelected = {};
-    if (checked) {
-      broadcasts.forEach((_, idx) => {
-        newSelected[idx] = true;
-      });
-    }
-    setSelectedRows(newSelected);
-  };
-
-  const handleCheckboxChange = (idx, event) => {
-    setSelectedRows((prev) => ({
-      ...prev,
-      [idx]: event.target.checked,
-    }));
-  };
-
-  useEffect(() => {
-    const total = broadcasts.length;
-    const selected = Object.values(selectedRows).filter(Boolean).length;
-    setSelectAll(selected === total && total > 0);
-  }, [selectedRows, broadcasts.length]);
-
-  const confirmDelete = () => {
-    if (deleteIndex !== null) {
-      broadcastDashboardRef.current?.handleDelete(deleteIndex);
-    }
-    setShowConfirmModal(false);
-    setDeleteIndex(null);
-  };
-
-  const cancelDelete = () => {
-    setShowConfirmModal(false);
-    setDeleteIndex(null);
-  };
-
+  // When broadcast is created
   const handleBroadcastCreated = () => {
     broadcastDashboardRef.current?.fetchBroadcasts();
     toast.success("Campaign added successfully!");
     setShowPopup(false);
   };
 
-  const handleBroadcastsUpdate = ({
-    broadcasts: newBroadcasts,
-    pagination: newPagination,
-  }) => {
+  // Update broadcasts & pagination
+  const handleBroadcastsUpdate = ({ broadcasts: newBroadcasts, pagination: newPagination }) => {
     setBroadcasts(newBroadcasts || []);
     setPagination(newPagination || null);
   };
 
+  // Add Campaign button
   const handleAddBroadcast = () => {
     if (!permissions.canAddBroadcast) {
       toast.error("You do not have permission to add Campaigns.");
@@ -108,26 +60,23 @@ const Broadcast = () => {
     setShowPopup(true);
   };
 
+  // Highlight cancel when backdrop clicked
+  const handleBackdropClick = (e) => {
+    if (e.target === e.currentTarget) {
+      setHighlightCancel(true);
+      setTimeout(() => setHighlightCancel(false), 2000);
+    }
+  };
+
   return (
     <div className="p-0 bg-white min-h-screen">
-      <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
-      />
+      <ToastContainer position="top-right" autoClose={3000} theme="light" />
 
-
+      {/* Header */}
       <div className="flex items-center justify-between p-2.5">
         <h2 className="text-xl pt-0 font-semibold">Campaigns</h2>
         <button
-          className="bg-gradient-to-r from-[#0AA89E] to-cyan-500 text-white flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl shadow-lg hover:shadow-xl  transition-all cursor-pointer"
+          className="bg-gradient-to-r from-[#0AA89E] to-cyan-500 text-white flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer"
           onClick={handleAddBroadcast}
         >
           <img src={vendor} alt="plus sign" className="w-5 h-5" />
@@ -135,38 +84,27 @@ const Broadcast = () => {
         </button>
       </div>
 
-      <BroadcastStats
-        data={broadcasts}
-        totalRecords={pagination?.totalRecords || 0}
-      />
+      {/* Stats */}
+      <BroadcastStats data={broadcasts} totalRecords={pagination?.totalRecords || 0} />
+
+      {/* Dashboard */}
       <BroadcastDashboard
         ref={broadcastDashboardRef}
         onBroadcastsUpdate={handleBroadcastsUpdate}
-        selectAll={selectAll}
-        handleSelectAllChange={handleSelectAllChange}
-        selectedRows={selectedRows}
-        handleCheckboxChange={handleCheckboxChange}
       />
 
+      {/* Modal */}
       {showPopup && (
         <div
           className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 transition-all duration-300"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setHighlightCancel(true);
-              setTimeout(() => setHighlightCancel(false), 2000);
-            }
-          }}
+          onClick={handleBackdropClick}
+          role="dialog"
+          aria-modal="true"
         >
           <div
-            className={`bg-white w-full 
-              max-w-full sm:max-w-5xl md:max-w-6xl lg:max-w-7xl
-              h-[95vh] sm:h-auto sm:max-h-[95vh]
-              rounded-t-2xl sm:rounded-xl
-              overflow-hidden relative shadow-2xl
-              border ${highlightCancel ? "border-red-500" : "border-gray-200"} 
-              transition-all duration-300
-              flex flex-col`}
+            className={`bg-white w-full max-w-full sm:max-w-5xl md:max-w-5xl lg:max-w-5xl xl:max-w-6xl h-[95vh] sm:h-auto sm:max-h-[95vh] rounded-t-2xl sm:rounded-xl overflow-hidden relative shadow-2xl border ${
+              highlightCancel ? "border-red-500" : "border-gray-200"
+            } transition-all duration-300 flex flex-col`}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
@@ -176,17 +114,21 @@ const Broadcast = () => {
                   <img src={vendor} alt="campaign" className="w-4 h-4 sm:w-6 sm:h-6" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900 truncate">Create New Campaign</h2>
-                  <p className="text-xs sm:text-sm text-gray-500 hidden sm:block">Set up and send your WhatsApp broadcast</p>
+                  <h2 className="text-lg sm:text-xl lg:text-md xl:text-xl font-semibold text-gray-900 truncate">
+                    Create New Campaign
+                  </h2>
+                  <p className="text-xs sm:text-sm lg:text-xs xl:text-sm text-gray-500 hidden sm:block">
+                    Set up and send your WhatsApp broadcast
+                  </p>
                 </div>
               </div>
               <button
                 onClick={() => setShowPopup(false)}
-                className={`w-8 h-8 flex items-center justify-center rounded-full transition-all duration-200 flex-shrink-0
-                  ${highlightCancel
+                className={`w-8 h-8 flex items-center justify-center rounded-full transition-all duration-200 flex-shrink-0 ${
+                  highlightCancel
                     ? "bg-red-500 text-white hover:bg-red-600"
                     : "bg-gray-200 text-gray-600 hover:bg-gray-300 hover:text-gray-800"
-                  }`}
+                }`}
                 aria-label="Close modal"
               >
                 <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -197,13 +139,10 @@ const Broadcast = () => {
 
             {/* Modal Body */}
             <div className="flex-1 overflow-y-auto min-h-0 scrollbar-hide">
-              <BroadcastPages
-                onClose={() => setShowPopup(false)}
-                onBroadcastCreated={handleBroadcastCreated}
-              />
+              <BroadcastPages onClose={() => setShowPopup(false)} onBroadcastCreated={handleBroadcastCreated} />
             </div>
           </div>
-          
+
           {/* Date Picker Portal */}
           <div id="datepicker-portal"></div>
         </div>

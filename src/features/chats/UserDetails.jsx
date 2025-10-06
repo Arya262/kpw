@@ -1,52 +1,16 @@
+import React, { useState, useEffect } from "react";
 import { formatTime } from "../../utils/time";
-
-// HSL-based dynamic avatar color generator
-const getAvatarColor = (name = "User") => {
-  const hash = [...name].reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const hue = hash % 360;
-  return `hsl(${hue}, 70%, 50%)`;
-};
-
-const renderAvatar = (contact) => {
-  const name = contact?.name || "User";
-  const parts = name.trim().split(/\s+/);
-  let initials = "U";
-
-  if (parts.length === 1) {
-    initials = parts[0][0]?.toUpperCase() || "U";
-  } else if (parts.length > 1) {
-    initials =
-      (parts[0][0]?.toUpperCase() || "") +
-      (parts[parts.length - 1][0]?.toUpperCase() || "");
-  }
-
-  const bgColor = getAvatarColor(name);
-
-  if (contact.image) {
-    return (
-      <img
-        src={contact.image}
-        alt={`${name} Avatar`}
-        className="w-full h-full object-cover"
-      />
-    );
-  }
-
-  return (
-    <div
-      className="w-full h-full rounded-full flex items-center justify-center text-white font-semibold text-2xl"
-      style={{ backgroundColor: bgColor }}
-    >
-      {initials}
-    </div>
-  );
-};
+import Avatar from "../../utils/Avatar";
+import Dropdown from "../../components/Dropdown"; // adjust path if needed
 
 const UserDetails = ({ isExpanded, setIsExpanded, selectedContact }) => {
-  // console.log("Selected Contact:", selectedContact);
+  // ✅ Hooks must be inside the component
+  const [status, setStatus] = useState("");
+  const [tag, setTag] = useState("");
+  const [incomingStatus, setIncomingStatus] = useState("");
+
   if (!selectedContact) return null;
 
-  // Check if user is active within last 24 hours
   const isActive =
     selectedContact.updated_at &&
     Date.now() - new Date(selectedContact.updated_at).getTime() <
@@ -57,24 +21,22 @@ const UserDetails = ({ isExpanded, setIsExpanded, selectedContact }) => {
       <div className="user-details h-full">
         {/* Profile Info */}
         <div className="profile mt-3 text-center">
-          <div className="avatar mx-auto mb-2 w-16 h-16 rounded-full overflow-hidden">
-            {renderAvatar(selectedContact)}
+          <div className="avatar mb-2 flex justify-center">
+            <Avatar name={selectedContact?.name} image={selectedContact?.image} />
           </div>
           <h3 className="font-semibold text-lg break-all text-center px-2 max-w-[280px] mx-auto">
             {selectedContact.name || "Unnamed"}
           </h3>
           <p className="text-sm text-gray-600">
             {selectedContact?.country_code
-              ? `${selectedContact.country_code.startsWith("+") ? "" : "+"}${
-                  selectedContact.country_code
-                } `
+              ? `${selectedContact.country_code.startsWith("+") ? "" : "+"}${selectedContact.country_code} `
               : ""}
             {selectedContact?.mobile_no || "No number"}
           </p>
           <p className="opted-in text-green-600 text-sm">Opted-in</p>
         </div>
 
-        <hr className="my-4" />
+        <hr className="my-4 border-t-2 border-gray-300" />
 
         {/* Last Message */}
         <div className="flex justify-between items-center p-2">
@@ -128,32 +90,46 @@ const UserDetails = ({ isExpanded, setIsExpanded, selectedContact }) => {
         {/* General Details Section */}
         {isExpanded && (
           <div className="space-y-3 p-2">
+            {/* Status Dropdown */}
             <div>
               <label className="block text-sm font-medium text-black mb-1">
                 Status
               </label>
-              <select className="w-full p-2 border border-gray-300 rounded-md bg-white text-sm">
-                <option>Open</option>
-                <option>Closed</option>
-              </select>
+              <Dropdown
+                options={[
+                  { value: "open", label: "Open" },
+                  { value: "closed", label: "Closed" },
+                ]}
+                value={status}
+                onChange={setStatus}
+                placeholder="Select Status"
+              />
             </div>
 
+            {/* Tags Dropdown */}
             <div>
               <label className="block text-sm font-medium text-black mb-1">
                 Tags
               </label>
-              <select className="w-full p-2 border border-gray-300 rounded-md bg-white text-sm text-gray-500">
-                <option>+ Add Tags</option>
-              </select>
+              <Dropdown
+                options={[{ value: "add-tags", label: "+ Add Tags" }]}
+                value={tag}
+                onChange={setTag}
+                placeholder="Tags"
+              />
             </div>
 
+            {/* Incoming Status Dropdown */}
             <div>
               <label className="block text-sm font-medium text-black mb-1">
                 Incoming Status
               </label>
-              <select className="w-full p-2 border border-gray-300 rounded-md bg-white text-sm">
-                <option>Allowed</option>
-              </select>
+              <Dropdown
+                options={[{ value: "allowed", label: "Allowed" }]}
+                value={incomingStatus}
+                onChange={setIncomingStatus}
+                placeholder="Incoming Status"
+              />
             </div>
           </div>
         )}

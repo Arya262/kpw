@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react"; 
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Wallet, Megaphone, Zap, ShieldCheck } from "lucide-react";
-import { useLocation as useAppLocation } from "../../context/LocationContext";
+import { useLocation } from "../../context/LocationContext";
 import pricingData from "../../pricing.json";
 
 // Map category names to match the pricing.json keys
@@ -18,29 +18,23 @@ const getMessagesCount = (balance, price) => {
 };
 
 const WalletDetailsModal = ({ isOpen, onClose, walletBalance }) => {
-  const { location } = useAppLocation();
-  const [ipData, setIpData] = useState(null);
+  const { location } = useLocation();
   const [countryName, setCountryName] = useState("India");
   const [currency, setCurrency] = useState({ symbol: "₹", code: "INR" });
 
-  // Fetch IP data for country detection
+  // Update country and currency based on location context
   useEffect(() => {
-    if (location?.loaded && !ipData) {
-      fetch("https://ipapi.co/json/")
-        .then((res) => res.json())
-        .then((data) => {
-          setIpData(data);
-          if (data.country_name) setCountryName(data.country_name);
-        })
-        .catch((err) => console.error("Error fetching IP data:", err));
+    if (location?.loaded && location.address) {
+      // Extract country from the address or use default
+      const address = location.address.toLowerCase();
+      const isIndia = address.includes('india') || address.includes('indian');
+      setCountryName(isIndia ? "India" : "United States");
+      setCurrency({ 
+        symbol: isIndia ? "₹" : "$", 
+        code: isIndia ? "INR" : "USD" 
+      });
     }
-  }, [location, ipData]);
-
-  // Update currency based on country
-  useEffect(() => {
-    const isIndia = countryName === "India";
-    setCurrency({ symbol: isIndia ? "₹" : "$", code: isIndia ? "INR" : "USD" });
-  }, [countryName]);
+  }, [location]);
 
   // Get pricing for a category
   const getPriceForCategory = (category) => {

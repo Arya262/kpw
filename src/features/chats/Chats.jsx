@@ -10,10 +10,11 @@ import UserDetails from "./UserDetails";
 import { MessageCircle } from "lucide-react";
 import { useChatLogic } from "../../hooks/useChatLogic";
 import { getPermissions } from "../../utils/getPermissions";
-import { toast } from "react-toastify";
 import Loader from "../../components/Loader";
-
+import ContactsLoader from "./ContactsLoader";
 const MOBILE_BREAKPOINT = 768;
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const Chat = () => {
   const [showUserDetails, setShowUserDetails] = useState(false);
@@ -218,37 +219,38 @@ const Chat = () => {
   }, [isSelectMode]);
 
   return (
+    
     <div className="flex flex-col md:flex-row w-full flex-1 min-h-0 h-full md:border md:rounded-2xl border-gray-300 bg-white overflow-hidden">
+       <ToastContainer position="top-right" autoClose={3000} />
       {/* Sidebar */}
-      {loading ? (
-        <div className="basis-full md:basis-1/4 flex items-center justify-center p-6 border-r border-gray-200">
-          <Loader />
-        </div>
-      ) : (
-        (!isMobile || (isMobile && !showMobileChat)) && (
-          <div
-            className="relative border-r border-gray-200 overflow-y-auto"
-            style={{ width: isMobile ? "100%" : `${width}px` }}
-          >
-            <ChatSidebar
-              contacts={contacts}
-              selectedContact={selectedContact}
-              searchQuery={searchQuery}
-              onSearchChange={handleSearchChange}
-              onSelectContact={handleSelectContact}
-              fetchContacts={fetchContacts}
-            />
-
-            {/* Drag handle (WhatsApp style) */}
-            <div
-              className="absolute top-0 right-0 h-full w-[4px] cursor-col-resize group"
-              onMouseDown={startResizing}
-            >
-              <div className="h-full w-[2px] mx-auto bg-gray-300 group-hover:bg-gray-500 transition-colors" />
-            </div>
-          </div>
-        )
-      )}
+{loading ? (
+  <div className="basis-full md:basis-1/4 border-r border-gray-200 overflow-y-auto">
+    <ContactsLoader />
+  </div>
+) : (
+  (!isMobile || !showMobileChat) && (
+    <div
+      className="relative border-r border-gray-200 overflow-y-auto"
+      style={{ width: isMobile ? "100%" : `${width}px` }}
+    >
+      <ChatSidebar
+        contacts={contacts}
+        selectedContact={selectedContact}
+        searchQuery={searchQuery}
+        onSearchChange={handleSearchChange}
+        onSelectContact={handleSelectContact}
+        fetchContacts={fetchContacts}
+      />
+      {/* Drag handle */}
+      <div
+        className="absolute top-0 right-0 h-full w-[4px] cursor-col-resize group"
+        onMouseDown={startResizing}
+      >
+        <div className="h-full w-[2px] mx-auto bg-gray-300 group-hover:bg-gray-500 transition-colors" />
+      </div>
+    </div>
+  )
+)}
 
       {/* Main Chat Area */}
       {(!isMobile || (isMobile && showMobileChat)) && (

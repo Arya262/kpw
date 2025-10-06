@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../../context/AuthContext";
 import TemplateModal from "../../templates/Modal";
-import {
-  Box,
-} from "@mui/material";
 
 // Custom hook
 import { useBroadcastForm } from "../hooks/useBroadcastForm";
@@ -18,7 +15,6 @@ import PreviewStep from "../steps/PreviewStep";
 // UI components
 import StepIndicator from "../ui/StepIndicator";
 import InformationCards from "../ui/InformationCards";
-import CostInformation from "../ui/CostInformation";
 import NavigationButtons from "../ui/NavigationButtons";
 
 const BroadcastForm = ({
@@ -41,12 +37,12 @@ const BroadcastForm = ({
   onTemplateSelect,
   step,
   setStep,
+  wabaInfo,
 }) => {
   const { user } = useAuth();
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
 
   const {
-    // States
     templates,
     templatesLoading,
     templatesError,
@@ -65,8 +61,6 @@ const BroadcastForm = ({
     setWarningMessage,
     selectedGroups,
     totalSelectedContacts,
-
-    // Functions
     fetchTemplates,
     loadMoreTemplates,
     validateStep,
@@ -74,7 +68,6 @@ const BroadcastForm = ({
     handleNext,
     handlePrevious,
     getStepSequence,
-    getCurrentStepIndex
   } = useBroadcastForm(
     formData,
     setFormData,
@@ -83,36 +76,62 @@ const BroadcastForm = ({
     step,
     setStep,
     selectedDate,
-    setSelectedDate
+    setSelectedDate,
+    wabaInfo
   );
 
-  const handleSubmit = (e) => {
+  const handleFormSubmit = (e) => {
     e.preventDefault();
-    if (validateForm()) {
-      onSubmit(e);
-    }
+    if (validateForm()) onSubmit(e);
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchTemplates(1, false, templateSearchTerm || "");
+    }, 500); 
+
+    return () => clearTimeout(timer);
+  }, [templateSearchTerm, fetchTemplates]);
+
+  // Handle dynamic template parameter input
+  const handleTemplateParameterChange = (index, value) => {
+    setFormData((prev) => {
+      const updatedParams = [...(prev.templateParameters || [])];
+      updatedParams[index] = value;
+      return { ...prev, templateParameters: updatedParams };
+    });
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5 sm:space-y-2 lg:space-y-2 xl:space-y-5">
       <StepIndicator step={step} getStepSequence={getStepSequence} />
-      <InformationCards formData={{ ...formData, customerLists }} />
-      
+
+      {step > 0 && step < getStepSequence().length && (
+        <InformationCards
+          formData={formData}
+          wabaInfo={wabaInfo}
+          totalSelectedContacts={totalSelectedContacts}
+        />
+      )}
+
       <div className="border border-gray-200 rounded-lg bg-gray-50/30">
-        <div className="p-3 sm:p-4 md:p-6">
+        <div className="p-3 sm:p-4 md:p-6 lg:p-1 xl:p-6">
           {step === 1 && (
-            <CampaignNameStep 
-              formData={formData} 
-              handleInputChange={handleInputChange} 
-              validationErrors={validationErrors} 
-              isSubmitting={isSubmitting} 
+            <CampaignNameStep
+              formData={formData}
+              handleInputChange={handleInputChange}
+              validationErrors={validationErrors}
+              isSubmitting={isSubmitting}
             />
           )}
+
           {step === 2 && (
-            <GroupSelectionStep 
+            <GroupSelectionStep
               formData={formData}
               setFormData={setFormData}
               customerLists={customerLists}
+              user={user}
+              wabaInfo={wabaInfo}
               validationErrors={validationErrors}
               isSubmitting={isSubmitting}
               loading={loading}
@@ -125,53 +144,68 @@ const BroadcastForm = ({
               setShowList={setShowList}
             />
           )}
+
           {step === 3 && (
-            <TemplateSelectionStep 
-              templates={templates}
-              templatesLoading={templatesLoading}
-              templatesError={templatesError}
-              onTemplateSelect={onTemplateSelect}
-              validationErrors={validationErrors}
-              setValidationErrors={(errors) => setFormData(prev => ({ ...prev, errors }))}
-              pagination={pagination}
-              loadMoreTemplates={loadMoreTemplates}
-              templateSearchTerm={templateSearchTerm}
-              setTemplateSearchTerm={setTemplateSearchTerm}
-              setIsTemplateModalOpen={setIsTemplateModalOpen}
-              formData={formData}
-            />
+            <>
+              <TemplateSelectionStep
+                templates={templates}
+                templatesLoading={templatesLoading}
+                templatesError={templatesError}
+                onTemplateSelect={onTemplateSelect}
+                validationErrors={validationErrors}
+                setValidationErrors={(errors) =>
+                  setFormData((prev) => ({ ...prev, errors }))
+                }
+                pagination={pagination}
+                loadMoreTemplates={loadMoreTemplates}
+                templateSearchTerm={templateSearchTerm}
+                setTemplateSearchTerm={setTemplateSearchTerm}
+                setIsTemplateModalOpen={setIsTemplateModalOpen}
+                formData={formData}
+                setFormData={setFormData} // Pass setFormData to update placeholders
+              />
+            </>
           )}
+
           {step === 4 && (
-            <ScheduleCampaignStep 
+            <ScheduleCampaignStep
               formData={formData}
               handleRadioChange={handleRadioChange}
               selectedDate={selectedDate}
               setSelectedDate={setSelectedDate}
               validationErrors={validationErrors}
-              setValidationErrors={(errors) => setFormData(prev => ({ ...prev, errors }))}
+              setValidationErrors={(errors) =>
+                setFormData((prev) => ({ ...prev, errors }))
+              }
               isSubmitting={isSubmitting}
             />
           )}
+
           {step === 5 && (
-            <PreviewStep 
+            <PreviewStep
               formData={formData}
               customerLists={customerLists}
               selectedDate={selectedDate}
               estimatedCost={estimatedCost}
               availableWCC={availableWCC}
               totalSelectedContacts={totalSelectedContacts}
+              wabaInfo={wabaInfo}
             />
           )}
         </div>
       </div>
-      
-      <NavigationButtons 
+
+      <NavigationButtons
         step={step}
         handlePrevious={handlePrevious}
         handleNext={handleNext}
-        handleSubmit={handleSubmit}
+        handleSubmit={handleFormSubmit}
         isSubmitting={isSubmitting}
         getStepSequence={getStepSequence}
+        estimatedCost={estimatedCost}
+        availableWCC={availableWCC}
+        totalSelectedContacts={totalSelectedContacts}
+        wabaInfo={wabaInfo}
       />
 
       <TemplateModal

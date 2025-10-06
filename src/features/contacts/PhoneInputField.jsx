@@ -33,8 +33,6 @@ export default function PhoneInputField({
           setPhone(value);
           setIsTouched(true);
           handleValidation(value);
-          // Optional: If you want to store country code separately
-          console.log('Country Code:', country.dialCode);
         }}
         enableSearch
         inputStyle={{

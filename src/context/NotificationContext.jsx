@@ -253,8 +253,6 @@ export const NotificationProvider = ({ children }) => {
     };
   }, [socket]);
 
-  // ❌ Removed "reset unreadCount on focus" effect (was wiping counts on reload)
-
 useEffect(() => {
   if (!user?.customer_id) return;
 

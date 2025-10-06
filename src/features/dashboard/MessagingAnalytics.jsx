@@ -131,7 +131,7 @@ export default function MessagingAnalytics({ usageHistory }) {
         }
         const data = await response.json();
         setBroadcasts(Array.isArray(data.broadcasts) ? data.broadcasts : []);
-      } catch (err) {}
+      } catch (err) { }
     };
     fetchBroadcasts();
   }, [user]);
@@ -202,7 +202,7 @@ export default function MessagingAnalytics({ usageHistory }) {
       0
     );
     return [
-      { name: "Gupshup Fees", value: gupshupTotal },
+      { name: "Foodchow Fees", value: gupshupTotal },
       { name: "Meta Fees", value: metaTotal },
     ];
   }, [filteredData]);
@@ -545,201 +545,200 @@ export default function MessagingAnalytics({ usageHistory }) {
               />
 
               {/* Cost Distribution */}
-<div className="rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 hover:shadow-lg hover:scale-[1.02] transition">
-  <h2 className="text-lg sm:text-xl font-semibold border-b pb-3 border-gray-300 mb-4">
-    Cost Distribution
-  </h2>
-  <div className="flex flex-col sm:flex-row items-center gap-4 w-full">
-    <ResponsiveContainer width="100%" height={220}>
-      <PieChart>
-        <Pie
-          data={costPieData}
-          dataKey="value"
-          nameKey="name"
-          cx="50%"
-          cy="50%"
-          innerRadius="40%"
-          outerRadius="70%"
-          label={({ name, value }) =>
-            `${name}: ₹${parseFloat(value).toFixed(2)}`
-          }
-        >
-          {costPieData.map((_, index) => (
-            <Cell
-              key={index}
-              fill={COST_COLORS[index % COST_COLORS.length]}
-            />
-          ))}
-        </Pie>
+              <div className="rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 hover:shadow-lg hover:scale-[1.02] transition">
+                <h2 className="text-lg sm:text-xl font-semibold border-b pb-3 border-gray-300 mb-4">
+                  Cost Distribution
+                </h2>
+                <div className="flex flex-col sm:flex-row items-center gap-4 w-full">
+                  <ResponsiveContainer width="100%" height={220}>
+                    <PieChart>
+                      <Pie
+                        data={costPieData}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius="40%"
+                        outerRadius="70%"
+                        label={({ name, value }) =>
+                          `${name}: ₹${parseFloat(value).toFixed(2)}`
+                        }
+                      >
+                        {costPieData.map((_, index) => (
+                          <Cell
+                            key={index}
+                            fill={COST_COLORS[index % COST_COLORS.length]}
+                          />
+                        ))}
+                      </Pie>
 
-        {/* Center text showing total */}
-        <text
-          x="50%"
-          y="50%"
-          textAnchor="middle"
-          dominantBaseline="middle"
-          className="text-sm font-semibold"
-        >
-          Total ₹
-          {costPieData
-            .reduce((acc, cur) => acc + cur.value, 0)
-            .toFixed(2)}
-        </text>
+                      {/* Center text showing total */}
+                      <text
+                        x="50%"
+                        y="50%"
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        className="text-sm font-semibold"
+                      >
+                        Total ₹
+                        {costPieData
+                          .reduce((acc, cur) => acc + cur.value, 0)
+                          .toFixed(2)}
+                      </text>
 
-        <Tooltip
-          formatter={(value, name) => [
-            `₹${parseFloat(value).toFixed(2)}`,
-            name,
-          ]}
-        />
-      </PieChart>
-    </ResponsiveContainer>
+                      <Tooltip
+                        formatter={(value, name) => [
+                          `₹${parseFloat(value).toFixed(2)}`,
+                          name,
+                        ]}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
 
-    {/* Custom legend */}
-    <div className="flex flex-col gap-2">
-      {costPieData.map((cost, index) => (
-        <div key={cost.name} className="flex items-center gap-2 text-sm">
-          <span
-            className="w-3 h-3 rounded-full"
-            style={{
-              backgroundColor: COST_COLORS[index % COST_COLORS.length],
-            }}
-          />
-          <span>
-            {cost.name}: ₹{parseFloat(cost.value).toFixed(2)}
-          </span>
-        </div>
-      ))}
-    </div>
-  </div>
-</div>
+                  {/* Custom legend */}
+                  <div className="flex flex-col gap-2">
+                    {costPieData.map((cost, index) => (
+                      <div key={cost.name} className="flex items-center gap-2 text-sm">
+                        <span
+                          className="w-3 h-3 rounded-full"
+                          style={{
+                            backgroundColor: COST_COLORS[index % COST_COLORS.length],
+                          }}
+                        />
+                        <span>
+                          {cost.name}: ₹{parseFloat(cost.value).toFixed(2)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
 
 
-{/* Campaign Details */}
-<div className="rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 hover:shadow-lg hover:scale-[1.02] transition">
-  <h2 className="text-lg sm:text-xl font-semibold border-b pb-3 border-gray-300 mb-4">
-    Campaign Details
-  </h2>
-  <div className="grid grid-cols-1 gap-2">
-    {campData.map((camp) => (
-      <div
-        key={camp.label}
-        className="flex items-center justify-between p-3 border-b border-gray-200 last:border-none hover:bg-gray-50 rounded-lg transition"
-      >
-        <div className="flex items-center gap-3">
-          {/* Icon inside colored circle */}
-          <div
-            className={`w-8 h-8 flex items-center justify-center rounded-full bg-opacity-10 ${camp.color}`}
-          >
-            <camp.icon className={`${camp.color} w-4 h-4`} />
-          </div>
-          <div>
-            <h3 className="text-sm sm:text-base font-medium text-gray-700">
-              {camp.label}
-            </h3>
-            {camp.subLabel && (
-              <p className="text-xs text-gray-500">{camp.subLabel}</p>
-            )}
-          </div>
-        </div>
-        <p className={`text-sm sm:text-base font-semibold ${camp.color}`}>
-          {camp.count}
-        </p>
-      </div>
-     ))}
-    </div>
- </div>
-</div>
+              {/* Campaign Details */}
+              <div className="rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 hover:shadow-lg hover:scale-[1.02] transition">
+                <h2 className="text-lg sm:text-xl font-semibold border-b pb-3 border-gray-300 mb-4">
+                  Campaign Details
+                </h2>
+                <div className="grid grid-cols-1 gap-2">
+                  {campData.map((camp) => (
+                    <div
+                      key={camp.label}
+                      className="flex items-center justify-between p-3 border-b border-gray-200 last:border-none hover:bg-gray-50 rounded-lg transition"
+                    >
+                      <div className="flex items-center gap-3">
+                        {/* Icon inside colored circle */}
+                        <div
+                          className={`w-8 h-8 flex items-center justify-center rounded-full bg-opacity-10 ${camp.color}`}
+                        >
+                          <camp.icon className={`${camp.color} w-4 h-4`} />
+                        </div>
+                        <div>
+                          <h3 className="text-sm sm:text-base font-medium text-gray-700">
+                            {camp.label}
+                          </h3>
+                          {camp.subLabel && (
+                            <p className="text-xs text-gray-500">{camp.subLabel}</p>
+                          )}
+                        </div>
+                      </div>
+                      <p className={`text-sm sm:text-base font-semibold ${camp.color}`}>
+                        {camp.count}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
 
- {/* Messaging & Fees Overview */}
-<div className="mb-8">
-  <div className="rounded-xl shadow-sm hover:shadow-lg hover:scale-[1.02] transition border border-gray-200 p-4 sm:p-6">
-    <h2 className="text-lg sm:text-xl font-semibold mb-4">
-      Messaging & Fees Overview
-    </h2>
-    <ResponsiveContainer width="100%" height={300}>
-      <LineChart
-        data={filteredData.map((item) => ({
-          ...item,
-          total_fees: item.gupshup_fees + item.meta_fees, 
-        }))}
-        className="text-xs"
-        margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
-      >
-        <CartesianGrid strokeDasharray="1 2" />
+            {/* Messaging & Fees Overview */}
+            <div className="mb-8">
+              <div className="rounded-xl shadow-sm hover:shadow-lg hover:scale-[1.02] transition border border-gray-200 p-4 sm:p-6">
+                <h2 className="text-lg sm:text-xl font-semibold mb-4">
+                  Messaging & Fees Overview
+                </h2>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart
+                    data={filteredData.map((item) => ({
+                      ...item,
+                      total_fees: item.gupshup_fees + item.meta_fees,
+                    }))}
+                    className="text-xs"
+                    margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="1 2" />
 
-        <XAxis
-          dataKey="usage_date"
-          tickFormatter={(date) =>
-            new Date(date).toLocaleDateString("en-IN", {
-              day: "2-digit",
-              month: "short",
-            })
-          }
-        />
-        <YAxis tickFormatter={(value) => `₹${value.toFixed(2)}`} />
+                    <XAxis
+                      dataKey="usage_date"
+                      tickFormatter={(date) =>
+                        new Date(date).toLocaleDateString("en-IN", {
+                          day: "2-digit",
+                          month: "short",
+                        })
+                      }
+                    />
+                    <YAxis tickFormatter={(value) => `₹${value.toFixed(2)}`} />
 
-        <Tooltip
-          formatter={(value, name) => [
-            `₹${parseFloat(value).toFixed(2)}`,
-            name,
-          ]}
-        />
-        <Legend wrapperStyle={{ fontSize: "0.85rem" }} />
+                    <Tooltip
+                      formatter={(value, name) => [
+                        `₹${parseFloat(value).toFixed(2)}`,
+                        name,
+                      ]}
+                    />
+                    <Legend wrapperStyle={{ fontSize: "0.85rem" }} />
 
-        {/* Gradient fills */}
-        <defs>
-          <linearGradient id="gupshupGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#82ca9d" stopOpacity={0.9} />
-            <stop offset="100%" stopColor="#82ca9d" stopOpacity={0.3} />
-          </linearGradient>
-          <linearGradient id="metaGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#ffc658" stopOpacity={0.9} />
-            <stop offset="100%" stopColor="#ffc658" stopOpacity={0.3} />
-          </linearGradient>
-          <linearGradient id="totalGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#8884d8" stopOpacity={0.9} />
-            <stop offset="100%" stopColor="#8884d8" stopOpacity={0.3} />
-          </linearGradient>
-        </defs>
+                    {/* Gradient fills */}
+                    <defs>
+                      <linearGradient id="foodchowGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#82ca9d" stopOpacity={0.9} />
+                        <stop offset="100%" stopColor="#82ca9d" stopOpacity={0.3} />
+                      </linearGradient>
+                      <linearGradient id="metaGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#ffc658" stopOpacity={0.9} />
+                        <stop offset="100%" stopColor="#ffc658" stopOpacity={0.3} />
+                      </linearGradient>
+                      <linearGradient id="totalGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#8884d8" stopOpacity={0.9} />
+                        <stop offset="100%" stopColor="#8884d8" stopOpacity={0.3} />
+                      </linearGradient>
+                    </defs>
 
-        {/* Gupshup Fees */}
-        <Line
-          type="monotone"
-          dataKey="gupshup_fees"
-          stroke="url(#gupshupGradient)"
-          name="Gupshup Fees"
-          strokeWidth={2}
-          dot={false}
-          activeDot={{ r: 5 }}
-        />
+                    {/* Foodchow Fees (was Gupshup Fees) */}
+                    <Line
+                      type="monotone"
+                      dataKey="gupshup_fees"
+                      stroke="url(#foodchowGradient)"
+                      name="Foodchow Fees"   // ✅ renamed here
+                      strokeWidth={2}
+                      dot={false}
+                      activeDot={{ r: 5 }}
+                    />
 
-        {/* Meta Fees */}
-        <Line
-          type="monotone"
-          dataKey="meta_fees"
-          stroke="url(#metaGradient)"
-          name="Meta Fees"
-          strokeWidth={2}
-          dot={false}
-          activeDot={{ r: 5 }}
-        />
+                    {/* Meta Fees */}
+                    <Line
+                      type="monotone"
+                      dataKey="meta_fees"
+                      stroke="url(#metaGradient)"
+                      name="Meta Fees"
+                      strokeWidth={2}
+                      dot={false}
+                      activeDot={{ r: 5 }}
+                    />
 
-        {/* Total Fees */}
-        <Line
-          type="monotone"
-          dataKey="total_fees"
-          stroke="url(#totalGradient)"
-          name="Total Fees"
-          strokeWidth={2}
-          dot={false}
-          activeDot={{ r: 5 }}
-        />
-      </LineChart>
-    </ResponsiveContainer>
-  </div>
-</div>
-
+                    {/* Total Fees */}
+                    <Line
+                      type="monotone"
+                      dataKey="total_fees"
+                      stroke="url(#totalGradient)"
+                      name="Total Fees"
+                      strokeWidth={2}
+                      dot={false}
+                      activeDot={{ r: 5 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
 
 
             {/* Message Distribution + Contact */}

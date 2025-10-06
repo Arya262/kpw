@@ -30,7 +30,7 @@ function PopoverPortal({ anchorRect, children, onClose, position = "bottom" }) {
   const style = {
     position: "absolute",
     left: anchorRect.left,
-    top: position === "bottom" ? anchorRect.bottom + 6 : anchorRect.top - 206, // 200px height + 6px gap
+    top: position === "bottom" ? anchorRect.bottom + 6 : anchorRect.top - 206, 
     zIndex: 9999,
     minWidth: 180,
     maxWidth: 320,
@@ -229,7 +229,7 @@ const roleOptions = [
         pauseOnHover
         theme="light"
       />
-      <div className="mb-8">
+      <div className="pt-2.5">
         <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
           <div className="flex items-center gap-4 flex-wrap">
             <h2 className="text-xl font-bold">Users</h2>
@@ -237,19 +237,18 @@ const roleOptions = [
           </div>
           <div >
             <button
-             className="bg-[#0AA89E] hover:bg-[#0AA89E] text-white flex items-center gap-2 px-4 py-2 rounded cursor-pointer"
-              onClick={() => {
-                if (permissions.canManageUsers) {
-                  setShowAddUser(true);
-                } else {
-                  toast.error("You do not have permission to add users.");
-                }
-              }}
-              type="button"
-        >
-          <img src={vendor} alt="plus sign" className="w-5 h-5" />
-          Add User
-        </button>
+                className="bg-gradient-to-r from-[#0AA89E] to-cyan-500 text-white flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl shadow-lg hover:shadow-xl  transition-all cursor-pointer"
+                  onClick={() => {
+                    if (permissions.canManageUsers) {
+                      setShowAddUser(true);
+                    } else {
+                      toast.error("You do not have permission to add users.");
+                    }
+                  }}
+                  type="button">
+              <img src={vendor} alt="plus sign" className="w-5 h-5" />
+              Add User
+            </button>
           </div>
         </div>
         {/* Add User Modal */}

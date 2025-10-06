@@ -38,24 +38,21 @@ const GroupNameDialog = ({
   return (
     <div
       className="fixed inset-0 bg-[#000]/50 flex items-center justify-center z-50"
-      onMouseDown={(e) => e.stopPropagation()}
-    >
+      onMouseDown={(e) => e.stopPropagation()}>
       <div
         ref={dialogRef}
         className="bg-white rounded-xl p-6 w-full max-w-sm shadow-lg transform transition-all duration-300 scale-100"
         role="dialog"
         aria-modal="true"
         aria-labelledby="group-dialog-title"
-        tabIndex="-1"
-      >
+        tabIndex="-1">
         <div className="flex items-center gap-3 mb-4">
           <svg
             className="w-6 h-6 text-teal-500"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
+            xmlns="http://www.w3.org/2000/svg">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -65,8 +62,7 @@ const GroupNameDialog = ({
           </svg>
           <h3
             id="group-dialog-title"
-            className="text-lg font-semibold text-gray-800"
-          >
+            className="text-lg font-semibold text-gray-800">
             Create Group
           </h3>
         </div>
@@ -94,16 +90,14 @@ const GroupNameDialog = ({
             onClick={onClose}
             disabled={isSubmitting}
             className="px-3 py-2 w-[70px] bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:opacity-50"
-            aria-label="Cancel"
-          >
+            aria-label="Cancel">
             Cancel
           </button>
           <button
             onClick={handleConfirm}
             disabled={!groupName.trim() || isSubmitting}
             className="px-3 py-2 w-[70px] bg-teal-500 text-white rounded-md hover:bg-teal-600 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:opacity-50 flex items-center justify-center"
-            aria-label="Create"
-          >
+            aria-label="Create">
             {isSubmitting ? (
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
             ) : (

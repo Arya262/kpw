@@ -149,6 +149,9 @@ const SendTemplate = ({ onSelect, onClose, returnFullTemplate = false }) => {
   useEffect(() => {
     if (searchTerm.trim() !== "") {
       debouncedSearch(searchTerm);
+    } else {
+      // When search is cleared, fetch first page without search term
+      fetchTemplates(1, "");
     }
     return () => debouncedSearch.cancel();
   }, [searchTerm, debouncedSearch]);
@@ -439,9 +442,7 @@ const SendTemplate = ({ onSelect, onClose, returnFullTemplate = false }) => {
         className="mb-4 w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
-        aria-describedby="error-message"
-      />
-
+        aria-describedby="error-message"/>
       {loading ? (
         <div className="space-y-4">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -555,7 +556,7 @@ const SendTemplate = ({ onSelect, onClose, returnFullTemplate = false }) => {
       )}
       {previewTemplate && (
         <div className="fixed inset-0 z-50 bg-[#000]/50 flex items-center justify-center px-4">
-          <div className="bg-white rounded-xl shadow-lg w-full max-w-full sm:max-w-lg md:max-w-4xl relative p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white w-full sm:max-w-md md:max-w-3xl lg:max-w-5xl xl:max-w-6xl max-h-[90vh] overflow-y-auto p-4 relative mx-auto my-20 rounded-lg">
             <button
               onClick={() => setPreviewTemplate(null)}
               className="absolute top-3 right-4 text-gray-400 hover:text-black text-2xl font-bold"
@@ -645,7 +646,7 @@ const SendTemplate = ({ onSelect, onClose, returnFullTemplate = false }) => {
                                   headerIsId: !isUrl,
                                 }));
                               }}
-                              className="border border-gray-300 rounded px-3 py-2 text-sm w-full"
+                              className="border border-gray-300 rounded px-3 py-2 text-sm w-full focus:outline-none"
                               aria-describedby="media-input-description"
                             />
                             <p
@@ -672,7 +673,7 @@ const SendTemplate = ({ onSelect, onClose, returnFullTemplate = false }) => {
                               }));
                             }}
                             placeholder={field.label}
-                            className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                            className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none"
                           />
                         )}
                       </div>

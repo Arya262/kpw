@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { Avatar } from "../chats/chatSidebar";
+import Avatar from  "../../utils/Avatar";
 import { useAuth } from "../../context/AuthContext";
-import { useChatLogic } from "../../hooks/useChatLogic"; // adjust path
+import { useChatLogic } from "../../hooks/useChatLogic"; 
 
 const ContactPart = () => {
   const [contacts, setContacts] = useState([]);
@@ -15,7 +15,7 @@ const ContactPart = () => {
     const loadContacts = async () => {
       if (!user?.customer_id) return;
       setLoading(true);
-      await fetchContacts(); // fetch contacts via hook
+      await fetchContacts(); 
       setLoading(false);
     };
 

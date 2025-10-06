@@ -8,7 +8,8 @@ export default function Dropdown({
   placeholder = "Select option",
 }) {
   const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState(""); // search state
+  const [search, setSearch] = useState("");
+  const [position, setPosition] = useState("bottom"); // top or bottom
   const dropdownRef = useRef(null);
   const selected = options.find((opt) => opt.value === value);
 
@@ -24,10 +25,28 @@ export default function Dropdown({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Determine dropdown position based on available space
+  useEffect(() => {
+    if (open && dropdownRef.current) {
+      const rect = dropdownRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+
+      if (spaceBelow < 200 && spaceAbove > spaceBelow) {
+        setPosition("top");
+      } else {
+        setPosition("bottom");
+      }
+    }
+  }, [open]);
+
   // Filter options based on search
   const filteredOptions = options.filter((opt) =>
     opt.label.toLowerCase().includes(search.toLowerCase())
   );
+
+  // Determine input text color: gray for placeholder/default, black for user selection
+  const inputTextColor = selected ? "text-black" : "text-gray-400";
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -37,11 +56,11 @@ export default function Dropdown({
       >
         <input
           type="text"
-          value={search}
+          value={search || (selected ? selected.label : "")}
           onChange={(e) => setSearch(e.target.value)}
           onFocus={() => setOpen(true)}
-          placeholder={selected ? selected.label : placeholder}
-          className="flex-1 p-2 bg-transparent outline-none text-gray-700"
+          placeholder={placeholder}
+          className={`flex-1 p-2 bg-transparent outline-none ${inputTextColor}`}
         />
         <ChevronDown
           className={`ml-2 h-4 w-4 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
@@ -51,7 +70,11 @@ export default function Dropdown({
 
       {/* Dropdown list */}
       {open && (
-        <div className="absolute mt-1 w-full border border-gray-200 rounded bg-white shadow-lg z-10 max-h-60 overflow-y-auto transition-all duration-150">
+        <div
+          className={`absolute w-full border border-gray-200 rounded bg-white shadow-lg z-10 max-h-60 overflow-y-auto transition-all duration-150 ${
+            position === "bottom" ? "mt-1 top-full" : "mb-1 bottom-full"
+          }`}
+        >
           {filteredOptions.length > 0 ? (
             filteredOptions.map((opt) => (
               <div
@@ -62,8 +85,10 @@ export default function Dropdown({
                   setSearch(""); 
                 }}
                 className={`cursor-pointer px-4 py-2 hover:bg-gray-100 ${
-                  opt.value === value ? "bg-teal-50 font-semibold" : ""
-                } ${opt.color || "text-gray-700"}`}
+                  opt.value === value
+                    ? "bg-teal-50 font-semibold text-teal-700"
+                    : opt.color || "text-gray-700"
+                }`}
               >
                 {opt.label}
               </div>

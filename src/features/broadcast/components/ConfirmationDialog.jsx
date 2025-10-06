@@ -22,8 +22,7 @@ const ConfirmationDialog = ({ showExitDialog, hasUnsavedChanges, cancelExit, con
   return (
     <div
       className="fixed inset-0  bg-[#000]/50 flex items-center justify-center z-50 transition-opacity duration-300"
-      onMouseDown={(e) => e.stopPropagation()}
-    >
+      onMouseDown={(e) => e.stopPropagation()}>
       <div
         ref={dialogRef}
         className="bg-white rounded-xl p-6 w-full max-w-sm shadow-lg transform transition-all duration-300 scale-100"

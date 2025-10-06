@@ -15,8 +15,8 @@ import TemplateDrawer from "../../components/TemplateDrawer";
 import SearchInput from "../shared/SearchInput";
 import { useInView } from "react-intersection-observer";
 import { renderMedia } from "../../utils/renderMedia";
-const ExploreTemplates = () => {
 
+const ExploreTemplates = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const permissions = getPermissions(user);
@@ -40,7 +40,6 @@ const ExploreTemplates = () => {
   // Infinite scroll intersection observer
   const { ref: loadMoreRef, inView } = useInView({ threshold: 0 });
 
-
   useEffect(() => {
     if (templates.length > 0) {
       setAllTemplates((prev) => {
@@ -52,16 +51,25 @@ const ExploreTemplates = () => {
   }, [templates]);
 
   useEffect(() => {
-    if (inView && pagination.currentPage < pagination.totalPages && !loading) {
-      fetchTemplates(pagination.currentPage + 1, pagination.itemsPerPage, searchTerm);
+    if (
+      inView &&
+      pagination.currentPage < pagination.totalPages &&
+      !loading
+    ) {
+      fetchTemplates(
+        pagination.currentPage + 1,
+        pagination.itemsPerPage,
+        searchTerm
+      );
       pagination.onPageChange(pagination.currentPage + 1);
     }
   }, [inView, pagination, loading, fetchTemplates, searchTerm]);
 
-
   const filteredTemplates = (allTemplates || []).filter(
     (template) =>
-      template?.element_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      template?.element_name
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
       template?.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       template?.language?.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -91,13 +99,18 @@ const ExploreTemplates = () => {
   const handleConfirmDelete = async () => {
     if (!templateToDelete) return;
     setIsDeleting(true);
-    await deleteTemplate(templateToDelete.element_name, templateToDelete.id, user?.customer_id);
+    await deleteTemplate(
+      templateToDelete.element_name,
+      templateToDelete.id,
+      user?.customer_id
+    );
     setIsDeleting(false);
     setShowDeleteDialog(false);
     setTemplateToDelete(null);
 
-
-    setAllTemplates((prev) => prev.filter((t) => t.id !== templateToDelete.id));
+    setAllTemplates((prev) =>
+      prev.filter((t) => t.id !== templateToDelete.id)
+    );
   };
 
   const handleCancelDelete = () => {
@@ -143,7 +156,11 @@ const ExploreTemplates = () => {
         <p className="text-red-500">{error}</p>
       ) : !allTemplates.length || !filteredTemplates.length ? (
         <div className="flex flex-col items-center justify-center py-20 text-center text-gray-500">
-          <img src="/illustrations/empty.svg" alt="No templates" className="w-40 mb-6" />
+          <img
+            src="/illustrations/empty.svg"
+            alt="No templates"
+            className="w-40 mb-6"
+          />
           <p className="text-lg">No templates available yet.</p>
           <button
             onClick={() => setIsModalOpen(true)}
@@ -162,21 +179,41 @@ const ExploreTemplates = () => {
                 transition={{ duration: 0.2 }}
                 className="bg-white/90 backdrop-blur rounded-2xl shadow-lg overflow-hidden flex flex-col border border-gray-100 hover:border-cyan-300 transition-all duration-300 group"
               >
-
                 {(() => {
                   const mediaTemplate = {
                     ...template,
                     ...template.container_meta,
-                    media_url: template.media_url || template.container_meta?.media_url,
-                    template_type: template.template_type || template.container_meta?.templateType,
-                    element_name: template.element_name
+                    media_url:
+                      template.media_url ||
+                      template.container_meta?.media_url,
+                    template_type:
+                      template.template_type ||
+                      template.container_meta?.templateType,
+                    element_name: template.element_name,
                   };
-                  return renderMedia(mediaTemplate) && (
-                    <div className="relative">
-                      {renderMedia(mediaTemplate)}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-70 group-hover:opacity-90 transition" />
-                    </div>
-                  );
+
+                  const mediaContent = renderMedia(mediaTemplate);
+
+                  // Only render preview block if NOT text type
+                  if (
+                    mediaTemplate.template_type?.toLowerCase() !== "text"
+                  ) {
+                    return (
+                      <div className="relative w-full aspect-video overflow-hidden rounded-t-2xl">
+                        {mediaContent ? (
+                          mediaContent
+                        ) : (
+                          <img
+                            src="/fallback.jpg"
+                            alt="Template fallback"
+                            className="w-full h-full object-cover"
+                          />
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-70 group-hover:opacity-90 transition pointer-events-none" />
+                      </div>
+                    );
+                  }
+                  return null;
                 })()}
 
                 <div className="p-4 flex-1 flex flex-col justify-between">
@@ -186,12 +223,13 @@ const ExploreTemplates = () => {
                         {template.element_name}
                       </h3>
                       <span
-                        className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium mt-1 ${template.category?.toLowerCase() === "marketing"
-                          ? "bg-green-100 text-green-700"
-                          : template.category?.toLowerCase() === "info"
+                        className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium mt-1 ${
+                          template.category?.toLowerCase() === "marketing"
+                            ? "bg-green-100 text-green-700"
+                            : template.category?.toLowerCase() === "info"
                             ? "bg-blue-100 text-blue-700"
                             : "bg-gray-100 text-gray-600"
-                          }`}
+                        }`}
                       >
                         {template.category}
                       </span>
@@ -220,7 +258,8 @@ const ExploreTemplates = () => {
                   </div>
 
                   <p className="text-sm text-gray-600 mt-3 line-clamp-3">
-                    {template.container_meta?.sampleText || "No sample text available"}
+                    {template.container_meta?.sampleText ||
+                      "No sample text available"}
                   </p>
                 </div>
 
@@ -232,10 +271,11 @@ const ExploreTemplates = () => {
                         state: { selectedTemplate: template, openForm: true },
                       })
                     }
-                    className={`flex-1 px-4 py-3 font-semibold rounded-b-2xl transition-all ${template?.status?.toLowerCase() === "approved"
-                      ? "bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:brightness-110"
-                      : "bg-gray-200 text-gray-500 cursor-not-allowed"
-                      }`}
+                    className={`flex-1 px-4 py-3 font-semibold rounded-b-2xl transition-all cursor-pointer ${
+                      template?.status?.toLowerCase() === "approved"
+                        ? "bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:brightness-110"
+                        : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                    }`}
                   >
                     {template?.status?.toLowerCase() === "approved" ? (
                       <span className="flex items-center justify-center gap-2">
@@ -252,7 +292,9 @@ const ExploreTemplates = () => {
 
           <div ref={loadMoreRef} className="h-10 mt-4" />
           {loading && templates.length > 0 && (
-            <div className="flex justify-center mt-4 text-gray-500">Loading more templates...</div>
+            <div className="flex justify-center mt-4 text-gray-500">
+              Loading more templates...
+            </div>
           )}
         </>
       )}

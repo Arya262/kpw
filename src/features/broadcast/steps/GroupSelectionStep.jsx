@@ -1,11 +1,10 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   TextField,
   Typography,
-  Checkbox,
   FormControlLabel,
-  LinearProgress,
+  Switch,
 } from "@mui/material";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import FolderOffIcon from "@mui/icons-material/FolderOff";
@@ -19,86 +18,110 @@ const GroupSelectionStep = ({
   loading,
   customerSearchTerm,
   setCustomerSearchTerm,
-  filteredCustomerLists,
+  showList,
+  setShowList,
   warningMessage,
   setWarningMessage,
-  showList,
-  setShowList
+  user,
+  wabaInfo,
 }) => {
   const selectedCount = formData.group_id?.length || 0;
-  const totalContacts = formData.group_id?.reduce((sum, id) => {
-    const group = customerLists?.find(g => g.group_id === id);
-    return sum + (group?.total_contacts || 0);
-  }, 0) || 0;
+  const [selectedGroupId, setSelectedGroupId] = useState(
+    formData.group_id?.[0] || null
+  );
 
-  const handleGroupChange = (customer, isChecked) => {
-    const selectedGroups = customerLists?.filter((c) =>
-      formData.group_id.includes(c.group_id)
-    ) || [];
-    const totalSelectedContacts = selectedGroups.reduce(
-      (sum, group) => sum + (group.total_contacts || 0),
-      0
-    );
+  // Filter customer lists by search term
+  const filteredCustomerLists = customerLists.filter((c) =>
+    c.group_name.toLowerCase().includes(customerSearchTerm.toLowerCase())
+  );
+
+  // Get the message limit based on the user's tier
+  const getMessageLimit = () => {
+    if (!wabaInfo?.messagingLimit) return 250; // Default to 250 if no tier info
     
-    if (isChecked && totalSelectedContacts + customer.total_contacts > 250) {
-      setWarningMessage(`Selecting "${customer.group_name}" would exceed the 250 contact limit.`);
-      setTimeout(() => setWarningMessage(""), 3000);
-      return;
+    const tierLimits = {
+      'TIER_1K': 1000,
+      'TIER_10K': 10000,
+      'TIER_100K': 100000,
+      // Add more tiers as needed
+    };
+    
+    return tierLimits[wabaInfo.messagingLimit] || 250; // Default to 250 if tier not found
+  };
+
+  const messageLimit = getMessageLimit();
+  const totalContacts = selectedGroupId
+    ? customerLists?.find((g) => g.group_id === selectedGroupId)
+        ?.total_contacts || 0
+    : 0;
+
+  const handleGroupChange = (customer) => {
+    if (selectedGroupId === customer.group_id) {
+      // Deselect
+      setSelectedGroupId(null);
+      setFormData((prev) => ({ ...prev, group_id: [] }));
+    } else {
+      if (customer.total_contacts > messageLimit) {
+        setWarningMessage(
+          `Selecting "${customer.group_name}" exceeds the ${messageLimit.toLocaleString()} contact limit.`
+        );
+        setTimeout(() => setWarningMessage(""), 3000);
+        return;
+      }
+      setSelectedGroupId(customer.group_id);
+      setFormData((prev) => ({ ...prev, group_id: [customer.group_id] }));
+      setWarningMessage("");
     }
-    
-    setWarningMessage("");
-    setFormData((prev) => ({
-      ...prev,
-      group_id: isChecked
-        ? [...prev.group_id, customer.group_id]
-        : prev.group_id.filter((id) => id !== customer.group_id),
-    }));
     setShowList(false);
   };
 
   return (
-    <Box display="flex" gap={6} p={2} flexDirection={{ xs: "column", sm: "column", md: "row" }}>
-      <Box sx={{ 
-        display: { xs: "none", sm: "none", md: "block" }, 
-        minWidth: { md: "250px" }, 
-        textAlign: "center", 
-        mb: { xs: 2, sm: 2, md: 0 }, 
-      }}>
-        <Box 
-          position="relative" 
-          width={120} 
-          height={120} 
-          borderRadius="50%" 
-          border="8px solid #E5E7EB" 
-          display="flex" 
-          alignItems="center" 
-          justifyContent="center" 
-          margin="0 auto" 
-          mb={8}
+    <Box display="flex" gap={6} p={1} flexDirection={{ xs: "column", md: "row" }}>
+      {/* Left Circle / Tier */}
+      <Box
+        sx={{
+          display: { xs: "none", md: "block" },
+          minWidth: 250,
+          textAlign: "center",
+          mb: { xs: 2, md: 0 },
+        }}
+      >
+        <Box
+          position="relative"
+          width={120}
+          height={120}
+          borderRadius="50%"
+          border="8px solid #E5E7EB"
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          margin="0 auto"
+          mb={5}
           sx={{
-            '&::before': {
+            "&::before": {
               content: '""',
-              position: 'absolute',
+              position: "absolute",
               top: -8,
               left: -8,
               right: -8,
               bottom: -8,
-              padding: '8px',
+              padding: "8px",
               background: `conic-gradient(
-                #10B981 0% ${Math.min((totalContacts / 250) * 100, 100)}%,
-                transparent ${Math.min((totalContacts / 250) * 100, 100)}% 100%
+                #10B981 0% ${Math.min((totalContacts / messageLimit) * 100, 100)}%,
+                transparent ${Math.min((totalContacts / messageLimit) * 100, 100)}% 100%
               )`,
-              borderRadius: '50%',
-              WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-              WebkitMaskComposite: 'xor',
-              maskComposite: 'exclude',
-              pointerEvents: 'none',
-            }
+              borderRadius: "50%",
+              WebkitMask:
+                "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
+              WebkitMaskComposite: "xor",
+              maskComposite: "exclude",
+              pointerEvents: "none",
+            },
           }}
         >
-          <Box 
-            display="flex" 
-            flexDirection="column" 
+          <Box
+            display="flex"
+            flexDirection="column"
             alignItems="center"
             justifyContent="center"
             zIndex={1}
@@ -107,81 +130,99 @@ const GroupSelectionStep = ({
             height="100%"
             borderRadius="50%"
           >
-            <Typography 
-              variant="h6" 
-              fontWeight="bold" 
-              color={totalContacts > 250 ? "error.main" : "#10B981"}
+            <Typography
+              variant="h6"
+              fontWeight="bold"
+              color={totalContacts > messageLimit ? "error.main" : "#10B981"}
             >
               {totalContacts}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              of 250
+              of {messageLimit.toLocaleString()} contacts
             </Typography>
           </Box>
         </Box>
         <Typography mt={2} variant="body2" color="textSecondary">
-          TIER #250
+          {wabaInfo?.messagingLimit ? `TIER ${wabaInfo.messagingLimit}` : 'TIER 2'}
         </Typography>
         <Typography variant="body2" mt={1} color="text.secondary">
-          You can only send up to 250 messages in 24 hrs
+          You can send up to {messageLimit.toLocaleString()} unique contacts in 24 hrs
         </Typography>
       </Box>
-      
-      <Box flex={1} display="flex" flexDirection="column" gap={2}>
+
+      {/* Right List */}
+      <Box flex={1} display="flex" flexDirection="column" gap={1}>
         <Typography variant="h6" fontWeight="bold" color="text.primary">
           Select List
         </Typography>
-        
+
         {warningMessage && (
           <Typography color="error" variant="body2">
             {warningMessage}
           </Typography>
         )}
-        
+
         {!showList ? (
-          <Box 
+          <Box
             onClick={() => setShowList((prev) => !prev)}
-            sx={{ 
-              border: "1px solid #E5E7EB", 
-              backgroundColor: "#FAFAFA", 
-              borderRadius: "8px", 
-              padding: "12px 16px", 
-              minHeight: "56px", 
-              cursor: "pointer", 
-              display: "flex", 
-              alignItems: "center", 
-              justifyContent: "space-between", 
-              width: "100%", 
-              "&:hover": { borderColor: "#CBD5E1" }, 
+            sx={{
+              border: "1px solid #E5E7EB",
+              backgroundColor: "#FAFAFA",
+              borderRadius: "8px",
+              padding: "12px 16px",
+              minHeight: "56px",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              width: "100%",
+              "&:hover": { borderColor: "#CBD5E1" },
             }}
           >
             <Typography color={selectedCount > 0 ? "text.primary" : "text.secondary"}>
               {selectedCount > 0
                 ? `${selectedCount} list${selectedCount > 1 ? "s" : ""} with ${totalContacts} customers selected`
-                : `Select list (max 250 contacts)`}
+                : `Select list (max ${messageLimit.toLocaleString()} contacts)`}
             </Typography>
             <ArrowDropDownIcon />
           </Box>
         ) : (
           <>
-            <TextField 
-              placeholder="Search contact lists" 
-              variant="outlined" 
-              size="small" 
-              fullWidth 
-              value={customerSearchTerm} 
-              onChange={(e) => setCustomerSearchTerm(e.target.value)} 
-            />
-            <Box 
-              border="1px solid #E5E7EB" 
-              borderRadius="8px" 
-              minHeight="300px" 
-              maxHeight="400px"
-              p={2} 
-              display="flex" 
-              flexDirection="column" 
-              alignItems="center" 
+            <TextField
+  placeholder="Search contact lists"
+  variant="outlined"
+  size="small"
+  fullWidth
+  value={customerSearchTerm}
+  onChange={(e) => {
+    console.log("Search term changed:", e.target.value); 
+    setCustomerSearchTerm(e.target.value);
+  }}
+  sx={{
+    "& label.Mui-focused": {
+      color: "#0AA89E",
+    },
+    "& .MuiOutlinedInput-root": {
+      "&.Mui-focused fieldset": {
+        borderColor: "#0AA89E",
+      },
+    },
+    "& .MuiInputBase-input": {
+      caretColor: "#0AA89E",
+    },
+  }}
+/>
+            <Box
+              border="1px solid #E5E7EB"
+              borderRadius="8px"
+              overflow="auto"
+              maxHeight="200px"
+              p={2}
+              display="flex"
+              flexDirection="column"
+              alignItems="center"
               justifyContent={filteredCustomerLists.length === 0 ? "center" : "flex-start"}
+              sx={{ scrollbarWidth: "none" }}
             >
               {filteredCustomerLists.length === 0 ? (
                 <Box textAlign="center" color="text.secondary">
@@ -198,12 +239,13 @@ const GroupSelectionStep = ({
                     py={1}
                     borderBottom="1px solid #F3F4F6"
                     width="100%"
+                    onClick={() => handleGroupChange(customer)}
                   >
                     <FormControlLabel
                       control={
-                        <Checkbox
-                          checked={formData.group_id.includes(customer.group_id)}
-                          onChange={(e) => handleGroupChange(customer, e.target.checked)}
+                        <Switch
+                          checked={selectedGroupId === customer.group_id}
+                          onChange={() => {}}
                           disabled={isSubmitting || loading}
                         />
                       }
@@ -223,16 +265,13 @@ const GroupSelectionStep = ({
                         </Box>
                       }
                     />
-                    <Box px={1} py={0.5} border="1px dashed #10B981" borderRadius="4px" fontSize="12px" color="#10B981" alignSelf="center">
-                      Exported data
-                    </Box>
                   </Box>
                 ))
               )}
             </Box>
           </>
         )}
-        
+
         {validationErrors.group_id && (
           <Typography color="error" variant="body2" mt={1}>
             {validationErrors.group_id}

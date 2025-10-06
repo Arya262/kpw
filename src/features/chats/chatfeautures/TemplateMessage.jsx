@@ -86,7 +86,6 @@ const getVideoFromTemplate = () => {
           )}
           <a
             href={getMediaUrl(mediaFile)}
-            target="_blank"
             rel="noopener noreferrer"
             className="absolute inset-0"
           />

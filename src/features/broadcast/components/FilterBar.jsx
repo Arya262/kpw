@@ -11,7 +11,7 @@ const FilterBar = ({ filters, activeFilter, setActiveFilter }) => {
               ? "bg-[#0AA89E] text-white"
               : "text-gray-700 hover:text-[#0AA89E]"
           }`}
-          onClick={() => setActiveFilter(f.label === activeFilter ? null : f.label)}
+          onClick={() => setActiveFilter(f.label)} 
         >
           {f.label} ({f.count})
         </button>

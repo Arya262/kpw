@@ -1,13 +1,32 @@
 import React from "react";
-
+import { Send } from "lucide-react";
 const NavigationButtons = ({
   step,
   handlePrevious,
   handleNext,
   handleSubmit,
   isSubmitting,
-  getStepSequence
+  getStepSequence,
+  estimatedCost,
+  availableWCC,
+  totalSelectedContacts,
+  wabaInfo
 }) => {
+ 
+  const getMessageLimit = (wabaInfo) => {
+    if (!wabaInfo?.messagingLimit) return 250;
+    const tierLimits = {
+      'TIER_1K': 1000,
+      'TIER_10K': 10000,
+      'TIER_100K': 100000,
+    };
+    return tierLimits[wabaInfo.messagingLimit] || 250; 
+  };
+  
+  const messageLimit = getMessageLimit(wabaInfo);
+  const isContactLimitExceeded = totalSelectedContacts > messageLimit;
+  const isInsufficientBalance = estimatedCost > availableWCC;
+  const isSendDisabled = isSubmitting || isContactLimitExceeded || isInsufficientBalance;
   const sequence = getStepSequence();
   const isLastStep = step === sequence[sequence.length - 1];
   
@@ -38,12 +57,18 @@ const NavigationButtons = ({
             <button
               type="button"
               onClick={handleSubmit}
-              disabled={isSubmitting}
+              disabled={isSendDisabled}
               className={`px-6 sm:px-8 py-2 sm:py-3 rounded-lg flex items-center justify-center transition-colors font-medium cursor-pointer text-sm sm:text-base ${
-                isSubmitting
-                  ? "bg-gray-400 text-white cursor-not-allowed"
+                isSendDisabled
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                   : "bg-teal-500 hover:bg-teal-600 text-white"
               }`}
+              title={isContactLimitExceeded 
+                ? `Audience size exceeds ${messageLimit.toLocaleString()} contacts. Please reduce the number of contacts.` 
+                : isInsufficientBalance 
+                  ? 'Insufficient balance. Please add more credits to your account.' 
+                  : ''
+              }
             >
               {isSubmitting ? (
                 <>
@@ -51,16 +76,15 @@ const NavigationButtons = ({
                     className="animate-spin -ml-1 mr-2 sm:mr-3 h-4 w-4 sm:h-5 sm:w-5 text-white"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
-                    viewBox="0 0 24 24"
-                  >
+                    viewBox="0 0 24 24">
                     <circle
                       className="opacity-25"
                       cx="12"
                       cy="12"
                       r="10"
                       stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
+                      strokeWidth="4">
+                    </circle>
                     <path
                       className="opacity-75"
                       fill="currentColor"
@@ -72,8 +96,8 @@ const NavigationButtons = ({
                 </>
               ) : (
                 <>
-                  <span className="hidden sm:inline">🚀 Send Campaign</span>
-                  <span className="sm:hidden">🚀 Send</span>
+                  <span className="hidden sm:inline"><Send className="w-4 h-4" /> Send Campaign</span>
+                  <span className="sm:hidden"><Send className="w-4 h-4" /> Send</span>
                 </>
               )}
             </button>

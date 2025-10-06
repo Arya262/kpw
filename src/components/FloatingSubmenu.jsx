@@ -14,8 +14,8 @@ const FloatingSubmenu = ({
     if (!position) return;
 
     const padding = 10; 
-    const maxLeft = window.innerWidth - 200 - padding;
-    const maxTop = window.innerHeight - 200 - padding;
+    const maxLeft = window.innerWidth - 224 - padding; // fixed width for desktop
+    const maxTop = window.innerHeight - 300 - padding; // adjust if submenu taller
 
     setSafePosition({
       top: Math.min(position.top, maxTop),
@@ -27,7 +27,8 @@ const FloatingSubmenu = ({
 
   return createPortal(
     <div
-      className={`absolute z-[9999] bg-white shadow-lg rounded-lg min-w-[180px] p-2 transition-all duration-200 ease-in-out transform 
+      className={`absolute z-[9999] bg-white shadow-lg rounded-lg p-2 transition-all duration-200 ease-in-out transform
+        lg:border lg:border-gray-300 lg:w-56 w-auto  // fixed width on desktop, auto on mobile
         ${visible ? "opacity-100 scale-100" : "opacity-0 scale-95"}`}
       style={{
         top: `${safePosition.top}px`,
@@ -38,7 +39,7 @@ const FloatingSubmenu = ({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-      {children}
+      <div className="flex flex-col w-full">{children}</div> 
     </div>,
     document.body
   );

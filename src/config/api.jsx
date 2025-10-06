@@ -1,11 +1,13 @@
 export const API_BASE =
-  // import.meta.env.VITE_API_BASEz || "http://localhost:60000";
-  import.meta.env.VITE_API_BASE || "https://marketing.foodchow.co.uk";
+  import.meta.env.VITE_API_BASEz || "http://localhost:60000";
+  // import.meta.env.VITE_API_BASE || "https://marketing.foodchow.co.uk";
+  // import.meta.env.VITE_API_BASE || "https://whatsappbackend.foodchow.app";
 
 export const API_ENDPOINTS = {
   BROADCASTS: {
     GET_ALL: `${API_BASE}/getBroadcasts`,
     GET_CUSTOMERS: `${API_BASE}/getBroadcastCustomers`,
+    GET_DIRECT: `${API_BASE}/getContactCustomers`,
     DELETE: (id) => `${API_BASE}/broadcasts/${id}`,
   },
   CONTACTS: {
@@ -16,6 +18,7 @@ export const API_ENDPOINTS = {
       `${API_BASE}/conversationid?contact_id=${customerId}`,
     DELETE: `${API_BASE}/deletecontact`,
     UPDATE: `${API_BASE}/updatecontact`,
+    BULK_IMPORT: `${API_BASE}/addBulkContact`,
   },
   CHAT: {
     CONVERSATIONS: `${API_BASE}/conversations`,

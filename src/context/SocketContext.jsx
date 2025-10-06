@@ -12,7 +12,7 @@ export const SocketProvider = ({ children }) => {
     if (!user) {
       // User logged out => disconnect socket
       if (socket) {
-        console.log("[Socket] Disconnecting due to no user");
+        // console.log("[Socket] Disconnecting due to no user");
         socket.disconnect();
         setSocket(null);
         
@@ -22,7 +22,7 @@ export const SocketProvider = ({ children }) => {
 
     // User logged in => create socket if not already connected
     if (!socket) {
-      const newSocket = io("https://marketing-uoxu.onrender.com", {
+      const newSocket = io("http://localhost:60000", {
         transports: ["websocket"],
         withCredentials: true,
       });
@@ -52,7 +52,7 @@ export const SocketProvider = ({ children }) => {
   useEffect(() => {
     return () => {
       if (socket) {
-        console.log("[Socket] Disconnecting on unmount");
+        // console.log("[Socket] Disconnecting on unmount");
         socket.disconnect();
        
       }

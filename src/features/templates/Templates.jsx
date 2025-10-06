@@ -70,17 +70,49 @@ const {
   const handleDelete = async (ids) => {
     if (!Array.isArray(ids)) ids = [ids];
     try {
-      for (const id of ids) {
-        const template = templates.find((t) => t.id === id);
-        if (template) {
-          const success = await deleteTemplate(template.element_name, id);
-          if (!success) throw new Error(`Failed to delete template: ${template.element_name}`);
+      // Check if we're in select-all-across-pages mode
+      const isBulkDelete = ids[0]?._selectedIds;
+      
+      if (isBulkDelete) {
+        // This is a bulk delete with select-all-across-pages
+        const allTemplates = await fetchAllTemplates(searchTerm);
+        const templateIdsToDelete = allTemplates
+          .filter(template => !ids[0]._exceptions?.includes(template.id))
+          .map(template => template.id);
+        
+        // Delete all selected templates
+        for (const id of templateIdsToDelete) {
+          const template = allTemplates.find(t => t.id === id);
+          if (template) {
+            const success = await deleteTemplate(template.element_name, id);
+            if (!success) throw new Error(`Failed to delete template: ${template.element_name}`);
+          }
+        }
+        
+        // Show success message
+        toast.success(`${templateIdsToDelete.length} template(s) deleted successfully!`, defaultToastConfig);
+      } else {
+        // Normal delete for specific IDs
+        for (const id of ids) {
+          const template = templates.find((t) => t.id === id);
+          if (template) {
+            const success = await deleteTemplate(template.element_name, id);
+            if (!success) throw new Error(`Failed to delete template: ${template.element_name}`);
+          }
+        }
+        // Show success message for single or multiple deletes
+        if (ids.length > 1) {
+          toast.success(`${ids.length} templates deleted successfully!`, defaultToastConfig);
+        } else {
+          toast.success('Template deleted successfully!', defaultToastConfig);
         }
       }
+      
       // After deletion refresh current page
       await fetchTemplates(currentPage, itemsPerPage, searchTerm);
       return true;
     } catch (error) {
+      console.error('Error in handleDelete:', error);
       toast.error(error?.message || "Failed to delete template(s)", defaultToastConfig);
       return false;
     }
@@ -141,10 +173,8 @@ const {
           onSubmit={async (updatedTemplate) => {
             try {
               if (typeof updateTemplate === "function") {
-                // If you add updateTemplate to the hook, it will be invoked
                 await updateTemplate(updatedTemplate);
               } else {
-                // Otherwise refresh list after editing (you can replace with direct API call here)
                 await fetchTemplates(currentPage, itemsPerPage, searchTerm);
               }
               toast.success("Template updated successfully!", defaultToastConfig);

@@ -1,98 +1,11 @@
 import { IoSearchOutline } from "react-icons/io5";
+import { FaUserPlus } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 import { useMemo, useRef, useEffect, useCallback, useState } from "react";
-
-// Utility: Generate avatar background color based on name
-const getAvatarColor = (name = "User") => {
-  const hash = [...name].reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const hue = hash % 360;
-  return `hsl(${hue}, 70%, 50%)`;
-};
-
-// Utility: Format timestamp into readable string
-const formatLastMessageTime = (timestamp) => {
-  if (!timestamp) return "";
-
-  const date = new Date(timestamp);
-  const now = new Date();
-  const yesterday = new Date(now);
-  yesterday.setDate(yesterday.getDate() - 1);
-
-  if (date.toDateString() === now.toDateString()) {
-    return date
-      .toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-      })
-      .toLowerCase();
-  }
-
-  if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
-
-  if (date.getFullYear() === now.getFullYear()) {
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  }
-
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-};
-
-// Utility: Return last message preview based on type
-const getMessagePreview = (message, type) => {
-  if (!message && !type) return null;
-
-  if (message && type === "text") return message;
-
-  switch (type) {
-    case "image": return "📷 Photo";
-    case "video": return "🎥 Video";
-    case "document": return "📄 Document";
-    case "audio": return "🎵 Audio";
-    case "location": return "📍 Location";
-    case "contact": return "👤 Contact";
-    case "template": return "📋 Template";
-    default: return message || "";
-  }
-};
-
-// ✅ Reusable Avatar component (exported)
-export const Avatar = ({ name = "User", image }) => {
-  // Extract first letter of first and last name
-  let initials = "U";
-  if (name && typeof name === "string") {
-    const parts = name.trim().split(/\s+/);
-    if (parts.length === 1) {
-      initials = parts[0][0]?.toUpperCase() || "U";
-    } else if (parts.length > 1) {
-      initials =
-        (parts[0][0] || "").toUpperCase() +
-        (parts[parts.length - 1][0] || "").toUpperCase();
-    }
-  }
-  const bgColor = getAvatarColor(name);
-
-  if (image) {
-    return (
-      <img
-        src={image}
-        alt="User Avatar"
-        className="w-10 h-10 rounded-full object-cover mr-4"
-      />
-    );
-  }
-
-  return (
-    <div
-      className="w-10 h-10 rounded-full mr-4 flex items-center justify-center text-white font-semibold"
-      style={{ backgroundColor: bgColor }}
-    >
-      {initials}
-    </div>
-  );
-};
+import ContactsLoader from "./ContactsLoader";
+import Avatar from "../../utils/Avatar";
+import { formatLastMessageTime } from "../../utils/formatLastMessageTime";
+import { getMessagePreview } from "../../utils/getMessagePreview";
 
 const ChatSidebar = ({
   contacts,
@@ -106,14 +19,13 @@ const ChatSidebar = ({
   const [isLoading, setIsLoading] = useState(false);
   const [nextCursor, setNextCursor] = useState(null);
   const [hasMore, setHasMore] = useState(true);
-
+  const navigate = useNavigate();
+  
   const filteredContacts = useMemo(() => {
     if (!searchQuery) return contacts || [];
     const query = searchQuery.toLowerCase().trim();
     return (contacts || []).filter((c) => {
-      // Check if name includes the query (case insensitive)
       const nameMatch = c.name?.toLowerCase().includes(query);
-      // Check mobile number field
       const phoneMatch = c.mobile_no?.includes(query);
       return nameMatch || phoneMatch;
     });
@@ -144,9 +56,20 @@ const ChatSidebar = ({
 
   return (
     <div className="w-full h-full flex flex-col bg-white border-r border-gray-200 p-4">
-      {/* Title */}
-      <h2 className="text-2xl font-semibold mb-4 text-black">Inbox</h2>
-
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-gray-200 pb-3 mb-4">
+        <div>
+          <h2 className="text-xl font-semibold text-gray-900">Inbox</h2>
+          <p className="text-sm text-gray-500">List of all Chats.</p>
+        </div>
+        <div className="flex items-center gap-4 text-gray-500">
+          <button className="p-2 rounded-full hover:bg-gray-100" aria-label="Users"
+          onClick={() => navigate('/contact')}>
+            <FaUserPlus className="text-lg" />
+          </button>
+          
+        </div>
+      </div>
       {/* Search Input */}
       <div className="relative mb-4">
         <input
@@ -231,13 +154,7 @@ const ChatSidebar = ({
             No contacts found.
           </p>
         )}
-
-        {/* Loader indicator */}
-        {isLoading && (
-          <div className="flex justify-center py-3 text-gray-400 text-sm">
-            Loading more contacts...
-          </div>
-        )}
+        {isLoading && <ContactsLoader />}
       </div>
     </div>
   );

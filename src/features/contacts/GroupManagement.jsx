@@ -57,24 +57,15 @@ const GroupCard = ({ group, onEdit, onDelete, onViewContacts }) => {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => onViewContacts(group)}
-            className="p-2 text-teal-600 hover:bg-teal-50 rounded-full"
-            title="View contacts"
-          >
-            <UserCheck className="w-4 h-4" />
-          </button>
-          <button
             onClick={() => onEdit(group)}
             className="p-2 text-gray-600 hover:bg-gray-100 rounded-full"
-            title="Edit group"
-          >
+            title="Edit group">
             <Edit2 className="w-4 h-4" />
           </button>
           <button
             onClick={() => onDelete(group)}
             className="p-2 text-red-600 hover:bg-red-50 rounded-full"
-            title="Delete group"
-          >
+            title="Delete group">
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
@@ -138,94 +129,108 @@ const GroupForm = ({ group, onSave, onCancel }) => {
     }
     setFileError("");
     return true;
+  }
+  // Extract contact data from CSV row
+  const extractContactData = (headers, rowData) => {
+    // console.log('Processing row data:', rowData);
+    const contact = {};
+    headers.forEach((header, index) => {
+      const lowerHeader = header.toLowerCase().trim();
+      const value = (rowData[index] || '').trim();
+      // console.log(`Processing header: ${header}, value: ${value}`);
+      
+      // Match name fields
+      if ((lowerHeader.includes('name') || lowerHeader.includes('fullname')) && !contact.name) {
+        contact.name = value;
+      } 
+      // Match country code
+      else if ((lowerHeader.includes('country') && lowerHeader.includes('code')) || lowerHeader === 'countrycode') {
+        contact.countryCode = value.replace(/\D/g, ''); // Remove non-digits
+      } 
+      // Match mobile number
+      else if (lowerHeader.includes('mobile') || lowerHeader.includes('phone') || lowerHeader.includes('number')) {
+        contact.mobile = value.replace(/\D/g, ''); // Remove non-digits
+      }
+    });
+    console.log('Extracted contact:', contact);
+    return contact;
   };
 
-  // CSV content validation (only for .csv)
   const validateCsvContent = (selectedFile) => {
     return new Promise((resolve) => {
       if (!selectedFile || !selectedFile.name.endsWith(".csv")) {
-        resolve(true); // skip for non-csv
+        resolve(true);
         return;
       }
+      
       const reader = new FileReader();
       reader.onload = (event) => {
-        let text = event.target.result;
-        if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
-        const lines = text.split(/\r?\n/);
-        const headersLine = lines[0];
-        if (!headersLine || headersLine.trim() === "") {
-          setFileError("CSV file appears to be empty or malformed.");
-          resolve(false);
-          return;
-        }
-        const headers = headersLine
-          .split(",")
-          .map((header) => header.trim().toLowerCase())
-          .filter((header) => header.length > 0);
-        if (headers.length === 0) {
-          setFileError("No headers found in CSV.");
-          resolve(false);
-          return;
-        }
-
-        // Check for phone number column
-        const phoneColumns = [
-          "phone",
-          "mobile",
-          "phone_number",
-          "mobile_number",
-          "phone number",
-          "mobile number",
-          "contact",
-          "contact_number",
-          "tel",
-          "telephone",
-          "cell",
-          "cellphone",
-          "number",
-        ];
-
-        const phoneColumnIndex = headers.findIndex((header) =>
-          phoneColumns.some((phoneCol) => header.includes(phoneCol))
-        );
-
-        if (phoneColumnIndex === -1) {
-          setFileError(
-            "CSV file must contain a phone number column. Accepted column names include: phone, mobile, phone_number, mobile_number, contact, telephone, etc."
+        try {
+          let text = event.target.result;
+          if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
+          const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+          if (lines.length < 2) { 
+            setFileError("CSV file is empty or has no data rows.");
+            resolve(false);
+            return;
+          }
+          
+          const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+          const hasNameHeader = headers.some(h => h.includes('name'));
+          const hasMobileHeader = headers.some(h => 
+            h.includes('mobile') || h.includes('phone') || h.includes('number')
           );
+          
+          if (!hasNameHeader || !hasMobileHeader) {
+            setFileError("CSV must contain 'Name' and 'Mobile' columns.");
+            resolve(false);
+            return;
+          }
+          
+          const contacts = [];
+          for (let i = 1; i < lines.length; i++) {
+            const rowData = lines[i].split(',').map(cell => cell.trim().replace(/^"|"$/g, ''));
+            const contact = extractContactData(headers, rowData);
+            if (contact.name && contact.mobile && contact.countryCode) {
+              const fullMobile = contact.countryCode + contact.mobile;
+              
+              contacts.push({
+                name: contact.name,
+                mobile: fullMobile, 
+                countryCode: contact.countryCode,
+                originalMobile: contact.mobile, 
+                timestamp: new Date().toISOString()
+              });
+            } else if (contact.name && contact.mobile) {
+              // console.log('Skipping contact - missing country code:', contact);
+            }
+          }
+          
+          if (contacts.length === 0) {
+            setFileError("No valid contacts found in the CSV.");
+            resolve(false);
+            return;
+          }
+          
+          // Store parsed contacts in the file object for later use
+          selectedFile.parsedContacts = contacts;
+          // console.log('Successfully parsed contacts:', contacts);
+          // console.log('Total valid contacts:', contacts.length);
+          resolve(true);
+          
+        } catch (error) {
+          // console.error("Error processing CSV:", error);
+          setFileError("Error processing the CSV file. Please check the format.");
           resolve(false);
-          return;
         }
-
-        const phoneColumnHasData = lines
-          .slice(1)
-          .filter((line) => line.trim())
-          .some((line) => {
-            const columns = line.split(",");
-            const phoneValue = columns[phoneColumnIndex]
-              ?.trim()
-              .replace(/["\']/g, "");
-            if (!phoneValue) return false;
-            const cleanPhone = phoneValue.replace(/[\s\-\(\)\+\.]/g, "");
-            const digitCount = (cleanPhone.match(/\d/g) || []).length;
-            return digitCount >= 7;
-          });
-
-        if (!phoneColumnHasData) {
-          setFileError(
-            "The phone number column exists but appears to be empty or contains invalid phone numbers. Please ensure the phone column has valid phone numbers."
-          );
-          resolve(false);
-          return;
-        }
-
-        setCsvHeaders(headers);
-        resolve(true);
       };
+      
       reader.onerror = () => {
-        setFileError("Failed to read CSV file.");
+        setFileError("Error reading the file.");
+        setFile(null);
         resolve(false);
       };
+      
       reader.readAsText(selectedFile);
     });
   };
@@ -254,24 +259,62 @@ const GroupForm = ({ group, onSave, onCancel }) => {
       await validateCsvContent(selectedFile);
     }
   };
-
+  const { user } = useAuth();
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
     const validName = validateGroupName();
     const validFile = validateFile();
     let validCsv = true;
+    
     if (file && file.name.endsWith(".csv")) {
       validCsv = await validateCsvContent(file);
     }
+    
     if (!validName || !validFile || !validCsv) return;
+    
     setIsSubmitting(true);
     try {
-      await onSave({
-        name: name.trim(),
+      const customer_id = user?.customer_id;
+      
+      if (!customer_id) {
+        console.error('No customer_id found in user context');
+        setError('User authentication error. Please log in again.');
+        return;
+      }
+
+      // Prepare the data to match backend expectations
+      const groupData = {
+        customer_id: customer_id, 
+        group_name: name.trim(),   
         description: description.trim(),
-        file,
-        fileRemoved,
-      });
+        contacts: (file.parsedContacts || []).map(contact => ({
+          name: contact.name,
+          mobile: contact.mobile 
+        }))
+      };
+      // console.log('=== Sending to Backend ===');
+      // console.log('Customer ID:', groupData.customer_id);
+      // console.log('Group Name:', groupData.group_name);
+      // console.log('Description:', groupData.description);
+      // console.log('File:', file.name);
+      // console.log('Parsed Contacts Count:', groupData.contacts.length);
+      
+     
+      if (groupData.contacts.length > 0) {
+        const sampleContacts = groupData.contacts.slice(0, 3).map(contact => ({
+          name: contact.name,
+          phoneNumber: `+${contact.mobile}`,
+          originalMobile: contact.originalMobile,
+          countryCode: contact.countryCode
+        }));
+        // console.log('Sample contacts:', sampleContacts);
+      }
+      
+      // console.log('Full request payload:', groupData);
+      // console.log('==========================');
+      
+      await onSave(groupData);
     } finally {
       setIsSubmitting(false);
     }
@@ -306,8 +349,7 @@ const GroupForm = ({ group, onSave, onCancel }) => {
           className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 ${
             groupNameError ? "border-red-500" : "border-gray-300"
           }`}
-          required
-        />
+          required/>
         {groupNameError && (
           <p className="text-red-500 text-sm mt-1">{groupNameError}</p>
         )}
@@ -321,8 +363,7 @@ const GroupForm = ({ group, onSave, onCancel }) => {
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Enter group description"
           rows="3"
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
-        />
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"/>
       </div>
       <div className="mb-6">
         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -350,19 +391,16 @@ const GroupForm = ({ group, onSave, onCancel }) => {
               const fakeEvent = { target: { files: [droppedFile] } };
               await handleFileChange(fakeEvent);
             }
-          }}
-        >
+          }}>
           <input
             type="file"
             accept=".csv,.docx"
             onChange={handleFileChange}
             className="hidden"
-            id="fileUpload"
-          />
+            id="fileUpload"/>
           <label
             htmlFor="fileUpload"
-            className="cursor-pointer text-gray-500 flex flex-col items-center"
-          >
+            className="cursor-pointer text-gray-500 flex flex-col items-center">
             <CloudUpload className="w-12 h-12 mb-2" />
             <p className="text-sm">Drag & drop a CSV or DOCX file here</p>
             <p className="text-xs mt-1">Max 50MB and 200K contacts allowed.</p>
@@ -380,8 +418,7 @@ const GroupForm = ({ group, onSave, onCancel }) => {
                   setFileError("");
                   setCsvHeaders([]);
                 }}
-                className="text-red-600 text-sm underline hover:text-red-800"
-              >
+                className="text-red-600 text-sm underline hover:text-red-800">
                 Remove
               </button>
             </div>
@@ -401,11 +438,10 @@ const GroupForm = ({ group, onSave, onCancel }) => {
                 type="button"
                 onClick={() => {
                   setFileRemoved(true);
-                  setFileError(""); // Clear file error when removing existing file
-                  setCsvHeaders([]); // Clear CSV headers
+                  setFileError("");
+                  setCsvHeaders([]); 
                 }}
-                className="text-red-600 underline"
-              >
+                className="text-red-600 underline">
                 Remove
               </button>
             </div>
@@ -421,15 +457,13 @@ const GroupForm = ({ group, onSave, onCancel }) => {
         <button
           type="button"
           onClick={onCancel}
-          className="px-4 py-2 bg-gray-300 text-gray-600 rounded-md  hover:text-gray-800 cursor-pointer"
-        >
+          className="px-4 py-2 bg-gray-300 text-gray-600 rounded-md  hover:text-gray-800 cursor-pointer">
           Cancel
         </button>
         <button
           type="submit"
           disabled={isSubmitting || !name.trim()}
-          className="px-4 py-2 bg-teal-500 text-white rounded-md hover:bg-teal-600 disabled:opacity-50 cursor-pointer flex items-center justify-center"
-        >
+          className="px-4 py-2 bg-teal-500 text-white rounded-md hover:bg-teal-600 disabled:opacity-50 cursor-pointer flex items-center justify-center">
           {isSubmitting ? (
             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
           ) : (
@@ -615,25 +649,27 @@ export default function GroupManagement() {
   const handleCreateGroup = async (groupData) => {
     if (!permissions.canManageGroups) return;
     try {
-      const formData = new FormData();
       const customerId = user?.customer_id;
-      const groupName = groupData.name;
-      const file = groupData.file;
-      const fileRemoved = groupData.fileRemoved;
-      formData.append("customer_id", customerId);
-      formData.append("group_name", groupName);
-      formData.append("description", groupData.description || "");
-      if (file) {
-        formData.append("file", file);
-      }
-      if (fileRemoved) {
-        formData.append("remove_file", "true");
-      }
+      
+      // Prepare the request body as JSON with contacts_json
+      const requestBody = {
+        customer_id: customerId,
+        group_name: groupData.group_name || groupData.name || "",
+        description: groupData.description || "",
+        contacts_json: (groupData.contacts || []).map((contact, index) => ({
+          // contact_id: index + 1, // Auto-incrementing ID, replace with actual ID if available
+          name: contact.name || "",
+          phone: `+${contact.mobile}`, // Add + prefix to mobile
+        }))
+      };
 
       const response = await fetch(`${API_ENDPOINTS.GROUPS.CREATE}`, {
         method: "POST",
         credentials: "include",
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
       });
 
       if (response.ok) {
@@ -646,42 +682,48 @@ export default function GroupManagement() {
       }
     } catch (error) {
       console.error("Error creating group:", error);
-      toast.error(error.message || "Failed to create group");
     }
   };
 
   const handleUpdateGroup = async (groupData) => {
     if (!permissions.canManageGroups) return;
     try {
-      const formData = new FormData();
-      formData.append("group_id", editingGroup.id);
-      formData.append("customer_id", user?.customer_id);
-      formData.append("group_name", groupData.name);
-      formData.append("description", groupData.description || "");
-      if (groupData.file) {
-        formData.append("file", groupData.file);
-      }
-      if (groupData.fileRemoved) {
-        formData.append("remove_file", "true");
+      const customerId = user?.customer_id;
+      if (!customerId) {
+        throw new Error('Customer ID is required');
       }
 
-      const response = await fetch(`${API_ENDPOINTS.GROUPS.UPDATE}`, {
+      const requestBody = {
+        group_id: editingGroup.id,
+        customer_id: customerId,  // Added customer_id
+        group_name: groupData.group_name || groupData.name || "",
+        description: groupData.description || "",
+        contacts_json: (groupData.contacts || []).map((contact, index) => ({
+          name: contact.name || "",
+          phone: `+${contact.mobile}`, 
+        }))
+      };
+
+      const response = await fetch(API_ENDPOINTS.GROUPS.UPDATE, {
         method: "PUT",
         credentials: "include",
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
       });
 
       if (response.ok) {
         toast.success("Group updated successfully!");
-        setEditingGroup(null);
         fetchGroups();
+        setEditingGroup(null);
       } else {
         const error = await response.json();
         throw new Error(error.message || "Failed to update group");
       }
     } catch (error) {
-      console.error("Error updating group:", error);
-      toast.error(error.message || "Failed to update group");
+      console.error('Error updating group:', error);
+      toast.error(error.response?.data?.message || 'Failed to update group');
     }
   };
 
@@ -780,9 +822,14 @@ export default function GroupManagement() {
     const allSelected = groups.every((g) =>
       selectAllAcrossPages ? selectedGroups[g.id] !== false : selectedGroups[g.id]
     );
-    // Match ContactList: header checkbox unchecked when across-pages is active
     setSelectAll(allSelected && !selectAllAcrossPages);
   }, [selectedGroups, groups, selectAllAcrossPages]);
+
+  const allDisplayedSelected = displayedGroups.every((g) =>
+    selectAllAcrossPages
+     ? selectedGroups[g.id] !== false
+     : !!selectedGroups[g.id]
+   );
 
   const handleDeleteSelected = async () => {
     let selectedIds = [];
@@ -803,7 +850,7 @@ export default function GroupManagement() {
           .map((g) => g.group_id)
           .filter((id) => selectedGroups[id] !== false);
       } catch (err) {
-        console.error('Error fetching all groups for deletion:', err);
+        // console.error('Error fetching all groups for deletion:', err);
         toast.error('Failed to fetch groups for deletion');
         setIsDeleting(false);
         return;
@@ -901,9 +948,10 @@ export default function GroupManagement() {
                     <input
                       type="checkbox"
                       className="form-checkbox w-4 h-4"
-                      checked={selectAll}
+                      // checked={selectAll}
                       onChange={handleSelectAllChange}
                       aria-label="Select all groups"
+                      checked={allDisplayedSelected}
                     />
                   </div>
                 </th>

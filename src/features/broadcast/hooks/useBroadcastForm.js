@@ -4,7 +4,51 @@ import { API_ENDPOINTS } from "../../../config/api";
 import { useAuth } from "../../../context/AuthContext";
 import pricingData from "../../../pricing.json";
 import { toast } from "react-toastify";
-export const useBroadcastForm = (formData, setFormData, customerLists, onTemplateSelect, step, setStep, selectedDate, setSelectedDate) => {
+
+export const useBroadcastForm = (
+  formData,
+  setFormData,
+  customerLists,
+  onTemplateSelect,
+  step,
+  setStep,
+  selectedDate,
+  setSelectedDate,
+  wabaInfo
+) => {
+  const location = useLocation();
+  
+  // Define step sequence after hooks
+  const getStepSequence = useCallback(() => {
+    const isDirectBroadcast = location.state?.directBroadcast || formData.isDirectBroadcast;
+    const sequence = [1, 2, 3, 4, 5]; // Always include all steps
+    
+    // console.group('getStepSequence');
+    // console.log('location.state.directBroadcast:', location.state?.directBroadcast);
+    // console.log('formData.isDirectBroadcast:', formData.isDirectBroadcast);
+    // console.log('isDirectBroadcast:', isDirectBroadcast);
+    // console.log('Returning sequence:', sequence);
+    // console.groupEnd();
+    
+    return sequence;
+  }, [location.state?.directBroadcast, formData.isDirectBroadcast]);
+  
+  // Log when step changes
+  useEffect(() => {
+    // console.group('Step Change');
+    // console.log('Current step:', step);
+    // const sequence = getStepSequence();
+    // console.log('Current sequence:', sequence);
+    // console.log('Is valid step:', sequence.includes(step));
+    // console.log('Current step index:', sequence.indexOf(step));
+    // console.groupEnd();
+    
+    // Ensure we don't stay on step 2 for direct broadcasts
+    const isDirectBroadcast = location.state?.directBroadcast || formData.isDirectBroadcast;
+    if (isDirectBroadcast && step === 2) {
+      setStep(3); // Skip step 2 for direct broadcasts
+    }
+  }, [step, getStepSequence, setStep, location.state?.directBroadcast, formData.isDirectBroadcast]);
   const [templates, setTemplates] = useState([]);
   const [templatesLoading, setTemplatesLoading] = useState(true);
   const [estimatedCost, setEstimatedCost] = useState(0);
@@ -18,16 +62,43 @@ export const useBroadcastForm = (formData, setFormData, customerLists, onTemplat
     isLoadingMore: false
   });
   const [validationErrors, setValidationErrors] = useState({});
-  const location = useLocation();
   const [templateSearchTerm, setTemplateSearchTerm] = useState("");
   const [customerSearchTerm, setCustomerSearchTerm] = useState("");
   const [showList, setShowList] = useState(false);
   const [filteredCustomerLists, setFilteredCustomerLists] = useState(customerLists || []);
+  
+  // Get the message limit based on the user's WABA tier
+  const getMessageLimit = (wabaInfo) => {
+    if (!wabaInfo?.messagingLimit) return 250; // Default to 250 if no tier info
+
+    const tierLimits = {
+      'TIER_1K': 1000,
+      'TIER_10K': 10000,
+      'TIER_100K': 100000,
+      // Add more tiers as needed
+    };
+
+    return tierLimits[wabaInfo.messagingLimit] || 250; // Default to 250 if tier not found
+  };
+  
+  const messageLimit = getMessageLimit(wabaInfo);
   const [warningMessage, setWarningMessage] = useState("");
+  
+  // Step navigation helpers
+  const getCurrentStepIndex = useCallback(() => {
+    const sequence = getStepSequence();
+    return sequence.indexOf(step);
+  }, [step, getStepSequence]);
 
   // Template fetching
-  const fetchTemplates = useCallback(async (page = 1, append = false) => {
-    if (page === 1) {
+  const fetchTemplates = useCallback(
+    async (page = 1, append = false, searchTerm = "") => {
+      if (!user?.customer_id) {
+        setTemplatesError("Missing customer ID");
+        return;
+      }
+
+      if (page === 1) {
       setTemplatesLoading(true);
     } else {
       setPagination(prev => ({ ...prev, isLoadingMore: true }));
@@ -36,16 +107,32 @@ export const useBroadcastForm = (formData, setFormData, customerLists, onTemplat
 
     try {
       const response = await fetch(
-        `${API_ENDPOINTS.TEMPLATES.GET_ALL}?customer_id=${user?.customer_id}&page=${page}`,
+        `${API_ENDPOINTS.TEMPLATES.GET_ALL}?customer_id=${user.customer_id}&page=${page}&search=${encodeURIComponent(searchTerm)}`,
         {
           headers: { "Content-Type": "application/json" },
           credentials: "include",
         }
       );
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          // No templates found for this search
+          setTemplates(prev => append ? prev : []);
+          setPagination({
+            currentPage: 1,
+            totalPages: 1,
+            hasMore: false,
+            isLoadingMore: false,
+          });
+          return;
+        }
+        throw new Error(`HTTP ${response.status}`);
+      }
+
       const data = await response.json();
 
       if (data && Array.isArray(data.templates)) {
-        const normalizedTemplates = data.templates.map((t) => ({
+        const normalizedTemplates = data.templates.map(t => ({
           ...t,
           container_meta: {
             ...t.container_meta,
@@ -53,27 +140,36 @@ export const useBroadcastForm = (formData, setFormData, customerLists, onTemplat
           },
         }));
 
-        setTemplates(prev => append ? [...prev, ...normalizedTemplates] : normalizedTemplates);
+        setTemplates(prev =>
+          append ? [...prev, ...normalizedTemplates] : normalizedTemplates
+        );
 
-        const paginationData = data.pagination || {};
-        const hasMoreTemplates = paginationData.page < paginationData.totalPages;
-
+        const { page: current = page, totalPages = 1 } = data.pagination || {};
         setPagination({
-          currentPage: paginationData.page || page,
-          totalPages: paginationData.totalPages || 1,
-          hasMore: hasMoreTemplates,
-          isLoadingMore: false
+          currentPage: current,
+          totalPages,
+          hasMore: current < totalPages,
+          isLoadingMore: false,
         });
       } else {
-        setTemplatesError("Invalid response format");
+       
+        setTemplates(append ? templates : []);
+        setPagination({
+          currentPage: 1,
+          totalPages: 1,
+          hasMore: false,
+          isLoadingMore: false,
+        });
       }
     } catch (err) {
-      console.error('Error fetching templates:', err);
+      console.error("Error fetching templates:", err);
       setTemplatesError("Failed to fetch templates");
     } finally {
       setTemplatesLoading(false);
     }
-  }, [user?.customer_id]);
+  },
+  [user?.customer_id]
+);
 
   const loadMoreTemplates = useCallback(() => {
     if (pagination.hasMore && !pagination.isLoadingMore) {
@@ -112,10 +208,22 @@ export const useBroadcastForm = (formData, setFormData, customerLists, onTemplat
     }
   }, [user?.customer_id]);
 
-  // Log formData changes for debugging
+  // Debug effect for step changes
+  const stepDebugEffect = useCallback(() => {
+    console.log('Current step changed to:', step);
+    const sequence = getStepSequence();
+    console.log('Current sequence:', sequence);
+    console.log('Is last step:', step === sequence[sequence.length - 1]);
+  }, [step, getStepSequence]);
+
   useEffect(() => {
-    // console.log('formData updated:', formData);
+    console.log('formData updated:', formData);
   }, [formData]);
+
+  // Debug effect for validation errors
+  useEffect(() => {
+    console.log('Current validation errors:', validationErrors);
+  }, [validationErrors]);
 
   // Initial data fetching
   useEffect(() => {
@@ -152,8 +260,24 @@ export const useBroadcastForm = (formData, setFormData, customerLists, onTemplat
   }, [customerLists, formData.group_id]);
 
   const totalSelectedContacts = useMemo(() => {
-    return selectedGroups.reduce((sum, group) => sum + (group.total_contacts || 0), 0);
-  }, [selectedGroups]);
+    // For direct broadcasts, use the length of the directContacts array
+    if (formData.isDirectBroadcast) {
+      return formData.directContacts?.length || 0;
+    }
+    // For group broadcasts, sum up contacts from selected groups
+    if (!formData.group_id || formData.group_id.length === 0) return 0;
+    
+    console.log('Selected groups:', selectedGroups);
+    console.log('Group IDs:', formData.group_id);
+    
+    const total = selectedGroups.reduce((sum, group) => {
+      console.log('Processing group:', group.group_name, 'with contacts:', group.total_contacts);
+      return sum + (parseInt(group.total_contacts) || 0);
+    }, 0);
+    
+    console.log('Total contacts calculated:', total);
+    return total;
+  }, [selectedGroups, formData.isDirectBroadcast, formData.directContacts, formData.group_id]);
 
   // Cost calculation
   useEffect(() => {
@@ -163,106 +287,136 @@ export const useBroadcastForm = (formData, setFormData, customerLists, onTemplat
       return;
     }
     
-    // console.log('--- Cost Calculation Debug ---');
-    // console.log('Selected template:', formData.selectedTemplate);
-    // console.log('Selected groups:', selectedGroups);
-    // console.log('Direct contacts:', formData.directContacts);
-    
-    // Calculate total contacts (from groups or direct contacts)
     let contactCount = 0;
     
     if (formData.isDirectBroadcast && formData.directContacts?.length > 0) {
-      // Use direct contacts count if in direct broadcast mode
       contactCount = formData.directContacts.length;
     } else {
-      // Otherwise use group contacts count
       contactCount = totalSelectedContacts;
     }
     
-    // console.log('Total selected contacts:', contactCount);
-
-    // Get category and country with fallbacks
     const category = formData.selectedTemplate.category?.toLowerCase() || "marketing";
     const country = formData.country || "India";
-    
-    // console.log('Using category:', category, 'country:', country);
-
-    // Get pricing data
     const countryPricing = pricingData[country] || pricingData["All other countries"];
-    // console.log('Available pricing data:', countryPricing);
-
-    // Find matching category (case-insensitive)
     const matchingCategory = Object.keys(countryPricing || {}).find(
       key => key.toLowerCase() === category.toLowerCase()
     ) || "marketing";
     
-    // console.log('Matching category:', matchingCategory);
-    
-    // Get cost per message
     const costPerMessage = countryPricing?.[matchingCategory] ?? 0.88;
-    // console.log('Cost per message:', costPerMessage);
-    
-    // Calculate total cost
     const calculatedCost = contactCount * costPerMessage;
-    // console.log('Calculated cost:', calculatedCost, 'for', contactCount, 'contacts');
-    
     setEstimatedCost(calculatedCost);
   }, [formData.selectedTemplate, formData.group_id, formData.country, totalSelectedContacts]);
 
 
   // Step navigation
-  const getStepSequence = useCallback(() => {
-    const isDirectBroadcast = location.state?.directBroadcast;
-    return isDirectBroadcast ? [1, 3, 4, 5] : [1, 2, 3, 4, 5];
-  }, [location.state?.directBroadcast]);
-
-  const getCurrentStepIndex = useCallback(() => {
-    const sequence = getStepSequence();
-    return sequence.indexOf(step);
-  }, [step, getStepSequence]);
 
   // Validation
   const validateStep = useCallback((currentStep) => {
+    console.log('Validating step:', currentStep);
     const newErrors = {};
-    const isDirectBroadcast = location.state?.directBroadcast;
-    let adjustedStep = isDirectBroadcast && currentStep >= 2 ? currentStep + 1 : currentStep;
+    const isDirectBroadcast = location.state?.directBroadcast || formData.isDirectBroadcast;
+    const sequence = getStepSequence();
+    const isFinalStep = currentStep === sequence[sequence.length - 1]; // Last step in sequence
+    
+    console.log('isDirectBroadcast:', isDirectBroadcast, 'currentStep:', currentStep, 'isFinalStep:', isFinalStep);
+    
+    // Adjust step for direct broadcast flow
+    let adjustedStep = currentStep;
+    if (isDirectBroadcast && currentStep >= 2) {
+      adjustedStep = currentStep + 1;
+    }
+    
+    console.log('isDirectBroadcast:', isDirectBroadcast, 'currentStep:', currentStep, 'adjustedStep:', adjustedStep, 'isFinalStep:', isFinalStep);
+
+    // Common validation for contact limits - only runs on final step
+    const validateContactLimits = () => {
+      if (isFinalStep && totalSelectedContacts > messageLimit) {
+        newErrors.audience = `You can only send to a maximum of ${messageLimit.toLocaleString()} contacts at once`;
+        toast.error(`You can only send to a maximum of ${messageLimit.toLocaleString()} contacts`, {
+          toastId: 'contactLimitExceeded',
+          autoClose: 5000
+        });
+        return false;
+      }
+      return true;
+    };
 
     switch (adjustedStep) {
       case 1:
         if (!formData.broadcastName?.trim()) {
           newErrors.broadcastName = "Campaign name is required";
-          // Show popup only when navigating Next on Step 1
-          toast.error("Campaign name is required", { toastId: "broadcastNameRequiredStep1" });
+          toast.error("Campaign name is required", { 
+            toastId: "broadcastNameRequiredStep1",
+            autoClose: 3000
+          });
         }
         break;
+
       case 2:
         if (!isDirectBroadcast) {
           if (!Array.isArray(formData.group_id) || formData.group_id.length === 0) {
             newErrors.group_id = "Please select at least one group";
-          } else if (totalSelectedContacts > 250) {
-            newErrors.group_id = "Selected audience exceeds the 250 contact limit";
+            toast.error("Please select at least one group", {
+              toastId: 'noGroupSelected',
+              autoClose: 3000
+            });
+          }
+        } else if (formData.isDirectBroadcast) {
+          if (!formData.directContacts || formData.directContacts.length === 0) {
+            newErrors.audience = "Please add at least one contact";
+            toast.error("Please add at least one contact", {
+              toastId: 'noContactsAdded',
+              autoClose: 3000
+            });
           }
         }
         break;
+
       case 3:
         if (!formData.selectedTemplate) {
           newErrors.template = "Please select a template";
-          // Show popup only when navigating Next on Step 3
-          toast.error("Please select a template", { toastId: "templateRequiredStep3" });
+          toast.error("Please select a template", { 
+            toastId: "templateRequiredStep3",
+            autoClose: 3000
+          });
+        } else if (formData.templatePlaceholders?.length > 0) {
+          // Check if all placeholders are filled
+          const emptyPlaceholders = formData.templateParameters?.some(
+            (param, index) => !param?.trim() && formData.templatePlaceholders[index]
+          );
+          
+          if (emptyPlaceholders) {
+            newErrors.template = "Please fill in all template variables";
+            toast.error("Please fill in all template variables", {
+              toastId: "templateVariablesRequired",
+              autoClose: 3000
+            });
+          }
         }
         break;
       case 4:
+        // Only validate schedule on step 4, not contact limits
         if (formData.schedule === "Yes" && !selectedDate) {
           newErrors.schedule = "Please select a date and time";
+          toast.error("Please select a date and time", {
+            toastId: 'scheduleRequired',
+            autoClose: 3000
+          });
         }
         break;
+
       case 5:
+        // Final validation before submission
         if (!formData.broadcastName?.trim()) {
           newErrors.broadcastName = "Campaign name is required";
         }
         if (!isDirectBroadcast && (!Array.isArray(formData.group_id) || formData.group_id.length === 0)) {
           newErrors.group_id = "Please select at least one group";
         }
+        // Only validate contact limits on final step
+        if (isFinalStep) {
+          validateContactLimits();
+        }
         if (!formData.selectedTemplate) {
           newErrors.template = "Please select a template";
         }
@@ -272,57 +426,46 @@ export const useBroadcastForm = (formData, setFormData, customerLists, onTemplat
         break;
     }
 
-    setValidationErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  }, [formData, selectedDate, location.state?.directBroadcast]);
+  setValidationErrors(newErrors);
+  return Object.keys(newErrors).length === 0;
+}, [formData, selectedDate, location.state?.directBroadcast, totalSelectedContacts, messageLimit]);
 
-  const validateForm = useCallback(() => {
-    const newErrors = {};
-    const isDirectBroadcast = location.state?.directBroadcast;
+const validateForm = useCallback(() => {
+  const sequence = getStepSequence();
+  const finalStep = sequence[sequence.length - 1];
+  return validateStep(finalStep);
+}, [getStepSequence, validateStep]);
 
-    if (!formData.broadcastName?.trim()) {
-      newErrors.broadcastName = "Broadcast name is required";
-    }
-
-    if (!isDirectBroadcast && (!Array.isArray(formData.group_id) || formData.group_id.length === 0)) {
-      newErrors.group_id = "Please select at least one group";
-    }
-
-    if (!formData.selectedTemplate) {
-      newErrors.template = "Please select a template";
-    }
-
-    if (formData.schedule === "Yes" && !selectedDate) {
-      newErrors.schedule = "Please select a date and time";
-    }
-
-    if (!isDirectBroadcast && totalSelectedContacts > 250) {
-      newErrors.group_id = "Selected audience exceeds the 250 contact limit";
-    }
-
-    setValidationErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  }, [formData, selectedDate, location.state?.directBroadcast, totalSelectedContacts]);
-
-  const handleNext = useCallback(() => {
-    const isValid = validateStep(step);
-    if (isValid) {
-      const sequence = getStepSequence();
-      const currentIndex = getCurrentStepIndex();
-      if (currentIndex < sequence.length - 1) {
-        setStep(sequence[currentIndex + 1]);
-      }
-    }
-  }, [validateStep, getStepSequence, getCurrentStepIndex, setStep, step]);
-
-  const handlePrevious = useCallback(() => {
+const handleNext = useCallback(() => {
+  console.log('Current step before validation:', step);
+  const isValid = validateStep(step);
+  console.log('Is valid:', isValid);
+  
+  if (isValid) {
     const sequence = getStepSequence();
     const currentIndex = getCurrentStepIndex();
-    if (currentIndex > 0) {
-      setStep(sequence[currentIndex - 1]);
+    console.log('Current sequence:', sequence);
+    console.log('Current index:', currentIndex);
+    console.log('Next step would be:', sequence[currentIndex + 1]);
+    
+    if (currentIndex < sequence.length - 1) {
+      console.log('Setting step to:', sequence[currentIndex + 1]);
+      setStep(sequence[currentIndex + 1]);
+    } else {
+      console.log('Already at the last step');
     }
-  }, [getStepSequence, getCurrentStepIndex, setStep]);
+  } else {
+    console.log('Validation failed with errors:', validationErrors);
+  }
+}, [validateStep, getStepSequence, getCurrentStepIndex, setStep, step, validationErrors]);
 
+const handlePrevious = useCallback(() => {
+  const sequence = getStepSequence();
+  const currentIndex = getCurrentStepIndex();
+  if (currentIndex > 0) {
+    setStep(sequence[currentIndex - 1]);
+  }
+}, [getStepSequence, getCurrentStepIndex, setStep]);
   return {
     // States
     templates,
@@ -348,7 +491,7 @@ export const useBroadcastForm = (formData, setFormData, customerLists, onTemplat
     fetchTemplates,
     loadMoreTemplates,
     validateStep,
-    validateForm,
+    validateForm, 
     handleNext,
     handlePrevious,
     getStepSequence,

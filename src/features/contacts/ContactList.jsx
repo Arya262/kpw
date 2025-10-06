@@ -14,7 +14,7 @@ import Loader from "../../components/Loader";
 import Pagination from "../shared/Pagination";
 import { formatDate } from "../../utils/formatters";
 import ConfirmationDialog from "../shared/ExitConfirmationDialog";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import GroupNameDialog from "./components/GroupNameDialog";
 import ExportDialog from "./components/ExportDialog";
 import { Send, Users, Download } from "lucide-react";
@@ -157,6 +157,7 @@ export default function ContactList() {
     itemsPerPage: 10,
   });
 
+  const [searchParams] = useSearchParams();
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [editContact, setEditContact] = useState(null);
   const [deleteContact, setDeleteContact] = useState(null);
@@ -422,11 +423,22 @@ export default function ContactList() {
     setSelectedContacts((prev) => {
       const updated = { ...prev };
       if (selectAllAcrossPages) {
-        if (!isChecked) updated[contactId] = false;
-        else delete updated[contactId];
+        // When in "select all" mode, we only track unchecked contacts
+        if (!isChecked) {
+          updated[contactId] = false; // Mark as explicitly unchecked
+        } else {
+          // If re-checking a previously unchecked contact, remove it from the unchecked list
+          if (updated[contactId] === false) {
+            delete updated[contactId];
+          }
+        }
       } else {
-        if (isChecked) updated[contactId] = true;
-        else delete updated[contactId];
+        // In normal mode, just track selected contacts
+        if (isChecked) {
+          updated[contactId] = true;
+        } else {
+          delete updated[contactId];
+        }
       }
       return updated;
     });
@@ -436,7 +448,11 @@ export default function ContactList() {
     const checked = event.target.checked;
     setSelectAll(checked);
     setSelectAllAcrossPages(checked);
-    setSelectedContacts({});
+    // Don't clear selectedContacts when selecting all across pages
+    // We'll use this to track explicitly unchecked contacts
+    if (!checked) {
+      setSelectedContacts({});
+    }
   };
 
 
@@ -463,7 +479,9 @@ export default function ContactList() {
     }
     setIsPopupOpen(true);
   };
-  const closePopup = () => setIsPopupOpen(false);
+  const closePopup = () => {
+    setIsPopupOpen(false);
+  };
 
   useEffect(() => {
     if (allContacts.length === 0) {
@@ -531,23 +549,44 @@ export default function ContactList() {
     if (selectAllAcrossPages) {
       try {
         setLoading(true);
-        // Fetch all contacts without pagination
-        const response = await axios.get(API_ENDPOINTS.CONTACTS.GET_ALL, {
+        // First, get the total count of contacts without fetching all data
+        const countResponse = await axios.get(API_ENDPOINTS.CONTACTS.GET_ALL, {
           params: {
             customer_id: user?.customer_id,
-            limit: 1000,
+            limit: 1, // Just get the count
+            countOnly: true
           },
           withCredentials: true,
         });
 
-        if (response.data && Array.isArray(response.data.data)) {
-          allFetchedContacts = response.data.data.map(item => ({
-            ...item,
-            contact_id: item.contact_id || item.id,
-          }));
-          selectedContactIds = allFetchedContacts
-            .filter(contact => selectedContacts[contact.contact_id] !== false)
-            .map(contact => contact.contact_id);
+        const totalContacts = countResponse.data?.pagination?.total || 0;
+        
+        if (totalContacts > 0) {
+          // Now fetch all contacts without pagination
+          const response = await axios.get(API_ENDPOINTS.CONTACTS.GET_ALL, {
+            params: {
+              customer_id: user?.customer_id,
+              limit: totalContacts, // Fetch all contacts in one go
+            },
+            withCredentials: true,
+          });
+
+          if (response.data && Array.isArray(response.data.data)) {
+            allFetchedContacts = response.data.data.map(item => ({
+              ...item,
+              contact_id: item.contact_id || item.id,
+            }));
+            
+            // If we have any explicitly unchecked contacts, filter them out
+            if (Object.keys(selectedContacts).length > 0) {
+              selectedContactIds = allFetchedContacts
+                .filter(contact => selectedContacts[contact.contact_id] !== false)
+                .map(contact => contact.contact_id);
+            } else {
+              // If no contacts are explicitly unchecked, select all
+              selectedContactIds = allFetchedContacts.map(contact => contact.contact_id);
+            }
+          }
         }
       } catch (error) {
         console.error('Error fetching all contacts:', error);
@@ -841,9 +880,6 @@ export default function ContactList() {
         'Last Name',
         'Country Code',
         'Mobile No',
-        // 'Status',
-        // 'Created At',
-        
       ];
 
       // Create CSV content
@@ -855,9 +891,6 @@ export default function ContactList() {
             `"${contact.last_name || ''}"`,
             `"${contact.country_code || ''}"`,
             `"${contact.mobile_no || ''}"`
-            // `"${contact.status || ''}"`,
-            // `"${contact.created_at || ''}"`,
-            
           ].join(',');
         })
       ].join('\n');
@@ -1117,14 +1150,14 @@ export default function ContactList() {
                         <div className="flex gap-2">
                           <button
                             onClick={() => handleAddbroadcast(false)}
-                            className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex items-center gap-2 bg-[#0AA89E] text-white rounded-md hover:bg-[#089A8B] px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                             disabled={!hasSelectedContacts || !permissions.canAdd}
                             title="Send broadcast to selected contacts directly"
                           >
                             <Send className="w-4 h-4 text-white" />
                             Send Broadcast
                           </button>
-                          <button
+                          {/* <button
                             onClick={() => handleAddbroadcast(true)}
                             className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             disabled={!hasSelectedContacts || !permissions.canAdd}
@@ -1132,12 +1165,12 @@ export default function ContactList() {
                           >
                             <Users className="w-4 h-4 text-white" />
                             Create Group & Broadcast
-                          </button>
+                          </button> */}
                         </div>
                         <button
                           onClick={() => setShowExportDialog(true)}
                           disabled={isDeleting || (!selectAllAcrossPages && Object.values(selectedContacts).filter(Boolean).length === 0)}
-                          className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200"
+                          className="flex items-center gap-2 bg-[#0AA89E] text-white rounded-md hover:bg-[#089A8B] px-4 py-2 text-sm font-medium transition-colors duration-200 cursor-pointer"
                           title="Export selected contacts"
                         >
                           <Download className="w-4 h-4" />
@@ -1146,7 +1179,7 @@ export default function ContactList() {
                         <button
                           onClick={handleDeleteClick}
                           disabled={isDeleting}
-                          className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                          className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 cursor-pointer">
                           Delete
                         </button>
                       </div>

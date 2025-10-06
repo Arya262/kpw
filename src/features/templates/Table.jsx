@@ -34,9 +34,9 @@ const Table = ({
 
   // ✅ counts for filter bar
 const filteredCounts = useMemo(() => {
-    const approved = templates.filter(t => t.status?.toLowerCase() === "approved").length;
-    const pending = templates.filter(t => t.status?.toLowerCase() === "pending").length;
-    const failed = templates.filter(t => t.status?.toLowerCase() === "failed").length;
+    const approved = templates.filter(t => t?.status?.toLowerCase() === "approved").length;
+    const pending = templates.filter(t => t?.status?.toLowerCase() === "pending").length;
+    const failed = templates.filter(t => t?.status?.toLowerCase() === "failed").length;
     return {
       all: totalRecords || templates.length, // ✅ totalRecords from API
       approved,
@@ -54,9 +54,10 @@ const filteredCounts = useMemo(() => {
 
   // ✅ status filter applied locally
   const displayedTemplates = useMemo(() => {
-    if (activeFilter === "All") return templates;
+    if (!activeFilter || activeFilter === "All") return templates;
+    const filterValue = activeFilter?.toLowerCase()?.trim() || '';
     return templates.filter(
-      (t) => t.status?.toLowerCase().trim() === activeFilter.toLowerCase()
+      (t) => t?.status?.toLowerCase()?.trim() === filterValue
     );
   }, [templates, activeFilter]);
 
@@ -105,39 +106,36 @@ const filteredCounts = useMemo(() => {
       return;
     }
 
-    let idsToDelete = [];
+    let payload;
     if (selectAllAcrossPages) {
-      // Need to gather all template IDs then exclude exceptions
-      if (typeof fetchAllTemplates === 'function') {
-        const all = await fetchAllTemplates(searchTerm);
-        const exceptions = Object.entries(selectedRows)
-          .filter(([_, v]) => v === false)
-          .map(([id]) => id);
-        idsToDelete = all
-          .map(t => t.id)
-          .filter(id => !exceptions.includes(String(id)));
-      } else {
-        // Fallback: use currently displayedTemplates
-        idsToDelete = displayedTemplates.map(t => t.id);
-      }
+      // For select-all-across-pages, we'll send a special payload
+      const exceptions = Object.entries(selectedRows)
+        .filter(([_, v]) => v === false)
+        .map(([id]) => id);
+      
+      payload = [{
+        id: 'select-all',
+        element_name: 'Selected Templates',
+        _selectedIds: ['select-all'],
+        _exceptions: exceptions,
+        _isSelectAll: true
+      }];
     } else {
       // Normal per-page selection
-      idsToDelete = displayedTemplates
-        .filter(t => selectedRows[t.id])
-        .map(t => t.id);
+      const selectedTemplates = displayedTemplates.filter(t => selectedRows[t.id]);
+      if (selectedTemplates.length === 0) {
+        toast.error("No templates selected for deletion.", { autoClose: 3000 });
+        return;
+      }
+      
+      payload = selectedTemplates.map(t => ({
+        id: t.id,
+        element_name: t.element_name,
+        _selectedIds: [t.id]
+      }));
     }
 
-    if (idsToDelete.length === 0) {
-      toast.error("No templates selected for deletion.", { autoClose: 3000 });
-      return;
-    }
-
-    // Build a mock template just to reuse the confirm dialog component
-    setSelectedTemplate({
-      id: idsToDelete[0],
-      element_name: (templates.find(t => t.id === idsToDelete[0]) || {}).element_name,
-      _selectedIds: idsToDelete,
-    });
+    setSelectedTemplate(payload[0]);
     setShowDeleteDialog(true);
   };
 
@@ -409,8 +407,7 @@ const filteredCounts = useMemo(() => {
                       <td className="relative py-4">
                         <div
                           ref={(el) => (dropdownRefs.current[idx] = el)}
-                          className="flex justify-center"
-                        >
+                          className="flex justify-center">
                           <button
                             onClick={() => handleSendCampaign(template)}
                             disabled={
@@ -426,8 +423,7 @@ const filteredCounts = useMemo(() => {
                               template.status?.toLowerCase() !== "approved"
                                 ? "Only approved templates can be sent"
                                 : "Send a campaign using this template"
-                            }
-                          >
+                            }>
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
                               className="w-4 h-4 transform rotate-45"
@@ -435,8 +431,7 @@ const filteredCounts = useMemo(() => {
                               viewBox="0 0 24 24"
                               stroke="currentColor"
                               strokeWidth="2"
-                              aria-hidden="true"
-                            >
+                              aria-hidden="true">
                               <path
                                 strokeLinecap="round"
                                 strokeLinejoin="round"

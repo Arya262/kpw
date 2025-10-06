@@ -1,12 +1,7 @@
 import { forwardRef, useState, useEffect, useRef } from "react";
 import { ChevronLeft, MoreVertical, Trash2, BellOff } from "lucide-react";
 import SingleDeleteDialog from "../../features/contacts/SingleDeleteDialog";
-
-const getAvatarColor = (name = "User") => {
-  const hash = [...name].reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const hue = hash % 360;
-  return `hsl(${hue}, 70%, 50%)`;
-};
+import Avatar from "../../utils/Avatar";
 
 const ChatHeader = forwardRef(
   (
@@ -40,18 +35,17 @@ const ChatHeader = forwardRef(
     }, []);
 
     if (!selectedContact) return null;
-    const handleDelete = async () => {
-      setShowDeleteDialog(true);
-    };
+
+    const handleDelete = () => setShowDeleteDialog(true);
 
     const handleConfirmDelete = async () => {
       setDeleting(true);
       try {
         console.log(
-   `Delete confirmed at: ${new Date().toISOString()} | Contact: ${
-     selectedContact?.name
-   } | Customer ID (from auth): ${authCustomerId}`
- );
+          `Delete confirmed at: ${new Date().toISOString()} | Contact: ${
+            selectedContact?.name
+          } | Customer ID: ${authCustomerId}`
+        );
         if (onDeleteChat) {
           await onDeleteChat(selectedContact, authCustomerId);
         }
@@ -64,44 +58,7 @@ const ChatHeader = forwardRef(
       }
     };
 
-    const handleCancelDelete = () => {
-      setShowDeleteDialog(false);
-    };
-
-    const renderAvatar = (contact) => {
-      if (contact.image) {
-        return (
-          <img
-            src={contact.image}
-            alt="User Avatar"
-            className="w-10 h-10 rounded-full object-cover"
-          />
-        );
-      }
-
-      const name = contact.name || "User";
-      const parts = name.trim().split(/\s+/);
-      let initials = "U";
-
-      if (parts.length === 1) {
-        initials = parts[0][0]?.toUpperCase() || "U";
-      } else if (parts.length > 1) {
-        const firstInitial = parts[0][0]?.toUpperCase() || "";
-        const lastInitial = parts[parts.length - 1][0]?.toUpperCase() || "";
-        initials = firstInitial + lastInitial;
-      }
-
-      const bgColor = getAvatarColor(name);
-
-      return (
-        <div
-          className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold"
-          style={{ backgroundColor: bgColor }}
-        >
-          {initials}
-        </div>
-      );
-    };
+    const handleCancelDelete = () => setShowDeleteDialog(false);
 
     return (
       <div className="chat-header relative flex justify-between items-center px-4 py-2 border-b border-gray-200 bg-white">
@@ -117,7 +74,7 @@ const ChatHeader = forwardRef(
             onClick={onProfileClick}
             ref={profileButtonRef}
           >
-            {renderAvatar(selectedContact)}
+            <Avatar name={selectedContact.name} image={selectedContact.image} />
             {!isMobile && (
               <h3 className="font-semibold text-lg text-black">
                 {selectedContact.name}
@@ -138,40 +95,38 @@ const ChatHeader = forwardRef(
         {/* Right Actions */}
         <div className="relative flex items-center space-x-2" ref={dropdownRef}>
           {!isMobile ? (
-            <>
-              <button
-                className="p-1 rounded hover:bg-red-100"
-                onClick={handleDelete}
-                disabled={deleting}
-              >
-                {deleting ? (
-                  <div className="flex items-center space-x-2">
-                    <svg
-                      className="animate-spin w-5 h-5 text-red-500"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                        fill="none"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                      />
-                    </svg>
-                    <span className="text-red-500 text-sm">Deleting...</span>
-                  </div>
-                ) : (
-                  <Trash2 className="w-5 h-5 text-red-500" />
-                )}
-              </button>
-            </>
+            <button
+              className="p-1 rounded hover:bg-red-100"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              {deleting ? (
+                <div className="flex items-center space-x-2">
+                  <svg
+                    className="animate-spin w-5 h-5 text-red-500"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      fill="none"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                    />
+                  </svg>
+                  <span className="text-red-500 text-sm">Deleting...</span>
+                </div>
+              ) : (
+                <Trash2 className="w-5 h-5 text-red-500" />
+              )}
+            </button>
           ) : (
             <>
               <button

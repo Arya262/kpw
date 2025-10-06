@@ -1,4 +1,11 @@
-import React, { useEffect, useLayoutEffect, useRef, useMemo, useCallback, useState } from "react";
+import React, {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useMemo,
+  useCallback,
+  useState,
+} from "react";
 import TextMessage from "./chatfeautures/TextMessage";
 import ImageMessage from "./chatfeautures/ImageMessage";
 import VideoMessage from "./chatfeautures/VideoMessage";
@@ -48,14 +55,17 @@ const ChatMessages = ({
     const container = chatContainerRef.current;
     if (!container || !selectedContact?.contact_id) return;
 
-    // Show/hide scroll button depending on position
+    // Show scroll button whenever user scrolls up (not at bottom)
     const nearBottom =
       container.scrollHeight - container.scrollTop - container.clientHeight <
       100;
-    setShowScrollButton(!nearBottom);
-    if (nearBottom) setUnreadCount(0);
+    setShowScrollButton(!nearBottom); // show button if NOT near bottom
 
-    // Load older when at top
+    if (nearBottom) {
+      setUnreadCount(0); // reset unread count if near bottom
+    }
+
+    // Load older messages when at top
     if (container.scrollTop === 0) {
       const prevHeight = container.scrollHeight;
       const oldestMessage = messages[0];
@@ -88,7 +98,10 @@ const ChatMessages = ({
 
   // 🔹 Mark first load on contact change and try to scroll immediately if messages already present
   useLayoutEffect(() => {
-    if (selectedContact?.contact_id && prevContactId.current !== selectedContact.contact_id) {
+    if (
+      selectedContact?.contact_id &&
+      prevContactId.current !== selectedContact.contact_id
+    ) {
       firstLoadRef.current = true;
       // If messages already present (fast path), scroll now
       if (messages.length > 0) {
@@ -110,7 +123,8 @@ const ChatMessages = ({
     const sentByUser = lastMessage && lastMessage.status !== "received";
 
     const nearBottom =
-      container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+      container.scrollHeight - container.scrollTop - container.clientHeight <
+      100;
 
     const isNewMessage = messages.length > prevMessagesLength.current;
 
@@ -133,11 +147,13 @@ const ChatMessages = ({
   useEffect(() => {
     const container = chatContainerRef.current;
     if (!container) return;
-    const imgs = Array.from(container.querySelectorAll('img'));
+    const imgs = Array.from(container.querySelectorAll("img"));
     if (imgs.length === 0) return;
 
     const onLoad = () => {
-      const nearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+      const nearBottom =
+        container.scrollHeight - container.scrollTop - container.clientHeight <
+        100;
       if (firstLoadRef.current || nearBottom) {
         scrollToBottom(true);
         firstLoadRef.current = false;
@@ -145,13 +161,13 @@ const ChatMessages = ({
     };
     imgs.forEach((img) => {
       if (img.complete) return;
-      img.addEventListener('load', onLoad);
-      img.addEventListener('error', onLoad);
+      img.addEventListener("load", onLoad);
+      img.addEventListener("error", onLoad);
     });
     return () => {
       imgs.forEach((img) => {
-        img.removeEventListener('load', onLoad);
-        img.removeEventListener('error', onLoad);
+        img.removeEventListener("load", onLoad);
+        img.removeEventListener("error", onLoad);
       });
     };
   }, [messages]);
@@ -180,11 +196,13 @@ const ChatMessages = ({
   const renderMessage = (msg, index) => {
     const sent = msg.status !== "received";
     const time = msg.sent_at
-      ? new Date(msg.sent_at).toLocaleTimeString("en-US", {
-          hour: "numeric",
-          minute: "2-digit",
-          hour12: true,
-        }).toLowerCase()
+      ? new Date(msg.sent_at)
+          .toLocaleTimeString("en-US", {
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true,
+          })
+          .toLowerCase()
       : "";
 
     const message = { ...msg, sent_at: time };
@@ -224,7 +242,8 @@ const ChatMessages = ({
                    bg-[url('/light.png')]
                    bg-repeat transition-colors duration-300 ease-in-out"
         aria-live="polite"
-        role="list">
+        role="list"
+      >
         {messages.length > 0 ? (
           Object.entries(groupedMessages).map(([dateLabel, msgs]) => (
             <div key={dateLabel}>
@@ -255,22 +274,21 @@ const ChatMessages = ({
       </div>
 
       {/* 🔹 Floating scroll button */}
-      {showScrollButton && unreadCount > 0 && (
+      {showScrollButton && (
         <button
-        onClick={() => {
-          scrollToBottom(true);
-          setUnreadCount(0);
-        }}
-        className="absolute bottom-20 right-4 bg-[#0AA89E] hover:bg-[#099086] rounded-full shadow-lg flex items-center justify-center w-12 h-12 transition-transform transform hover:scale-110"
-      >
-        <ArrowDown className="w-6 h-6 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]" />
-        {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow">
-            {unreadCount}
-          </span>
-        )}
-      </button>
-      
+          onClick={() => {
+            scrollToBottom(true);
+            setUnreadCount(0);
+          }}
+          className="absolute bottom-7 right-4 bg-[#0AA89E] hover:bg-[#099086] rounded-full shadow-lg flex items-center justify-center w-12 h-12 transition-transform transform hover:scale-110"
+        >
+          <ArrowDown className="w-6 h-6 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow">
+              {unreadCount}
+            </span>
+          )}
+        </button>
       )}
     </div>
   );
