@@ -181,10 +181,8 @@ const BroadcastPages = ({ onClose, showCustomAlert, onBroadcastCreated }) => {
       
 
       const endpoint = formData.isDirectBroadcast ? API_ENDPOINTS.BROADCASTS.GET_DIRECT : API_ENDPOINTS.BROADCASTS.GET_CUSTOMERS;
-
-      console.log('Sending request to:', endpoint);
-      console.log('Request data:', broadcastData);
-
+      // console.log('Sending request to:', endpoint);
+      // console.log('Request data:', broadcastData);
       const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -192,16 +190,12 @@ const BroadcastPages = ({ onClose, showCustomAlert, onBroadcastCreated }) => {
         body: JSON.stringify(broadcastData),
       });
 
-      console.log('Response status:', response.status);
+      // console.log('Response status:', response.status);
       const result = await response.json();
-
       if (!response.ok) throw new Error(result.message || "Failed to create broadcast");
-
       const successMessage = formData.isDirectBroadcast
         ? `Broadcast sent to ${broadcastData.total_contacts} contacts!`
         : "Broadcast created successfully!";
-
-      toast.success(successMessage);
       onBroadcastCreated();
       onClose();
       navigate("/broadcast", { replace: true });
@@ -216,22 +210,17 @@ const BroadcastPages = ({ onClose, showCustomAlert, onBroadcastCreated }) => {
 
   const openTemplate = () => setIsTemplateOpen(true);
   const closeTemplate = () => setIsTemplateOpen(false);
-
   const confirmExit = () => {
     onClose();
     navigate("/broadcast");
     setShowExitDialog(false);
   };
   const cancelExit = () => setShowExitDialog(false);
-
-  // Check for unsaved changes
   const hasUnsavedChanges = Object.entries(formData).some(([key, value]) => {
     if (Array.isArray(value)) return value.length > 0;
     if (typeof value === "object" && value !== null) return Object.keys(value).length > 0;
     return value && !["Select Customer List", "Text Message", "Pre-approved template message", "No"].includes(value);
   });
-
-  // Warn on browser close if unsaved changes
   useEffect(() => {
     const handleBeforeUnload = e => {
       if (hasUnsavedChanges) e.preventDefault();

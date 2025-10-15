@@ -22,6 +22,50 @@ export const useChatLogic = ({
 }) => {
   const { markConversationAsRead, setSelectedConversationId } = useNotifications();
   const selectedContactRef = useRef(selectedContact);
+
+  // Block/Unblock contact
+  const updateBlockStatus = useCallback(async (contactId, isBlocked) => {
+    try {
+      const endpoint = isBlocked 
+        ? API_ENDPOINTS.CHAT.BLOCK(user?.customer_id)
+        : API_ENDPOINTS.CHAT.UNBLOCK(user?.customer_id);
+        
+      const response = await axios.post(
+        endpoint,
+        { contact_ids: [contactId] },
+        { 
+          headers: { 'Content-Type': 'application/json' },
+          withCredentials: true 
+        }
+      );
+
+      if (response.data.success) {
+        // Update the contact in the contacts list
+        setContacts(prevContacts => 
+          prevContacts.map(contact => 
+            contact.contact_id === contactId 
+              ? { ...contact, isBlocked } 
+              : contact
+          )
+        );
+        
+        // If the blocked contact is currently selected, update its state
+        if (selectedContactRef.current?.contact_id === contactId) {
+          setSelectedContact(prev => ({ ...prev, isBlocked }));
+        }
+        
+        toast.success(response.data.message || `Contact ${isBlocked ? 'blocked' : 'unblocked'} successfully`);
+        return true;
+      } else {
+        throw new Error(response.data.message || 'Failed to update block status');
+      }
+    } catch (error) {
+      console.error('Error updating block status:', error);
+      toast.error(error.response?.data?.message || `Failed to ${isBlocked ? 'block' : 'unblock'} contact`);
+      return false;
+    }
+  }, [setContacts, setSelectedContact, user?.customer_id]);
+
   const fetchedConversations = useRef(new Set());
   // Deduplicate recently seen message ids to prevent late toasts after navigation
   const recentMessageIds = useRef(new Set());
@@ -58,7 +102,7 @@ export const useChatLogic = ({
 
 // ===== Fetch Contacts with Cursor Pagination =====
   const fetchContacts = useCallback(
-    async ({ cursor = null, limit = 10 } = {}) => {
+    async ({ cursor = null, limit = 10, search = ""  } = {}) => {
       if (!user?.customer_id) return;
 
       try {
@@ -66,6 +110,7 @@ export const useChatLogic = ({
         url.searchParams.append("customer_id", user.customer_id);
         url.searchParams.append("limit", limit);
         if (cursor) url.searchParams.append("cursor", cursor);
+        if (search.trim()) url.searchParams.append("search", search.trim());
 
         const response = await axios.get(url.toString(), {
           headers: { "Content-Type": "application/json" },
@@ -86,6 +131,7 @@ export const useChatLogic = ({
           lastMessageType: c.last_message_type,
           lastMessageTime: c.last_message_time,
           unreadCount: c.unread_count || 0,
+          block: c.block === 1,
         }));
 
         setContacts((prev) =>
@@ -202,12 +248,6 @@ export const useChatLogic = ({
         return;
       }
 
-      // console.log(
-      //   `👆 New contact selected: ${contact.name} (ID: ${
-      //     contact.contact_id || "new"
-      //   }, Phone: ${contact.mobile_no || "none"})`
-      // );
-
       setSelectedContact(contact);
 
       if (setSelectedConversationId && contact.contact_id) {
@@ -309,6 +349,7 @@ const sendMessage = useCallback(
       contact_id,
       customer_id,
       phoneNumber,
+      category: input.category,
     };
     let messageType = "text";
 
@@ -478,5 +519,6 @@ const sendMessage = useCallback(
     sendMessage,
     deleteChat,
     setupChatEventListener,
+    updateBlockStatus,
   };
 };

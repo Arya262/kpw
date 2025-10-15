@@ -10,7 +10,7 @@ const BroadcastTable = ({ filteredData, loading, error }) => {
   
   // Log the raw filteredData when it changes
   useEffect(() => {
-    console.log('Raw filteredData:', filteredData);
+    // console.log('Raw filteredData:', filteredData);
   }, [filteredData]);
 
   // Parse container_meta safely

@@ -29,7 +29,7 @@ const ChatMessages = ({
   const prevMessagesLength = useRef(0);
   const prevContactId = useRef(null);
   const firstLoadRef = useRef(false);
-
+  const isBlocked = selectedContact?.block === true;
   // 🔹 New states for scroll button
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -44,28 +44,25 @@ const ChatMessages = ({
           behavior: instant ? "auto" : "smooth",
         });
       } catch (e) {
-        // Fallback for older browsers
         container.scrollTop = container.scrollHeight;
       }
     });
   };
 
-  // 🔹 Load older messages when user scrolls to top
   const handleScroll = useCallback(async () => {
     const container = chatContainerRef.current;
     if (!container || !selectedContact?.contact_id) return;
 
-    // Show scroll button whenever user scrolls up (not at bottom)
     const nearBottom =
       container.scrollHeight - container.scrollTop - container.clientHeight <
       100;
-    setShowScrollButton(!nearBottom); // show button if NOT near bottom
+    setShowScrollButton(!nearBottom); 
 
     if (nearBottom) {
-      setUnreadCount(0); // reset unread count if near bottom
+      setUnreadCount(0); 
     }
 
-    // Load older messages when at top
+
     if (container.scrollTop === 0) {
       const prevHeight = container.scrollHeight;
       const oldestMessage = messages[0];
@@ -96,7 +93,7 @@ const ChatMessages = ({
     };
   }, [handleScroll]);
 
-  // 🔹 Mark first load on contact change and try to scroll immediately if messages already present
+
   useLayoutEffect(() => {
     if (
       selectedContact?.contact_id &&
@@ -236,14 +233,14 @@ const ChatMessages = ({
 
   return (
     <div className="relative h-full min-h-0">
-      <div
-        ref={chatContainerRef}
-        className="flex flex-col min-h-0 h-full overflow-y-auto scrollbar-hide 
-                   bg-[url('/light.png')]
-                   bg-repeat transition-colors duration-300 ease-in-out"
-        aria-live="polite"
-        role="list"
-      >
+        <div
+          ref={chatContainerRef}
+          className={`flex flex-col min-h-0 h-full overflow-y-auto scrollbar-hide 
+            bg-[url('/light.png')] ${isBlocked ? 'opacity-75' : ''}
+            bg-repeat transition-all duration-300 ease-in-out`}
+          aria-live="polite"
+          role="list"
+        >
         {messages.length > 0 ? (
           Object.entries(groupedMessages).map(([dateLabel, msgs]) => (
             <div key={dateLabel}>
@@ -270,6 +267,27 @@ const ChatMessages = ({
               : "This contact has no visible conversation."}
           </p>
         )}
+
+            {/* 🔹 Blocked User Notice (now in your theme color) */}
+            {isBlocked && (
+              <div className="flex justify-center my-3">
+                <span className="flex items-center gap-2 bg-[#0AA89E]/10 border border-[#0AA89E]/40 text-[#0AA89E] text-xs px-4 py-2 rounded-full shadow-sm">
+                  <svg
+                    className="w-4 h-4"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  You’ve blocked this contact. You won’t receive new messages.
+                </span>
+              </div>
+            )}
+
         <div ref={messagesEndRef} />
       </div>
 

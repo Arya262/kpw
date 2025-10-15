@@ -15,7 +15,7 @@ import TemplateDrawer from "../../components/TemplateDrawer";
 import SearchInput from "../shared/SearchInput";
 import { useInView } from "react-intersection-observer";
 import { renderMedia } from "../../utils/renderMedia";
-
+import fallbackImage from '../../assets/fallback.jpg';
 const ExploreTemplates = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -36,8 +36,6 @@ const ExploreTemplates = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  // Infinite scroll intersection observer
   const { ref: loadMoreRef, inView } = useInView({ threshold: 0 });
 
   useEffect(() => {
@@ -144,8 +142,6 @@ const ExploreTemplates = () => {
           </button>
         </div>
       </div>
-
-      {/* Content */}
       {loading && allTemplates.length === 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {Array.from({ length: 6 }).map((_, i) => (
@@ -164,8 +160,7 @@ const ExploreTemplates = () => {
           <p className="text-lg">No templates available yet.</p>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="mt-4 px-6 py-2 bg-cyan-500 text-white rounded-lg shadow hover:scale-105 transition"
-          >
+            className="mt-4 px-6 py-2 bg-cyan-500 text-white rounded-lg shadow hover:scale-105 transition">
             Create your first template
           </button>
         </div>
@@ -177,8 +172,7 @@ const ExploreTemplates = () => {
                 key={template.id}
                 whileHover={{ y: -8, scale: 1.02 }}
                 transition={{ duration: 0.2 }}
-                className="bg-white/90 backdrop-blur rounded-2xl shadow-lg overflow-hidden flex flex-col border border-gray-100 hover:border-cyan-300 transition-all duration-300 group"
-              >
+                className="bg-white/90 backdrop-blur rounded-2xl shadow-lg overflow-hidden flex flex-col border border-gray-100 hover:border-cyan-300 transition-all duration-300 group">
                 {(() => {
                   const mediaTemplate = {
                     ...template,
@@ -191,10 +185,7 @@ const ExploreTemplates = () => {
                       template.container_meta?.templateType,
                     element_name: template.element_name,
                   };
-
                   const mediaContent = renderMedia(mediaTemplate);
-
-                  // Only render preview block if NOT text type
                   if (
                     mediaTemplate.template_type?.toLowerCase() !== "text"
                   ) {
@@ -204,7 +195,7 @@ const ExploreTemplates = () => {
                           mediaContent
                         ) : (
                           <img
-                            src="/fallback.jpg"
+                          src={fallbackImage}
                             alt="Template fallback"
                             className="w-full h-full object-cover"
                           />
@@ -215,7 +206,6 @@ const ExploreTemplates = () => {
                   }
                   return null;
                 })()}
-
                 <div className="p-4 flex-1 flex flex-col justify-between">
                   <div className="flex justify-between items-start">
                     <div className="flex-1 min-w-0">
@@ -229,12 +219,10 @@ const ExploreTemplates = () => {
                             : template.category?.toLowerCase() === "info"
                             ? "bg-blue-100 text-blue-700"
                             : "bg-gray-100 text-gray-600"
-                        }`}
-                      >
+                        }`}>
                         {template.category}
                       </span>
                     </div>
-
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <button
                         onClick={() => {
@@ -250,8 +238,7 @@ const ExploreTemplates = () => {
                       <button
                         onClick={() => handleDeleteClick(template)}
                         className="p-2 rounded-full hover:bg-red-50 transition"
-                        title="Delete Template"
-                      >
+                        title="Delete Template">
                         <Trash2 className="w-5 h-5 text-red-500 group-hover:scale-110 transition" />
                       </button>
                     </div>

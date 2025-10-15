@@ -29,37 +29,43 @@ const PreviewStep = ({
     // Get the template and its parameters
     const { selectedTemplate, templateParameters = [] } = formData;
     
-    console.log('Template Parameters:', JSON.stringify(templateParameters, null, 2));
-    console.log('Selected Template:', {
-      container_meta: selectedTemplate.container_meta,
-      data: selectedTemplate.data,
-      template_type: selectedTemplate.template_type
-    });
+    // console.log('Template Parameters:', JSON.stringify(templateParameters, null, 2));
+    // console.log('Selected Template:', {
+    //   container_meta: selectedTemplate.container_meta,
+    //   data: selectedTemplate.data,
+    //   template_type: selectedTemplate.template_type
+    // });
+  
+     let content = selectedTemplate.data || selectedTemplate.container_meta?.sampleText || '';
+    // console.log('Initial content:', content);
     
-    // Always use the data field which contains the template with placeholders
-    // The sampleText might contain hardcoded values which we don't want
-    let content = selectedTemplate.data || selectedTemplate.container_meta?.sampleText || '';
-    console.log('Initial content:', content);
-    
-    // Function to get media URL - always use the server URL with filename if available
+    // Find the uploaded image if it exists
+    const uploadedImage = templateParameters.find(
+      param => param?.type === 'image' && (param?.image?.id || param?.image?.previewUrl || param?.image?.url)
+    )?.image;
+
     const getMediaUrl = (urlOrFile) => {
-      // If we have the uploaded image with fileName, always use that first
+      // console.log('getMediaUrl called with:', { urlOrFile, uploadedImage });
+      if (uploadedImage?.url) {
+        // console.log('Using uploaded image URL:', uploadedImage.url);
+        return uploadedImage.url;
+      }
+
       if (uploadedImage?.fileName) {
         const mediaUrl = `${API_BASE}/uploads/media/${uploadedImage.fileName}`;
-        console.log('Using media URL with filename:', mediaUrl);
+        // console.log('Using media URL with filename:', mediaUrl);
         return mediaUrl;
       }
       
-      // If it's already a full URL or blob URL and we don't have a better option
       if (urlOrFile && (urlOrFile.startsWith('http') || urlOrFile.startsWith('blob:'))) {
-        console.log('Using existing URL:', urlOrFile);
+        // console.log('Using existing URL:', urlOrFile);
         return urlOrFile;
       }
       
       // If we have a template media URL, use that
       if (selectedTemplate.container_meta?.mediaUrl) {
         const mediaUrl = `${API_BASE}/uploads/media/${selectedTemplate.container_meta.mediaUrl}`;
-        console.log('Using template media URL:', mediaUrl);
+        // console.log('Using template media URL:', mediaUrl);
         return mediaUrl;
       }
       
@@ -74,24 +80,16 @@ const PreviewStep = ({
       return '';
     };
 
-    // Find the uploaded image if it exists
-    const uploadedImage = templateParameters.find(
-      param => param?.type === 'image' && (param?.image?.id || param?.image?.previewUrl)
-    )?.image;
-
-    // Get the media file from uploaded image or template
-    // Prefer the server filename first, then the blob URL for preview
     const mediaFile = uploadedImage?.fileName ||
                      uploadedImage?.previewUrl ||
                      selectedTemplate.container_meta?.mediaUrl || 
                      selectedTemplate.media_url;
-                     
-    console.log('Media file selected for display:', mediaFile);
-    
+    // console.log('Media file selected for display:', mediaFile);
+
     // Always use the server URL if we have a fileName
     if (uploadedImage?.fileName) {
       const serverUrl = `${API_BASE}/uploads/media/${uploadedImage.fileName}`;
-      console.log('Using server URL for media:', serverUrl);
+      // console.log('Using server URL for media:', serverUrl);
     }
 
     // File metadata - prioritize the filename from the uploaded image object
@@ -104,61 +102,58 @@ const PreviewStep = ({
       ? fileName.split('.').pop().toLowerCase()
       : '';
       
-    // Detect media type by file extension or MIME type
-    const isImage = /^(jpg|jpeg|png|gif|webp|jfif|bmp)$/i.test(fileExtension) || 
+    const isImage = /^(jpg|jpeg|png)$/i.test(fileExtension) || 
                    (uploadedImage?.type || '').startsWith('image/');
-    const isVideo = /^(mp4|mov|webm|ogg|avi|wmv|flv|mkv)$/i.test(fileExtension) ||
+    const isVideo = /^(mp4)$/i.test(fileExtension) ||
                    (uploadedImage?.type || '').startsWith('video/');
     const hasMedia = isImage || isVideo;
     
     // Log detailed media info for debugging
-    console.log('Media File Info:', {
-      mediaFile,
-      fileName,
-      fileExtension,
-      isImage,
-      isVideo,
-      hasMedia,
-      uploadedImage: uploadedImage ? { 
-        ...uploadedImage, 
-        // Don't log the entire image object as it might be large
-        image: uploadedImage.image ? { 
-          ...uploadedImage.image, 
-          // Don't log the entire file object if it exists
-          file: uploadedImage.image.file ? '[File object]' : undefined 
-        } : null 
-      } : null,
-      templateMedia: selectedTemplate.container_meta?.mediaUrl || selectedTemplate.media_url,
-      templateType: selectedTemplate.template_type
-    });
+    // console.log('Media File Info:', {
+    //   mediaFile,
+    //   fileName,
+    //   fileExtension,
+    //   isImage,
+    //   isVideo,
+    //   hasMedia,
+    //   uploadedImage: uploadedImage ? { 
+    //     ...uploadedImage, 
+    //     image: uploadedImage.image ? { 
+    //       ...uploadedImage.image, 
+    //       file: uploadedImage.image.file ? '[File object]' : undefined 
+    //     } : null 
+    //   } : null,
+    //   templateMedia: selectedTemplate.container_meta?.mediaUrl || selectedTemplate.media_url,
+    //   templateType: selectedTemplate.template_type
+    // });
 
     if (templateParameters.length > 0) {
       const placeholderMap = {};
       
-      console.log('Processing parameters:');
+      // console.log('Processing parameters:');
       templateParameters.forEach((param, index) => {
-        console.log(`Parameter ${index}:`, param);
+        // console.log(`Parameter ${index}:`, param);
         if (param.type === 'text' && param.value) {
           const placeholder = param.placeholder || `{{${index + 1}}}`;
-          console.log(`  - Mapping placeholder: ${placeholder} = ${param.value}`);
+          // console.log(`  - Mapping placeholder: ${placeholder} = ${param.value}`);
           placeholderMap[placeholder] = param.value;
         }
       });
       
-      console.log('Placeholder map:', placeholderMap);
-      console.log('Before replacements:', content);
+      // console.log('Placeholder map:', placeholderMap);
+      // console.log('Before replacements:', content);
       Object.entries(placeholderMap).forEach(([placeholder, value]) => {
         const escapedPlaceholder = placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const regex = new RegExp(escapedPlaceholder, 'g');
         
-        console.log(`Looking for placeholder: ${placeholder} in content`);
+        // console.log(`Looking for placeholder: ${placeholder} in content`);
         if (content.includes(placeholder)) {
-          console.log(`Found exact match for ${placeholder}, replacing with ${value}`);
+          // console.log(`Found exact match for ${placeholder}, replacing with ${value}`);
           content = content.replace(regex, value);
         } else {
           const trimmedPlaceholder = placeholder.trim();
           if (content.includes(trimmedPlaceholder)) {
-            console.log(`Found trimmed match for ${placeholder}, replacing with ${value}`);
+            // console.log(`Found trimmed match for ${placeholder}, replacing with ${value}`);
             const trimmedRegex = new RegExp(trimmedPlaceholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
             content = content.replace(trimmedRegex, value);
           } else {
@@ -199,7 +194,7 @@ const PreviewStep = ({
                     opacity: 0
                   }}
                   onLoad={(e) => {
-                    console.log('Image loaded successfully:', e.target.src);
+                    // console.log('Image loaded successfully:', e.target.src);
                     e.target.style.opacity = '1';
                   }}
                   onError={(e) => {
@@ -208,15 +203,13 @@ const PreviewStep = ({
                     // If we were using a blob URL and have a filename, try the server URL
                     if (e.target.src.startsWith('blob:') && uploadedImage?.fileName) {
                       const serverUrl = `${API_BASE}/uploads/media/${uploadedImage.fileName}`;
-                      console.log('Trying server URL:', serverUrl);
+                      // console.log('Trying server URL:', serverUrl);
                       e.target.src = serverUrl;
                       return;
                     }
                     
                     // If we already tried the server URL or don't have a filename, show error state
                     e.target.onerror = null;
-                    
-                    // Create error message
                     const errorDiv = document.createElement('div');
                     errorDiv.className = 'text-center p-4 text-red-500';
                     errorDiv.innerHTML = `

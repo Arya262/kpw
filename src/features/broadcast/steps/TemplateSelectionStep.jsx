@@ -10,35 +10,44 @@ import { renderMedia } from "../../../utils/renderMedia";
 import { Plus } from "lucide-react";
 
 const TemplateSelectionStep = ({
-  templates,
-  templatesLoading,
-  templatesError,
-  onTemplateSelect,
-  validationErrors,
-  setValidationErrors,
-  pagination,
-  loadMoreTemplates,
-  templateSearchTerm,
-  setTemplateSearchTerm,
-  setIsTemplateModalOpen,
-  formData,
-  setFormData,
-}) => {
+  templates, templatesLoading, templatesError, onTemplateSelect, validationErrors, setValidationErrors, pagination, loadMoreTemplates,
+  templateSearchTerm, setTemplateSearchTerm, setIsTemplateModalOpen, formData, setFormData,
+  }) => {
   const approvedTemplates = useMemo(() => {
-    return templates.filter((t) => {
-      const isApproved = t.status?.toUpperCase() === "APPROVED";
-      const isSupportedType = ['TEXT', 'IMAGE'].includes(t.template_type?.toUpperCase());
-      const matchesSearch =
-        templateSearchTerm === "" ||
-        t.element_name
-          ?.toLowerCase()
-          .includes(templateSearchTerm.toLowerCase()) ||
-        t.container_meta?.sampleText
-          ?.toLowerCase()
-          .includes(templateSearchTerm.toLowerCase());
+    const searchTerm = templateSearchTerm.toLowerCase();
+    // console.log("Templates from API:", templates);
+    return templates.filter(
+      ({
+        status,
+        template_type,
+        element_name,
+        container_meta,
+        category,
+        sub_category, 
+      }) => {
+        const isApproved = status?.toUpperCase() === "APPROVED";
+        const isSupportedType = ["TEXT", "IMAGE"].includes(template_type?.toUpperCase());
+        const matchesSearch =
+          !searchTerm ||
+          element_name?.toLowerCase().includes(searchTerm) ||
+          container_meta?.sampleText?.toLowerCase().includes(searchTerm);
   
-      return isApproved && isSupportedType && matchesSearch;
-    });
+        const upperCategory = category?.trim().toUpperCase();
+        const upperSubcategory = sub_category?.trim().toUpperCase(); // updated
+  
+        // console.log(`Template: ${element_name}`, { upperCategory, upperSubcategory });
+  
+        const isValidCategory =
+          upperCategory !== "AUTHENTICATION" && 
+          upperSubcategory === "PROMOTION";
+  
+        const includeTemplate = isApproved && isSupportedType && matchesSearch && isValidCategory;
+  
+        // console.log(`Include template? ${element_name}:`, includeTemplate);
+  
+        return includeTemplate;
+      }
+    );
   }, [templates, templateSearchTerm]);
   const getTemplateParameters = (template) => {
     if (!template) return [];
@@ -88,26 +97,26 @@ const TemplateSelectionStep = ({
   const getTemplatePlaceholders = (template) => {
     if (!template) return [];
     
-    console.log('Checking for placeholders in template:', template.element_name);
+    // console.log('Checking for placeholders in template:', template.element_name);
     
     // First check the template's data field which contains the actual template with placeholders
     const templateData = template.data || '';
-    console.log('Template data with placeholders:', templateData);
+    // console.log('Template data with placeholders:', templateData);
   
     const sampleText = template.container_meta?.sampleText || template.container_meta?.sample_text || '';
-    console.log('Sample text:', sampleText);
+    // console.log('Sample text:', sampleText);
     
     // Match patterns like {{1}}, {{2}}, etc. in template data
     const dataMatches = templateData.match(/\{\{\d+\}\}/g) || [];
-    console.log('Found placeholders in template data:', dataMatches);
+    // console.log('Found placeholders in template data:', dataMatches);
     
     // Also check for other common placeholder formats in template data
     const alternativeDataMatches = templateData.match(/\{\{[^{}]+\}\}/g) || [];
-    console.log('Alternative format placeholders in template data:', alternativeDataMatches);
+    // console.log('Alternative format placeholders in template data:', alternativeDataMatches);
     
     // Combine all matches and remove duplicates
     const allMatches = [...new Set([...dataMatches, ...alternativeDataMatches])];
-    console.log('All placeholders found:', allMatches);
+    // console.log('All placeholders found:', allMatches);
     
     return allMatches;
   };
@@ -203,14 +212,14 @@ const TemplateSelectionStep = ({
     formData.append('is_template', 'true');
     formData.append('is_media', 'true');
 
-    console.log('Uploading file:', file.name, 'type:', type);
-    console.log('FormData entries:');
+    // console.log('Uploading file:', file.name, 'type:', type);
+    // console.log('FormData entries:');
     for (let pair of formData.entries()) {
-      console.log(pair[0] + ': ', pair[1]);
+      // console.log(pair[0] + ': ', pair[1]);
     }
 
     try {
-      console.log('Sending request to:', API_ENDPOINTS.CHAT.SEND_MEDIA);
+      // console.log('Sending request to:', API_ENDPOINTS.CHAT.SEND_MEDIA);
       const response = await axios.post(
         API_ENDPOINTS.CHAT.SEND_MEDIA,
         formData,
@@ -222,8 +231,8 @@ const TemplateSelectionStep = ({
         }
       );
 
-      console.log('Upload response:', response);
-      console.log('Response data:', response.data);
+      // console.log('Upload response:', response);
+      // console.log('Response data:', response.data);
 
       // Handle the server's response format
       if (response.data && response.data.success && response.data.mediaId) {
@@ -380,92 +389,89 @@ const TemplateSelectionStep = ({
     const isText = template.template_type?.toUpperCase() === "TEXT";
 
     return (
-      <div
-        key={template.id || template.element_name}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            handleTemplateSelect(template);
-          }
-        }}
-        onClick={() => handleTemplateSelect(template)}
-        className={`relative bg-white rounded-2xl shadow-sm overflow-hidden cursor-pointer border transition-all duration-200 ${
-          isSelected
-            ? "border-teal-500 ring-2 ring-teal-400 ring-offset-1"
-            : "border-gray-200 hover:border-teal-300 hover:shadow-md"
-        }`}
-      >
-        {/* Media Preview (only for non-text) */}
-        {!isText && (
-          <div className="relative w-full h-36 flex items-center justify-center bg-gray-50 border-b">
-            {renderMedia({
-              ...template,
-              mediaUrl: template.container_meta?.mediaUrl,
-              template_type: template.container_meta?.type,
-              element_name: template.element_name,
-            }) || (
-              <div className="flex flex-col items-center justify-center text-gray-400">
-                <FileText className="w-8 h-8 mb-1" />
-                <span className="text-xs">No Preview</span>
-              </div>
-            )}
+     <div
+                  key={template.id || template.element_name}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      handleTemplateSelect(template);
+                    }
+                  }}
+                  onClick={() => handleTemplateSelect(template)}
+                  className={`relative bg-white rounded-2xl shadow-sm overflow-hidden cursor-pointer border transition-all duration-300 transform 
+                    ${isSelected
+                      ? "border-teal-500 ring-offset-1 shadow-md"
+                      : "border-gray-200 hover:border-teal-300 hover:shadow-lg hover:-translate-y-1"
+                    }`}>
+                  {!isText && (
+                    <div className="relative w-full h-40 flex items-center justify-center bg-gray-50 overflow-hidden">
+                      {renderMedia({
+                        ...template,
+                        mediaUrl: template.container_meta?.mediaUrl,
+                        template_type: template.container_meta?.type,
+                        element_name: template.element_name,
+                      }) || (
+                        <div className="flex flex-col items-center justify-center text-gray-400">
+                          <FileText className="w-8 h-8 mb-1" />
+                          <span className="text-xs">No Preview</span>
+                        </div>
+                      )}
+                      <span className="absolute top-2 left-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/90 text-gray-800 uppercase tracking-wide shadow-sm">
+                        {template.template_type}
+                      </span>
+                    </div>
+                  )}
 
-            {/* Badge OVER media */}
-            <span className="absolute top-2 left-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/80 text-gray-800 uppercase tracking-wide">
-              {template.template_type}
-            </span>
+                  {/* Card Body */}
+                  <div className="p-4 mt-2">
+                    {/* Badge inside card for TEXT templates */}
+                    {isText && (
+                      <span className="inline-block mb-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 uppercase tracking-wide">
+                        {template.template_type}
+                      </span>
+                    )}
+
+                    {/* Title + Checkmark */}
+                    <div className="flex justify-between items-start mb-3">
+                      <h4 className="font-semibold text-sm text-gray-900 truncate pr-2 group-hover:text-teal-600 transition-colors">
+                        {template.element_name}
+                      </h4>
+
+                      {isSelected && (
+                        <span className="flex-shrink-0 w-6 h-6 bg-teal-500 rounded-full flex items-center justify-center shadow-md">
+                          <svg
+                            className="w-3.5 h-3.5 text-white"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Category */}
+                    <p className="text-xs font-medium text-teal-600 mb-2 uppercase tracking-wide">
+                      {template.category || "Uncategorized"}
+                    </p>
+
+                    {/* Description */}
+                    <p className="text-xs text-gray-600 leading-relaxed line-clamp-3">
+                      {template.container_meta?.sampleText || "No sample text available"}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        )}
-
-        {/* Card Body */}
-        <div className="p-4">
-          {/* Badge inside card for TEXT templates */}
-          {isText && (
-            <span className="inline-block mb-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 uppercase tracking-wide">
-              {template.template_type}
-            </span>
-          )}
-
-          <div className="flex justify-between items-start mb-2">
-            <h4 className="font-semibold text-sm text-gray-900 truncate pr-2">
-              {template.element_name}
-            </h4>
-
-            {isSelected && (
-              <span className="flex-shrink-0 w-6 h-6 bg-teal-500 rounded-full flex items-center justify-center shadow">
-                <svg
-                  className="w-3.5 h-3.5 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-              </span>
-            )}
-          </div>
-
-          <p className="text-xs font-medium text-teal-600 mb-1 uppercase tracking-wide">
-            {template.category || "Uncategorized"}
-          </p>
-
-          <p className="text-xs text-gray-600 line-clamp-3">
-            {template.container_meta?.sampleText || "No sample text available"}
-          </p>
-        </div>
-      </div>
-    );
-  })}
-</div>
-
-
 
           {/* Dynamic Parameter Inputs */}
           {formData.selectedTemplate && formData.templateParameters?.length > 0 && (
@@ -498,22 +504,23 @@ const TemplateSelectionStep = ({
                       <div className="space-y-3">
                         <div className="space-y-2">
                           <div className="flex space-x-2">
-                            <label className={`flex-1 cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                              {uploading ? 'Uploading...' : 'Upload Image'}
-                              <input
-                                type="file"
-                                accept="image/*"
-                                className="sr-only"
-                                disabled={uploading}
-                                onChange={(e) => handleImageUpload(e, index)}
-                              />
-                            </label>
+                          <label className={`flex-1 cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+  {uploading ? 'Uploading...' : 'Upload Image'}
+  <input
+    type="file"
+    accept="image/*"
+    className="absolute w-0 h-0 opacity-0"
+    disabled={uploading}
+    onChange={(e) => handleImageUpload(e, index)}
+  />
+</label>
                           </div>
                           
                           {/* Image Preview */}
                           {(previewUrl || param.image?.url) && (
                             <div className="mt-2">
-                              <div className="relative w-32 h-32 border border-gray-200 rounded-md overflow-hidden">
+                            <div className="relative w-32 h-32 border border-gray-200 rounded-md overflow-hidden bg-gray-50 flex items-center justify-center">
+                              {previewUrl || param.image?.url ? (
                                 <img
                                   src={previewUrl || param.image?.url}
                                   alt="Preview"
@@ -523,11 +530,14 @@ const TemplateSelectionStep = ({
                                     e.target.src = '';
                                   }}
                                 />
-                              </div>
-                              <p className="mt-1 text-xs text-gray-500">
-                                {selectedFile?.name || 'Image preview'}
-                              </p>
+                              ) : (
+                                <span className="text-gray-400 text-xs text-center">No preview available</span>
+                              )}
                             </div>
+                            <p className="mt-1 text-xs text-gray-500 text-center">
+                              {selectedFile?.name || param.image?.fileName || 'Image preview'}
+                            </p>
+                          </div>
                           )}
                         </div>
                         

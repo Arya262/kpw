@@ -17,7 +17,7 @@ const Table = ({
   totalRecords,
   searchTerm,
   onSearchChange,
-  fetchAllTemplates, // optional helper to fetch all for select-all across pages
+  fetchAllTemplates, 
 }) => {
   const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState("All");
@@ -26,19 +26,18 @@ const Table = ({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
-  const [selectedRows, setSelectedRows] = useState({}); // map of template.id -> boolean (true) or false (when select all across pages)
-  const [selectAll, setSelectAll] = useState(false); // current-page select all
+  const [selectedRows, setSelectedRows] = useState({});
+  const [selectAll, setSelectAll] = useState(false); 
   const [selectAllAcrossPages, setSelectAllAcrossPages] = useState(false);
   const dropdownRefs = useRef({});
   const rowRefs = useRef({});
 
-  // ✅ counts for filter bar
 const filteredCounts = useMemo(() => {
     const approved = templates.filter(t => t?.status?.toLowerCase() === "approved").length;
     const pending = templates.filter(t => t?.status?.toLowerCase() === "pending").length;
     const failed = templates.filter(t => t?.status?.toLowerCase() === "failed").length;
     return {
-      all: totalRecords || templates.length, // ✅ totalRecords from API
+      all: totalRecords || templates.length,
       approved,
       pending,
       failed,
@@ -84,16 +83,39 @@ const filteredCounts = useMemo(() => {
     setSelectedRows((prev) => {
       const updated = { ...prev };
       if (selectAllAcrossPages) {
-        // In select-all mode, unchecked becomes an explicit exception (false), checked removes exception
         if (!isChecked) updated[id] = false;
         else delete updated[id];
-      } else {
-        // Normal mode: store true for checked, remove for unchecked
+      } else {  
         if (isChecked) updated[id] = true;
         else delete updated[id];
       }
       return updated;
     });
+  };
+
+  const getDeletePayload = async () => {
+    if (selectAllAcrossPages) {
+      const exceptions = Object.entries(selectedRows)
+        .filter(([_, v]) => v === false)
+        .map(([id]) => id);
+      
+      const allTemplates = await fetchAllTemplates(searchTerm);
+      return allTemplates
+        .filter(template => !exceptions.includes(template.id) && template.id && template.element_name)
+        .map(template => ({
+          id: template.id,
+          element_name: template.element_name,
+          _selectedIds: [template.id]
+        }));
+    } else {
+      return displayedTemplates
+        .filter(t => selectedRows[t.id])
+        .map(t => ({
+          id: t.id,
+          element_name: t.element_name || t.elementName,
+          _selectedIds: [t.id]
+        }));
+    }
   };
 
   // ✅ bulk delete trigger
@@ -106,37 +128,25 @@ const filteredCounts = useMemo(() => {
       return;
     }
 
-    let payload;
-    if (selectAllAcrossPages) {
-      // For select-all-across-pages, we'll send a special payload
-      const exceptions = Object.entries(selectedRows)
-        .filter(([_, v]) => v === false)
-        .map(([id]) => id);
+    try {
+      const payload = await getDeletePayload();
       
-      payload = [{
-        id: 'select-all',
-        element_name: 'Selected Templates',
-        _selectedIds: ['select-all'],
-        _exceptions: exceptions,
-        _isSelectAll: true
-      }];
-    } else {
-      // Normal per-page selection
-      const selectedTemplates = displayedTemplates.filter(t => selectedRows[t.id]);
-      if (selectedTemplates.length === 0) {
-        toast.error("No templates selected for deletion.", { autoClose: 3000 });
+      if (payload.length === 0) {
+        toast.info(
+          selectAllAcrossPages 
+            ? 'No templates available for deletion'
+            : 'No templates selected for deletion',
+          { autoClose: 3000 }
+        );
         return;
       }
-      
-      payload = selectedTemplates.map(t => ({
-        id: t.id,
-        element_name: t.element_name,
-        _selectedIds: [t.id]
-      }));
-    }
 
-    setSelectedTemplate(payload[0]);
-    setShowDeleteDialog(true);
+      setSelectedTemplate(payload[0]);
+      setShowDeleteDialog(true);
+    } catch (error) {
+      console.error('Error preparing delete payload:', error);
+      toast.error("An error occurred while preparing to delete templates.", { autoClose: 3000 });
+    }
   };
 
   const handleDeleteClick = (template) => {
@@ -166,20 +176,30 @@ const filteredCounts = useMemo(() => {
 
   const handleDeleteConfirm = async () => {
     if (!selectedTemplate) return;
+    
     try {
       setIsDeleting(true);
-      const idsToDelete = selectedTemplate._selectedIds || [selectedTemplate.id];
-      const success = await onDelete(idsToDelete);
-      if (success) {
-        setSelectedRows({});
-        setSelectAll(false);
+      const payload = await getDeletePayload();
+      
+      if (payload.length > 0) {
+        const success = await onDelete(payload);
+        if (success) {
+          setSelectedRows({});
+          setSelectAll(false);
+          setSelectAllAcrossPages(false);
+        
+          if (pagination?.onPageChange) {
+            pagination.onPageChange(1); 
+          }
+        }
       }
-      setShowDeleteDialog(false);
-      setSelectedTemplate(null);
     } catch (error) {
       console.error("Error in handleDeleteConfirm:", error);
+      toast.error("An error occurred while deleting templates.", { autoClose: 3000 });
     } finally {
       setIsDeleting(false);
+      setShowDeleteDialog(false);
+      setSelectedTemplate(null);
     }
   };
 
@@ -231,7 +251,6 @@ const filteredCounts = useMemo(() => {
     <div className="overflow-x-auto">
       <div className="flex items-center shadow-2xl p-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
-          {/* FilterBar: scrollable only on mobile */}
           <div className="w-full sm:w-auto overflow-x-auto sm:overflow-x-visible scrollbar-hide">
             <FilterBar
               filters={filters}
@@ -239,8 +258,6 @@ const filteredCounts = useMemo(() => {
               setActiveFilter={setActiveFilter}
             />
           </div>
-
-          {/* SearchBar: fixed */}
           <div className="w-full sm:w-auto">
             <SearchBar search={searchTerm} setSearch={onSearchChange} />
           </div>
@@ -374,18 +391,17 @@ const filteredCounts = useMemo(() => {
                       <td className="px-2 py-4 text-[12px] sm:text-[16px] font-semibold rounded text-center">
                         <span
                           className={`px-3 py-1 rounded-full inline-block text-center min-w-[100px] font-medium
-      shadow-sm transition-colors duration-200
-      ${
-        template.status?.toLowerCase() === "approved"
-          ? "text-green-800 bg-green-200"
-          : template.status?.toLowerCase() === "pending"
-          ? "text-yellow-800 bg-yellow-200"
-          : template.status?.toLowerCase() === "failed"
-          ? "text-red-800 bg-red-200"
-          : "text-gray-800 bg-gray-200"
-      }
-    `}
-                        >
+                                      shadow-sm transition-colors duration-200
+                                      ${
+                                        template.status?.toLowerCase() === "approved"
+                                          ? "text-green-800 bg-green-200"
+                                          : template.status?.toLowerCase() === "pending"
+                                          ? "text-yellow-800 bg-yellow-200"
+                                          : template.status?.toLowerCase() === "failed"
+                                          ? "text-red-800 bg-red-200"
+                                          : "text-gray-800 bg-gray-200"
+                                      }
+                                    `}>
                           {template.status}
                         </span>
                       </td>

@@ -20,131 +20,119 @@ import Pagination from "../shared/Pagination";
 const Templates = () => {
   const { user } = useAuth();
   const permissions = getPermissions(user);
-const {
-  data: { templates = [], loading, error },
-  pagination: {
-    currentPage = 1,
-    totalPages = 1,
-    totalItems = 0,
-    totalRecords = 0,  
-    itemsPerPage = 10,
-    onPageChange,
-    onItemsPerPageChange,
-  },
-  search: { searchTerm = "", setSearchTerm } = {},
-  actions: { addTemplate, deleteTemplate, fetchTemplates, fetchAllTemplates } = {},
-} = useTemplates();
+  const {
+    data: { templates = [], loading, error },
+    pagination: {
+      currentPage = 1,
+      totalPages = 1,
+      totalItems = 0,
+      totalRecords = 0,
+      itemsPerPage = 10,
+      onPageChange,
+      onItemsPerPageChange,
+    },
+    search: { searchTerm = "", setSearchTerm } = {},
+    actions: {
+      addTemplate,
+      deleteTemplate,
+      fetchTemplates,
+      fetchAllTemplates,
+    } = {},
+  } = useTemplates();
 
   const [editingTemplate, setEditingTemplate] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Summary counts
-  const approvedCount = templates.filter((t) => t.status?.toLowerCase() === "approved").length;
-  const pendingCount = templates.filter((t) => t.status?.toLowerCase() === "pending").length;
-  const failedCount = templates.filter((t) => t.status?.toLowerCase() === "failed").length;
+  const approvedCount = templates.filter(
+    (t) => t.status?.toLowerCase() === "approved"
+  ).length;
+  const pendingCount = templates.filter(
+    (t) => t.status?.toLowerCase() === "pending"
+  ).length;
+  const failedCount = templates.filter(
+    (t) => t.status?.toLowerCase() === "failed"
+  ).length;
 
   const summaryCards = [
-    { label: "Approved Templates", count: approvedCount, image: approvedIcon, bgColor: "bg-[#D1FADF]" },
-    { label: "Pending Templates", count: pendingCount, image: pendingIcon, bgColor: "bg-[#FEE4E2]" },
-    { label: "Failed Templates", count: failedCount, image: rejectedIcon, bgColor: "bg-[#FECDCA]" },
+    {
+      label: "Approved Templates",
+      count: approvedCount,
+      image: approvedIcon,
+      bgColor: "bg-[#D1FADF]",
+    },
+    {
+      label: "Pending Templates",
+      count: pendingCount,
+      image: pendingIcon,
+      bgColor: "bg-[#FEE4E2]",
+    },
+    {
+      label: "Failed Templates",
+      count: failedCount,
+      image: rejectedIcon,
+      bgColor: "bg-[#FECDCA]",
+    },
   ];
 
-  // Add template
   const handleAddTemplate = async (newTemplate) => {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
       await addTemplate(newTemplate);
       setIsModalOpen(false);
-      // Refresh page 1 (or you could fetch currentPage)
       await fetchTemplates(1, itemsPerPage, searchTerm);
     } catch (error) {
-      toast.error(error?.message || "Failed to create template", createToastConfig(5000));
+      toast.error(
+        error?.message || "Failed to create template",
+        createToastConfig(5000)
+      );
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Delete templates
-  const handleDelete = async (ids) => {
-    if (!Array.isArray(ids)) ids = [ids];
+  const handleDelete = async (templatesToDelete) => {
     try {
-      // Check if we're in select-all-across-pages mode
-      const isBulkDelete = ids[0]?._selectedIds;
-      
-      if (isBulkDelete) {
-        // This is a bulk delete with select-all-across-pages
-        const allTemplates = await fetchAllTemplates(searchTerm);
-        const templateIdsToDelete = allTemplates
-          .filter(template => !ids[0]._exceptions?.includes(template.id))
-          .map(template => template.id);
-        
-        // Delete all selected templates
-        for (const id of templateIdsToDelete) {
-          const template = allTemplates.find(t => t.id === id);
-          if (template) {
-            const success = await deleteTemplate(template.element_name, id);
-            if (!success) throw new Error(`Failed to delete template: ${template.element_name}`);
-          }
-        }
-        
-        // Show success message
-        toast.success(`${templateIdsToDelete.length} template(s) deleted successfully!`, defaultToastConfig);
-      } else {
-        // Normal delete for specific IDs
-        for (const id of ids) {
-          const template = templates.find((t) => t.id === id);
-          if (template) {
-            const success = await deleteTemplate(template.element_name, id);
-            if (!success) throw new Error(`Failed to delete template: ${template.element_name}`);
-          }
-        }
-        // Show success message for single or multiple deletes
-        if (ids.length > 1) {
-          toast.success(`${ids.length} templates deleted successfully!`, defaultToastConfig);
-        } else {
-          toast.success('Template deleted successfully!', defaultToastConfig);
-        }
+      const success = await deleteTemplate(templatesToDelete[0]?.element_name, templatesToDelete[0]?.id);
+      if (success) {
+        await fetchTemplates(currentPage, itemsPerPage, searchTerm);
       }
-      
-      // After deletion refresh current page
-      await fetchTemplates(currentPage, itemsPerPage, searchTerm);
-      return true;
+      return success;
     } catch (error) {
       console.error('Error in handleDelete:', error);
-      toast.error(error?.message || "Failed to delete template(s)", defaultToastConfig);
       return false;
     }
   };
 
-  // Edit template (open modal)
   const handleEdit = (template) => {
     setEditingTemplate(template);
   };
 
-  // If not allowed to view templates
   if (!permissions.canViewTemplates) {
     return <NotAuthorized />;
   }
 
   return (
     <div className="flex flex-col gap-4 pt-2">
-      <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop closeOnClick draggable pauseOnHover theme="light" />
-<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-  <h2 className="text-xl pt-0 font-semibold">Templates List</h2>
+      <ToastContainer
+        position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop closeOnClick draggable pauseOnHover
+        theme="light"
+      />
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <h2 className="text-xl pt-0 font-semibold">Templates List</h2>
 
-  {permissions.canAddTemplate && (
-    <button
-      className="bg-gradient-to-r from-[#0AA89E] to-cyan-500 text-white flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer w-full sm:w-auto"
-      onClick={() => setIsModalOpen(true)}
-      title="Add a new template"
-    >
-      <img src={vendor} alt="plus sign" className="w-5 h-5" />
-      Add New Template
-    </button>
-  )}
-</div>
+        {permissions.canAddTemplate && (
+          <button
+            className="bg-gradient-to-r from-[#0AA89E] to-cyan-500 text-white flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer w-full sm:w-auto"
+            onClick={() => setIsModalOpen(true)}
+            title="Add a new template"
+          >
+            <img src={vendor} alt="plus sign" className="w-5 h-5" />
+            Add New Template
+          </button>
+        )}
+      </div>
       {/* Summary cards */}
       <div className="hidden md:flex flex-col md:flex-row justify-start gap-4">
         {summaryCards.map((card, index) => (
@@ -152,18 +140,27 @@ const {
             key={index}
             className="w-full md:w-[350px] h-[124px] p-5 rounded-xl bg-white flex items-center gap-6 shadow-[0_4px_8px_0_rgba(0,0,0,0.1)]"
           >
-            <div className={`w-[60px] h-[60px] rounded-full flex items-center justify-center ${card.bgColor}`}>
-              <img src={card.image} alt={card.label} className="w-[32px] h-[32px] object-contain" />
+            <div
+              className={`w-[60px] h-[60px] rounded-full flex items-center justify-center ${card.bgColor}`}
+            >
+              <img
+                src={card.image}
+                alt={card.label}
+                className="w-[32px] h-[32px] object-contain"
+              />
             </div>
             <div className="text-left">
-              <p className="text-[18px] text-[#555] font-medium font-poppins">{card.label}</p>
-              <p className="text-[22px] font-bold font-poppins mt-1">{card.count}</p>
+              <p className="text-[18px] text-[#555] font-medium font-poppins">
+                {card.label}
+              </p>
+              <p className="text-[22px] font-bold font-poppins mt-1">
+                {card.count}
+              </p>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Edit modal (uses fetchTemplates to refresh if updateTemplate isn't available) */}
       {editingTemplate && (
         <Modal
           isOpen={!!editingTemplate}
@@ -177,10 +174,16 @@ const {
               } else {
                 await fetchTemplates(currentPage, itemsPerPage, searchTerm);
               }
-              toast.success("Template updated successfully!", defaultToastConfig);
+              toast.success(
+                "Template updated successfully!",
+                defaultToastConfig
+              );
               setEditingTemplate(null);
             } catch (err) {
-              toast.error("Failed to save template. Please try again.", createToastConfig(5000));
+              toast.error(
+                "Failed to save template. Please try again.",
+                createToastConfig(5000)
+              );
             }
           }}
         />
@@ -192,29 +195,33 @@ const {
           <Loader />
         ) : (
           <Table
-                templates={templates}
-                onEdit={permissions.canEditTemplate ? handleEdit : undefined}
-                onDelete={permissions.canDeleteTemplate ? handleDelete : undefined}
-                canEdit={permissions.canEditTemplate}
-                canDelete={permissions.canDeleteTemplate}
-                onAddTemplate={permissions.canAddTemplate ? () => setIsModalOpen(true) : undefined}
-                vendorIcon={vendor}
-                searchTerm={searchTerm}
-                onSearchChange={setSearchTerm}
-                fetchAllTemplates={fetchAllTemplates}
-                pagination={
-                  <div className="mt-4">
-                    <Pagination
-                      currentPage={currentPage}
-                      totalPages={totalPages}
-                      totalItems={totalRecords} 
-                      itemsPerPage={itemsPerPage}
-                      onPageChange={onPageChange}
-                      onItemsPerPageChange={onItemsPerPageChange}
-                    />
-                  </div>
-                }
-                totalRecords={totalRecords} 
+            templates={templates}
+            onEdit={permissions.canEditTemplate ? handleEdit : undefined}
+            onDelete={permissions.canDeleteTemplate ? handleDelete : undefined}
+            canEdit={permissions.canEditTemplate}
+            canDelete={permissions.canDeleteTemplate}
+            onAddTemplate={
+              permissions.canAddTemplate
+                ? () => setIsModalOpen(true)
+                : undefined
+            }
+            vendorIcon={vendor}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            fetchAllTemplates={fetchAllTemplates}
+            pagination={
+              <div className="mt-4">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalRecords}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={onPageChange}
+                  onItemsPerPageChange={onItemsPerPageChange}
+                />
+              </div>
+            }
+            totalRecords={totalRecords}
           />
         )}
       </ErrorBoundary>
@@ -240,7 +247,8 @@ const {
               exit={{ x: "100%", opacity: 0 }}
               transition={{ type: "spring", stiffness: 120, damping: 20 }}
               className="fixed inset-0 flex items-center justify-center z-50"
-              onClick={(e) => e.stopPropagation()}>
+              onClick={(e) => e.stopPropagation()}
+            >
               <Modal
                 isOpen={isModalOpen}
                 onClose={() => {

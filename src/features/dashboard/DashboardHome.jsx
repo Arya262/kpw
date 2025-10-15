@@ -58,12 +58,12 @@ const DashboardHome = () => {
         { credentials: "include" }
       );
       const data = await res.json();
-      setSummary({
-        total_credit: data.total_credit,
-        total_credit_remaining: data.total_credit_remaining,
-        total_credit_consumed: data.total_credit_consumed,
-        plan_type: "Premium",
-      });
+setSummary({
+  total_credit: data.total_credit ?? 0,
+  total_credit_remaining: data.total_credit_remaining ?? 0,
+  total_credit_consumed: data.total_credit_consumed ?? 0,
+  plan_type: data.plan_type || "Premium",
+});
       setUsageHistory(data.usage_history || []);
     } catch (err) {
       console.error("Failed to load summary:", err);
@@ -259,7 +259,7 @@ const DashboardHome = () => {
           <p className="text-base sm:text-lg font-semibold">
             Wallet balance:{" "}
             <span className="font-bold text-green-600">
-              ₹{summary.total_credit_remaining.toLocaleString()}
+              ₹{summary?.total_credit_remaining?.toLocaleString() || "0"}
             </span>
           </p>
           <span className="flex flex-wrap items-center text-gray-600 gap-1 text-xs sm:text-sm md:text-base">

@@ -14,6 +14,7 @@ import Dropdown from "../../components/Dropdown";
 
 const templateSchema = z.object({
   category: z.string().min(1, "Please select a template category"),
+  sub_category: z.string().optional(),
   templateName: z
     .string()
     .min(1, "Template name is required")
@@ -25,7 +26,7 @@ const templateSchema = z.object({
   language: z.string().min(1, "Please select a language"),
   header: z.string().max(60, "Header must be 60 characters or less").optional(),
   templateType: z
-    .enum(["None","Text", "Image", "Video", "Document"], {
+    .enum(["None", "Text", "Image", "Video", "Document"], {
       required_error: "Please select a template type",
     })
     .optional(),
@@ -39,11 +40,23 @@ const templateSchema = z.object({
       required_error: "Please select an interactive action",
     })
     .optional(),
-  authButtonText: z
+authButtonText: z
     .string()
     .max(25, "Button text must be 25 characters or less")
     .optional(),
-});
+}).refine(
+  (data) => {
+    // Only require sub_category if category is not AUTHENTICATION
+    if (data.category !== "AUTHENTICATION") {
+      return data.sub_category && data.sub_category.trim().length > 0;
+    }
+    return true;
+  },
+  {
+    message: "Please select a subcategory",
+    path: ["sub_category"],
+  }
+);
 
 const TemplateModal = ({
   isOpen,
@@ -59,6 +72,7 @@ const TemplateModal = ({
   const [urlCtas, setUrlCtas] = useState([{ title: "", url: "" }]);
   const [templateName, setTemplateName] = useState("");
   const [category, setCategory] = useState("MARKETING");
+  const [sub_category, setSubCategory] = useState("");
   const [language, setLanguage] = useState("en");
   const [phoneCta, setPhoneCta] = useState({
     title: "",
@@ -92,22 +106,22 @@ const TemplateModal = ({
     formData.append("file", file);
     formData.append("customer_id", customerId);
     formData.append("fileType", file.type);
-  
+
     try {
       const response = await fetch(API_ENDPOINTS.TEMPLATES.UPLOAD_MEDIA, {
         method: "POST",
         body: formData,
       });
-  
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(
           errorData.message || `Upload failed: ${response.statusText}`
         );
       }
-  
+
       const data = await response.json();
-      console.log("Upload API response:", data);
+      // console.log("Upload API response:", data);
       const mediaIdentifier =
         data.handleId ||
         data.exampleMedia ||
@@ -115,13 +129,13 @@ const TemplateModal = ({
         data.url ||
         data.fileUrl;
       const fileName = data.fileName;
-  
+
       if (!mediaIdentifier && !fileName) {
         throw new Error("No media identifier or fileName returned from server");
       }
-      console.log("Media identifier returned:", mediaIdentifier);
-      console.log("File name returned:", fileName);
-  
+      // console.log("Media identifier returned:", mediaIdentifier);
+      // console.log("File name returned:", fileName);
+
       // Return both as an object
       return {
         mediaIdentifier: typeof mediaIdentifier === "string"
@@ -225,11 +239,11 @@ const TemplateModal = ({
     setSelectedFile(file);
     setPreviewUrl(URL.createObjectURL(file));
     setIsUploading(true);
-  
+
     try {
       const { mediaIdentifier, fileName } = await uploadFile(file);
       setExampleMedia(mediaIdentifier);
-      setMediaFileName(fileName); 
+      setMediaFileName(fileName);
       setErrors((prev) => ({ ...prev, file: null }));
       toast.success("File uploaded successfully!");
     } catch (error) {
@@ -242,7 +256,7 @@ const TemplateModal = ({
       setIsUploading(false);
     }
   };
-  
+
   const handleRetryUpload = async () => {
     if (!selectedFile) {
       toast.error("No file selected to retry");
@@ -252,7 +266,7 @@ const TemplateModal = ({
     try {
       const { mediaIdentifier, fileName } = await uploadFile(selectedFile);
       setExampleMedia(mediaIdentifier);
-      setMediaFileName(fileName); 
+      setMediaFileName(fileName);
       setErrors((prev) => ({ ...prev, file: null }));
       toast.success("File uploaded successfully!");
     } catch (error) {
@@ -277,7 +291,8 @@ const TemplateModal = ({
 
   // Reset form function
   const resetForm = () => {
-    setTemplateType("None");
+    setCategory("MARKETING");
+    setSubCategory("");
     setHeader("");
     setFormat("");
     setFooter("");
@@ -308,6 +323,11 @@ const TemplateModal = ({
     const uniqueVariables = [...new Set(matches.map((match) => match[1]))].sort(
       (a, b) => a - b
     );
+
+    if (matches.length > 1 && category !== "AUTHENTICATION") {
+      setSubCategory("TRANSACTIONAL");
+    }
+
     setVariables(uniqueVariables);
     setSampleValues((prev) => {
       const newValues = {};
@@ -316,9 +336,8 @@ const TemplateModal = ({
       });
       return newValues;
     });
-  }, [format]);
+  }, [format, category]);
 
-  // Set defaults for Authentication category
   useEffect(() => {
     if (category === "AUTHENTICATION") {
       setTemplateType("Text");
@@ -379,8 +398,7 @@ const TemplateModal = ({
     expiryMinutes,
     includeSecurityMessage,
   ]);
-
-  // Reset form when modal opens
+  
   useEffect(() => {
     if (isOpen) {
       resetForm();
@@ -388,23 +406,22 @@ const TemplateModal = ({
     }
   }, [isOpen]);
 
-  // Cleanup when modal closes
   useEffect(() => {
     if (!isOpen) {
       setShowExitDialog(false);
     }
   }, [isOpen]);
 
-  // Pre-fill fields for edit mode
   useEffect(() => {
     if (isOpen && mode === "edit" && Object.keys(initialValues).length > 0) {
       setCategory(initialValues.category || "MARKETING");
+      setSubCategory(initialValues.sub_category || "");
       setTemplateName(initialValues.elementName || "");
       setLanguage(initialValues.languageCode);
       setTemplateType(
         initialValues.templateType
           ? initialValues.templateType.charAt(0).toUpperCase() +
-              initialValues.templateType.slice(1).toLowerCase()
+          initialValues.templateType.slice(1).toLowerCase()
           : "Text"
       );
       setHeader(initialValues.header || "");
@@ -428,8 +445,8 @@ const TemplateModal = ({
             )
             ? "All"
             : initialValues.buttons.some((b) => b.type === "QUICK_REPLY")
-            ? "Quick Replies"
-            : "Call To Actions"
+              ? "Quick Replies"
+              : "Call To Actions"
           : "None"
       );
       setExampleMedia(initialValues.exampleMedia || "");
@@ -478,6 +495,7 @@ const TemplateModal = ({
     try {
       const formData = {
         category,
+        sub_category,
         templateName,
         language,
         format,
@@ -569,80 +587,81 @@ const TemplateModal = ({
     setShowExitDialog(false);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
-  
+
     const generateSampleText = (formatString, samples) => {
       return formatString.replace(/{{\s*(\d+)\s*}}/g, (match, number) => {
         return samples[number] || match;
       });
     };
     const sampleText = generateSampleText(format, sampleValues);
-  
+
     const buttons =
       category === "AUTHENTICATION"
         ? [{ text: authButtonText, type: "COPY_CODE" }]
         : [
-            ...quickReplies
-              .filter((reply) => reply.trim() && reply.trim() !== "QUICK_REPLY")
-              .map((text) => ({ text: text.trim(), type: "QUICK_REPLY" })),
-            ...urlCtas
-              .filter(
-                (cta) =>
-                  cta.title && cta.url && cta.title.trim() !== "URL_TITLE"
-              )
-              .map((cta) => ({ text: cta.title, type: "URL", url: cta.url })),
-            ...(phoneCta.title &&
+          ...quickReplies
+            .filter((reply) => reply.trim() && reply.trim() !== "QUICK_REPLY")
+            .map((text) => ({ text: text.trim(), type: "QUICK_REPLY" })),
+          ...urlCtas
+            .filter(
+              (cta) =>
+                cta.title && cta.url && cta.title.trim() !== "URL_TITLE"
+            )
+            .map((cta) => ({ text: cta.title, type: "URL", url: cta.url })),
+          ...(phoneCta.title &&
             phoneCta.number &&
             phoneCta.title.trim() !== "PHONE_NUMBER"
-              ? [
-                  {
-                    text: phoneCta.title,
-                    type: "PHONE",
-                    country: phoneCta.country,
-                    number: phoneCta.number,
-                  },
-                ]
-              : []),
-          ];
+            ? [
+              {
+                text: phoneCta.title,
+                type: "PHONE",
+                country: phoneCta.country,
+                number: phoneCta.number,
+              },
+            ]
+            : []),
+        ];
 
-          const isMediaTemplate = ["IMAGE", "VIDEO", "DOCUMENT"].includes(
-            templateType.toUpperCase()
-          );
-        
-          const newTemplate = {
-            elementName: templateName,
-            content: format,
-            category,
-            templateType:
-              category === "AUTHENTICATION" ? "TEXT" : templateType.toUpperCase(),
-            languageCode: language,
-            buttons,
-            example: sampleText,
-            exampleMedia,
-            media_url: mediaFileName, 
-            messageSendTTL: 3360,
-            container_meta: {
-              header: header
-                ? header
-                : isMediaTemplate
-                ? { type: templateType.toUpperCase(), media: { id: exampleMedia, media_url: mediaFileName } }
-                : null,
-              footer: footer || null,
-              data: format,
-              sampleText,
-              sampleValues,
-            },
-            ...(category === "AUTHENTICATION" && {
-              authButtonText,
-              codeExpirationMinutes: expiryMinutes,
-              addSecurityRecommendation: includeSecurityMessage,
-            }),
-          };
-          console.log("Submitting template:", newTemplate);
-          onSubmit(newTemplate);
-        };
+    const isMediaTemplate = ["IMAGE", "VIDEO", "DOCUMENT"].includes(
+      templateType.toUpperCase()
+    );
+
+    const newTemplate = {
+      elementName: templateName,
+      content: format,
+      category,
+      sub_category,
+      templateType:
+        category === "AUTHENTICATION" ? "TEXT" : templateType.toUpperCase(),
+      languageCode: language,
+      buttons,
+      example: sampleText,
+      exampleMedia,
+      media_url: mediaFileName,
+      messageSendTTL: 3360,
+      container_meta: {
+        header: header
+          ? header
+          : isMediaTemplate
+            ? { type: templateType.toUpperCase(), media: { id: exampleMedia, media_url: mediaFileName } }
+            : null,
+        footer: footer || null,
+        data: format,
+        sampleText,
+        sampleValues,
+      },
+      ...(category === "AUTHENTICATION" && {
+        authButtonText,
+        codeExpirationMinutes: expiryMinutes,
+        addSecurityRecommendation: includeSecurityMessage,
+      }),
+    };
+    // console.log("Submitting template:", newTemplate);
+    onSubmit(newTemplate);
+  };
 
   if (!isOpen) return null;
 
@@ -659,6 +678,12 @@ const TemplateModal = ({
         ? { type: templateType, url: previewUrl }
         : null,
   };
+
+  // Subcategory options based on category
+  const subCategories = [
+    { value: "PROMOTION", label: "Promotion" },
+    { value: "TRANSACTIONAL", label: "Transactional" },
+  ];
 
   return (
     <div
@@ -683,49 +708,52 @@ const TemplateModal = ({
         <div className="flex-1 flex flex-col lg:flex-row bg-gray-50">
           <div className="w-full lg:flex-1 overflow-y-auto scrollbar-hide p-4 lg:p-6 max-h-[calc(100vh-50px)]">
             <div className="bg-white p-4 lg:p-6 shadow rounded-md">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-">
-                <div className="mb-4">
-                  <label
-                    htmlFor="templateName"
-                    className="block text-sm font-medium text-gray-700 mb-1"
-                  >
-                    Template Name
-                  </label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-6 items-end">
+                {/* Template Name */}
+                <div className="flex flex-col">
+                  <div className="min-h-[65px]">
+                    <label
+                      htmlFor="templateName"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      Template Name
+                    </label>
+                    <p className="text-xs font-light text-gray-500">
+                      Name can only be lowercase, alphanumeric, and underscores. No spaces or
+                      special characters. e.g. sample_template
+                    </p>
+                  </div>
                   <input
                     id="templateName"
                     type="text"
-                    placeholder="Template Name ex. sample (Only lowercase letters and underscores)"
-                    className={` rounded p-2.5 w-full placeholder:text-sm ${
-                      errors.templateName
-                        ? "border-red-500"
-                        : "border-transparent"
-                    } hover:bg-gray-50 border border-gray-200 bg-gray-100 focus:outline-none focus:border-teal-500`}
+                    placeholder="sample_template"
+                    className={`rounded p-2.5 w-full placeholder:text-sm ${errors.templateName ? "border-red-500" : "border-gray-200"
+                      } border bg-gray-100 focus:outline-none focus:border-teal-500`}
                     value={templateName}
                     onChange={(e) => {
                       setTemplateName(e.target.value);
                       validateField("templateName", e.target.value);
                     }}
                     disabled={mode === "edit"}
-                    aria-describedby={
-                      errors.templateName ? "templateName-error" : undefined
-                    }
                   />
                   {errors.templateName && (
-                    <p
-                      id="templateName-error"
-                      className="text-red-500 text-sm mt-1"
-                    >
-                      {errors.templateName}
-                    </p>
+                    <p className="text-red-500 text-sm mt-1">{errors.templateName}</p>
                   )}
                 </div>
-                <div className="mb-4">
-                  <label
-                    htmlFor="templateCategory"
-                    className="block text-sm font-normal text-gray-700 mb-1"
-                  >
-                    Template Category
-                  </label>
+
+                {/* Template Category */}
+                <div className="flex flex-col">
+                  <div className="min-h-[65px]">
+                    <label
+                      htmlFor="templateCategory"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      Template Category
+                    </label>
+                    <p className="text-xs font-light text-gray-500">
+                      your template should fall under one of these categories.
+                    </p>
+                  </div>
                   <Dropdown
                     options={[
                       { value: "MARKETING", label: "Marketing" },
@@ -739,20 +767,24 @@ const TemplateModal = ({
                     }}
                     placeholder="Select Template Category"
                   />
-
                   {errors.category && (
-                    <p className="text-red-500 text-sm mt-1">
-                      {errors.category}
-                    </p>
+                    <p className="text-red-500 text-sm mt-1">{errors.category}</p>
                   )}
                 </div>
-                <div className="mb-6">
-                  <label
-                    htmlFor="language"
-                    className="block text-sm font-medium text-gray-700 mb-1"
-                  >
-                    Language
-                  </label>
+
+                {/* Language */}
+                <div className="flex flex-col">
+                  <div className="min-h-[65px]">
+                    <label
+                      htmlFor="language"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      Language
+                    </label>
+                    <p className="text-xs font-light text-gray-500">
+                      you will need to specify the language in which message template is submitted.
+                    </p>
+                  </div>
                   <Dropdown
                     options={[
                       { value: "af", label: "Afrikaans" },
@@ -833,9 +865,7 @@ const TemplateModal = ({
                     placeholder="Select Language"
                   />
                   {errors.language && (
-                    <p className="text-red-500 text-sm mt-1">
-                      {errors.language}
-                    </p>
+                    <p className="text-red-500 text-sm mt-1">{errors.language}</p>
                   )}
                 </div>
               </div>
@@ -844,6 +874,9 @@ const TemplateModal = ({
                 <>
                   <div className="mb-5 border-t-2 pt-4 border-gray-200 ">
                     <div className="font-semibold mb-1">Template Type</div>
+                    <p className="text-xs font-light text-gray-500">
+                      Your template type should fall under one of these categories.
+                    </p>
                     <div className="grid grid-cols-2 sm:flex sm:flex-row gap-4">
                       {["None", "Text", "Image", "Video", "Document"].map((type) => (
                         <label key={type} className="flex items-center gap-2 cursor-pointer">
@@ -868,6 +901,66 @@ const TemplateModal = ({
                     </div>
                   </div>
 
+                  {category !== "AUTHENTICATION" && (
+                    <div className="mb-4">
+                      <div className="flex flex-col mb-1">
+                        <div className="font-semibold mb-1">Template Subcategory</div>
+                        <span className="text-xs font-light text-gray-500">
+                          Your template type should fall under one of these categories.
+                        </span>
+
+                        {sub_category && (
+                          <div className="mt-1">
+                            <span className="text-yellow-600 text-xs block">
+                              {sub_category === "TRANSACTIONAL"
+                                ? "Transactional templates cannot be broadcast"
+                                : sub_category === "PROMOTION"
+                                  ? "Only one dynamic variable {{1}} is allowed for Promotion"
+                                  : null}
+                            </span>
+
+                            {/* Example messages */}
+                            {sub_category === "TRANSACTIONAL" && (
+                              <span className="text-gray-500 text-xs mt-1 block">
+                                {`Example: Hello {{1}}, your orderId {{2}} has been shipped.`}
+                              </span>
+                            )}
+                            {sub_category === "PROMOTION" && (
+                              <span className="text-gray-500 text-xs mt-1 block">
+                                {`Example: Hello {{1}}, get 20% off on your next purchase!`}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex gap-4 mt-2">
+                        {["Promotion", "Transactional"].map((option) => (
+                          <label key={option} className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="sub_category"
+                              value={option.toUpperCase()}
+                              checked={sub_category === option.toUpperCase()}
+                              onChange={(e) => {
+                                setSubCategory(e.target.value);
+                                validateField("sub_category", e.target.value);
+                              }}
+                              className="accent-blue-500"
+                            />
+                            <span>{option}</span>
+                          </label>
+                        ))}
+                      </div>
+
+                      {errors.sub_category && (
+                        <p className="text-red-500 text-sm mt-1">{errors.sub_category}</p>
+                      )}
+                    </div>
+
+
+                  )}
+
                   <div className="mb-5 mt-2 relative">
                     {templateType === "Text" && (
                       <>
@@ -881,11 +974,10 @@ const TemplateModal = ({
                               validateField("header", e.target.value);
                             }}
                             value={header}
-                            className={`border text-sm font-medium bg-gray-100 rounded p-3 w-full ${
-                              errors.header
+                            className={`border text-sm font-medium bg-gray-100 rounded p-3 w-full ${errors.header
                                 ? "border-red-500"
                                 : "border-transparent"
-                            } focus:outline-none focus:border-teal-500`}
+                              } focus:outline-none focus:border-teal-500`}
                             aria-describedby={
                               errors.header ? "header-error" : undefined
                             }
@@ -913,8 +1005,8 @@ const TemplateModal = ({
                             {templateType === "Image"
                               ? ".jpeg, .png"
                               : templateType === "Video"
-                              ? ".mp4"
-                              : ".pdf"}
+                                ? ".mp4"
+                                : ".pdf"}
                             )
                           </span>
                           <input
@@ -922,11 +1014,10 @@ const TemplateModal = ({
                             value={selectedFile ? selectedFile.name : ""}
                             placeholder={`Upload a ${templateType.toLowerCase()} file`}
                             readOnly
-                            className={`w-full border bg-gray-100 font-medium text-sm rounded p-3 mt-4 mb-1 focus:outline-none ${
-                              errors.file
+                            className={`w-full border bg-gray-100 font-medium text-sm rounded p-3 mt-4 mb-1 focus:outline-none ${errors.file
                                 ? "border-red-500"
                                 : "border-transparent"
-                            } focus:border-teal-500`}
+                              } focus:border-teal-500`}
                             aria-describedby={
                               errors.file ? "file-error" : undefined
                             }
@@ -946,11 +1037,10 @@ const TemplateModal = ({
                         <span className="text-gray-500 text-sm">or</span>
                         <div className="flex gap-2">
                           <label
-                            className={`border border-green-500 text-green-500 font-medium rounded p-3 mt-8 text-sm ${
-                              isUploading
+                            className={`border border-green-500 text-green-500 font-medium rounded p-3 mt-8 text-sm ${isUploading
                                 ? "opacity-50 cursor-not-allowed"
                                 : "hover:bg-green-50 cursor-pointer"
-                            }`}
+                              }`}
                           >
                             {isUploading ? "Uploading..." : "Upload Media"}
                             <input
@@ -959,8 +1049,8 @@ const TemplateModal = ({
                                 templateType === "Image"
                                   ? "image/*"
                                   : templateType === "Video"
-                                  ? "video/mp4"
-                                  : "application/pdf"
+                                    ? "video/mp4"
+                                    : "application/pdf"
                               }
                               onChange={handleFileChange}
                               className="hidden"
@@ -971,11 +1061,10 @@ const TemplateModal = ({
                           {errors.file && selectedFile && (
                             <button
                               onClick={handleRetryUpload}
-                              className={`border border-blue-500 text-blue-500 font-medium rounded p-3 mt-4 mb-2 text-sm ${
-                                isUploading
+                              className={`border border-blue-500 text-blue-500 font-medium rounded p-3 mt-4 mb-2 text-sm ${isUploading
                                   ? "opacity-50 cursor-not-allowed"
                                   : "hover:bg-blue-50 cursor-pointer"
-                              }`}
+                                }`}
                               disabled={isUploading}
                               aria-label="Retry uploading file"
                             >
@@ -997,31 +1086,47 @@ const TemplateModal = ({
                 </label>
                 <div className="flex justify-end mb-1">
                   <span
-                    className={`text-xs ${
-                      format.length === 1024
+                    className={`text-xs ${format.length === 1024
                         ? "text-red-500 font-semibold"
                         : format.length >= 950
-                        ? "text-yellow-500"
-                        : "text-gray-400"
-                    }`}
+                          ? "text-yellow-500"
+                          : "text-gray-400"
+                      }`}
                   >
                     {format.length}/1024
                   </span>
                 </div>
                 <textarea
                   id="body"
-                  className={`w-full border text-sm bg-gray-100 rounded p-4 pt-4 ${
-                    errors.format ? "border-red-500" : "border-transparent"
-                  } focus:outline-none focus:border-teal-500`}
+                  className={`w-full border text-sm bg-gray-100 rounded p-4 pt-4 ${errors.format ? "border-red-500" : "border-transparent"
+                    } focus:outline-none focus:border-teal-500`}
                   rows={4}
                   placeholder="Template Format (use {{1}}, {{2}}... for variables)"
                   value={format}
                   maxLength={1024}
                   style={{ resize: "vertical" }}
                   onChange={(e) => {
-                    if (e.target.value.length <= 1024) {
-                      setFormat(e.target.value);
-                      validateField("format", e.target.value);
+                    const newValue = e.target.value;
+
+                    // Only apply restrictions for PROMOTION subcategory
+                    if (sub_category === 'PROMOTION') {
+                      // Count all dynamic variables
+                      const dynamicVars = newValue.match(/\{\d+\}/g) || [];
+                      const hasMultipleVars = dynamicVars.length > 1;
+
+                      // Check if there are any variables other than {{1}}
+                      const hasVarOtherThanOne = dynamicVars.some(v => v !== '{1}');
+
+                      if (hasMultipleVars || hasVarOtherThanOne) {
+                        toast.error('Only one dynamic variable {{1}} is allowed for Promotion templates');
+                        return;
+                      }
+                    }
+
+                    // For all cases, update the format if within length limit
+                    if (newValue.length <= 1024) {
+                      setFormat(newValue);
+                      validateField("format", newValue);
                     }
                   }}
                   onKeyDown={(e) => {
@@ -1042,8 +1147,11 @@ const TemplateModal = ({
                   }}
                   aria-describedby={errors.format ? "format-error" : undefined}
                 ></textarea>
-                <p className="text-xs font-light text-gray-500 mb-2">
-                  Use text formatting - bold, italic, etc. Max 1024 characters.
+                <p className="text-xs font-light text-gray-500 mb-2 leading-relaxed">
+                  Use text formatting — <span className="font-semibold">*</span>bold<span className="font-semibold">*</span>,
+                  <span className="italic">_italic_</span>, and <span>~strikethrough~</span>.
+                  Your message content can be up to <span className="font-medium text-gray-600">1024 characters</span>. <br />
+                  <span className="text-gray-400">Example:</span> Hey {"{{1}}"},don’t miss out on our latest offer {"{{2}}"} is live now!.
                 </p>
                 {category === "AUTHENTICATION" && (
                   <div className="flex items-center mt-2">
@@ -1102,11 +1210,10 @@ const TemplateModal = ({
                       <input
                         id="footer"
                         type="text"
-                        className={`w-full bg-gray-100 border rounded p-3 pr-12 text-sm font-medium ${
-                          errors.footer
+                        className={`w-full bg-gray-100 border rounded p-3 pr-12 text-sm font-medium ${errors.footer
                             ? "border-red-500"
                             : "border-transparent"
-                        } focus:outline-none focus:border-teal-500`}
+                          } focus:outline-none focus:border-teal-500`}
                         placeholder="Template Footer"
                         value={footer}
                         onChange={(e) => {
@@ -1116,13 +1223,12 @@ const TemplateModal = ({
                       />
 
                       <span
-                        className={`absolute right-3 bottom-2 text-xs ${
-                          footer.length === 60
+                        className={`absolute right-3 bottom-2 text-xs ${footer.length === 60
                             ? "text-red-500 font-semibold"
                             : footer.length >= 50
-                            ? "text-yellow-500"
-                            : "text-gray-400"
-                        }`}
+                              ? "text-yellow-500"
+                              : "text-gray-400"
+                          }`}
                       >
                         {footer.length}/60
                       </span>
@@ -1151,13 +1257,12 @@ const TemplateModal = ({
                         disabled
                       />
                       <span
-                        className={`absolute right-3 bottom-2 text-xs ${
-                          footer.length === 60
+                        className={`absolute right-3 bottom-2 text-xs ${footer.length === 60
                             ? "text-red-500 font-semibold"
                             : footer.length >= 50
-                            ? "text-yellow-500"
-                            : "text-gray-400"
-                        }`}
+                              ? "text-yellow-500"
+                              : "text-gray-400"
+                          }`}
                       >
                         {footer.length}/60
                       </span>
@@ -1247,13 +1352,12 @@ const TemplateModal = ({
                       Max 25 characters
                     </span>
                     <span
-                      className={`text-xs ${
-                        authButtonText.length === 25
+                      className={`text-xs ${authButtonText.length === 25
                           ? "text-red-500 font-semibold"
                           : authButtonText.length >= 20
-                          ? "text-yellow-500"
-                          : "text-gray-400"
-                      }`}
+                            ? "text-yellow-500"
+                            : "text-gray-400"
+                        }`}
                     >
                       {authButtonText.length}/25
                     </span>
@@ -1262,11 +1366,10 @@ const TemplateModal = ({
                   <input
                     id="authButtonText"
                     type="text"
-                    className={`w-full bg-gray-100 border rounded p-3 text-sm font-medium mb-1 ${
-                      errors.authButtonText
+                    className={`w-full bg-gray-100 border rounded p-3 text-sm font-medium mb-1 ${errors.authButtonText
                         ? "border-red-500"
                         : "border-transparent"
-                    } focus:outline-none focus:border-teal-500`}
+                      } focus:outline-none focus:border-teal-500`}
                     placeholder="Button Text"
                     value={authButtonText}
                     onChange={(e) => {
@@ -1325,22 +1428,22 @@ const TemplateModal = ({
 
                   {(selectedAction === "Quick Replies" ||
                     selectedAction === "All") && (
-                    <QuickRepliesSection
-                      quickReplies={quickReplies}
-                      setQuickReplies={setQuickReplies}
-                    />
-                  )}
+                      <QuickRepliesSection
+                        quickReplies={quickReplies}
+                        setQuickReplies={setQuickReplies}
+                      />
+                    )}
 
                   {(selectedAction === "Call To Actions" ||
                     selectedAction === "All") && (
-                    <CallToActionSection
-                      urlCtas={urlCtas}
-                      setUrlCtas={setUrlCtas}
-                      phoneCta={phoneCta}
-                      setPhoneCta={setPhoneCta}
-                      selectedAction={selectedAction}
-                    />
-                  )}
+                      <CallToActionSection
+                        urlCtas={urlCtas}
+                        setUrlCtas={setUrlCtas}
+                        phoneCta={phoneCta}
+                        setPhoneCta={setPhoneCta}
+                        selectedAction={selectedAction}
+                      />
+                    )}
 
                   <OfferCodeSection
                     offerCode={offerCode}
@@ -1353,11 +1456,10 @@ const TemplateModal = ({
               <div className="flex gap-2 justify-end flex-wrap pb-4">
                 <button
                   onClick={handleSubmit}
-                  className={`bg-[#05a3a3] w-25 text-white px-6 py-2 rounded font-semibold ${
-                    isSubmitting || isUploading
+                  className={`bg-[#05a3a3] w-25 text-white px-6 py-2 rounded font-semibold ${isSubmitting || isUploading
                       ? "opacity-50 cursor-not-allowed"
                       : "hover:cursor-pointer"
-                  }`}
+                    }`}
                   disabled={isSubmitting || isUploading}
                 >
                   {mode === "edit" ? "Update" : "Add"}
@@ -1365,11 +1467,10 @@ const TemplateModal = ({
                 <button
                   type="button"
                   onClick={handleCancel}
-                  className={`border border-red-500 text-red-500 px-6 py-2 w-25 rounded font-semibold ${
-                    isSubmitting || isUploading
+                  className={`border border-red-500 text-red-500 px-6 py-2 w-25 rounded font-semibold ${isSubmitting || isUploading
                       ? "opacity-50 cursor-not-allowed"
                       : "hover:bg-red-50 hover:cursor-pointer"
-                  }`}
+                    }`}
                   disabled={isSubmitting || isUploading}
                 >
                   Cancel

@@ -1,6 +1,7 @@
 import React from "react";
 import { API_ENDPOINTS } from "../config/api";
 import { FileText, AlertCircle } from "lucide-react";
+import fallbackImage from '../assets/fallback.jpg';
 
 export const renderMedia = (template) => {
   if (!template) return null;
@@ -27,8 +28,10 @@ export const renderMedia = (template) => {
             alt={altText}
             className="w-full h-48 object-cover rounded-lg"
             onError={(e) => {
-              e.target.src = "/fallbacks/default.jpg";
-              e.target.onerror = null;
+              if (e.target.src !== fallbackImage) {
+                e.target.src = fallbackImage;
+                e.target.onerror = null;
+              }
             }}
             loading="lazy"
           />
@@ -77,8 +80,10 @@ export const renderMedia = (template) => {
               alt={altText}
               className="w-full h-48 object-cover rounded-lg"
               onError={(e) => {
-                e.target.src = "/fallbacks/default.jpg";
-                e.target.onerror = null;
+                if (e.target.src !== fallbackImage) {
+                  e.target.src = fallbackImage;
+                  e.target.onerror = null;
+                }
               }}
               loading="lazy"
             />

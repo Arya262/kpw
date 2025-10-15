@@ -284,6 +284,7 @@ const MessageInput = ({ onSendMessage, selectedContact, canSendMessage }) => {
         headerIsId: filledTemplate.headerIsId,
         language_code: filledTemplate.language_code || "en",
         fileName: filledTemplate.fileName,
+        category: filledTemplate.category,
       });
       setShowTemplates(false);
     }}

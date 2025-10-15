@@ -152,7 +152,7 @@ const GroupForm = ({ group, onSave, onCancel }) => {
         contact.mobile = value.replace(/\D/g, ''); // Remove non-digits
       }
     });
-    console.log('Extracted contact:', contact);
+    // console.log('Extracted contact:', contact);
     return contact;
   };
 

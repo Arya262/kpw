@@ -1,14 +1,20 @@
-import React from "react";
+import React, { useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import CustomDateInput from "./CustomDateInput";
+import PlansModal from "../../dashboard/PlansModal";
 
 const ScheduleSelector = ({
   formData,
   handleRadioChange,
   selectedDate,
   setSelectedDate,
+  userPlan = '',
 }) => {
+  const [showPlansModal, setShowPlansModal] = useState(false);
+  
+  // Check if user is on Pro plan
+  const isProUser = userPlan === 'Pro' || userPlan === 'pro';
   // Get the minimum allowed time for today
   const getMinTime = () => {
     const now = new Date();
@@ -29,6 +35,13 @@ const ScheduleSelector = ({
   // Handle Yes/No change
   const handleScheduleChange = (e) => {
     const value = e.target.value;
+    
+    if (value === "Yes" && !isProUser) {
+      e.preventDefault();
+      setShowPlansModal(true);
+      return;
+    }
+    
     handleRadioChange(e);
     if (value === "No") setSelectedDate(null);
   };
@@ -38,7 +51,6 @@ const ScheduleSelector = ({
     const now = new Date();
   
     if (date.toDateString() === now.toDateString() && date < now) {
-      // If selected time is in the past, round up to the next 10-min slot
       const minutes = Math.floor(now.getMinutes() / 10) * 10 + 10;
       const rounded = new Date(now);
       rounded.setMinutes(minutes, 0, 0);
@@ -53,19 +65,14 @@ const ScheduleSelector = ({
         0
       );
     }
-  
-    // Otherwise, just keep the selected time
     setSelectedDate(date);
   };
   
-
   return (
     <div className="w-full">
       <label className="block text-sm mb-1 font-semibold text-black">
         Schedule Campaign
       </label>
-
-      {/* Radio Buttons */}
       <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
         <label className="flex items-center">
           <input
@@ -95,7 +102,6 @@ const ScheduleSelector = ({
         </label>
       </div>
 
-      {/* Date Picker */}
       {formData.schedule === "Yes" && (
         <div className="w-full sm:w-1/2 mt-2">
           <DatePicker
@@ -109,15 +115,20 @@ const ScheduleSelector = ({
             minTime={new Date(getMinTime())}
             maxTime={new Date(new Date().setHours(23, 45))} 
             filterTime={filterPassedTime}
-            customInput={<CustomDateInput />}
             className="w-full border border-gray-300 rounded-md p-2 text-gray-700 focus:outline-none"
             popperClassName="custom-datepicker-popper"
             popperPlacement="bottom-start"
           />
         </div>
       )}
+      <PlansModal
+        isOpen={showPlansModal}
+        onClose={() => setShowPlansModal(false)}
+        userPlan={userPlan}
+      />
     </div>
   );
 };
+
 
 export default ScheduleSelector;

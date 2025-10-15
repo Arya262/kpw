@@ -47,7 +47,7 @@ const BroadcastDashboard = forwardRef(({ onBroadcastsUpdate }, ref) => {
         withCredentials: true,
         validateStatus: (status) => status < 500,
       });
-      console.log("📩 Full API Response:", response.data);
+      // console.log("📩 Full API Response:", response.data);
 
       if (response.status >= 400) {
         throw new Error(response.data?.message || "Failed to fetch broadcasts");

@@ -15,7 +15,7 @@ export const AuthProvider = ({ children }) => {
     if (storedUser) {
       const userData = JSON.parse(storedUser);
       setUser(userData);
-      fetchWabaInfo(userData.customer_id); // fetch WABA info in memory only
+      fetchWabaInfo(userData.customer_id); 
     }
     setLoading(false);
   }, []);
@@ -24,7 +24,7 @@ export const AuthProvider = ({ children }) => {
   const login = useCallback((userData) => {
     setUser(userData);
     localStorage.setItem("user", JSON.stringify(userData));
-    fetchWabaInfo(userData.customer_id); // fetch WABA info in memory
+    fetchWabaInfo(userData.customer_id);
   }, []);
 
   // Logout method: clear user and WABA info from memory
@@ -40,16 +40,17 @@ export const AuthProvider = ({ children }) => {
   const isAuthenticated = !!user;
 
   // Fetch WABA info (in-memory only)
-  const fetchWabaInfo = async (customerId) => {
+  const fetchWabaInfo = useCallback(async (customerId) => {
     if (!customerId) return;
     try {
-      const response = await axios.get(`http://localhost:60000/getWabaInfo/${customerId}`);
+      const response = await axios.get(API_ENDPOINTS.WABA.INFO(customerId));
+      // console.log('WABA Info Response:', response.data);
       setWabaInfo(response.data.wabaInfo); 
     } catch (err) {
       console.error("Failed to fetch WABA info:", err.response?.data?.error || err.message);
       setWabaInfo(null);
     }
-  };
+  }, []);
 
   return (
     <AuthContext.Provider

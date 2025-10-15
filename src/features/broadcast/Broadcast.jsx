@@ -20,7 +20,6 @@ const Broadcast = () => {
   const { user } = useAuth();
   const permissions = getPermissions(user);
 
-  // Handle navigation state (formData, openForm)
   useEffect(() => {
     if (location.state?.formData) {
       broadcastDashboardRef.current?.fetchBroadcasts();
@@ -30,13 +29,13 @@ const Broadcast = () => {
     if (location.state?.openForm) {
       if (!permissions.canAddBroadcast) {
         toast.error("You do not have permission to add Campaign.");
-        window.history.replaceState({}, document.title);
-        return;
+      } else {
+        setShowPopup(true);
       }
-      setShowPopup(true);
       window.history.replaceState({}, document.title);
     }
-  }, [location.state, permissions]);
+
+  }, []);
 
   // When broadcast is created
   const handleBroadcastCreated = () => {

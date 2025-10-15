@@ -1,97 +1,84 @@
-import React, { useEffect, useState, useMemo } from "react"; 
+import React, { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Wallet, Megaphone, Zap, ShieldCheck } from "lucide-react";
 import { useLocation } from "../../context/LocationContext";
 import pricingData from "../../pricing.json";
 
-// Map category names to match the pricing.json keys
 const categoryMap = {
   Marketing: "MARKETING",
   Utility: "UTILITY",
   Authentication: "AUTHENTICATION",
 };
 
-// Helper: calculate exact messages
 const getMessagesCount = (balance, price) => {
-  if (!price || price <= 0) return 0;
-  return Math.floor(balance / price);
+  if (!balance || !price || price <= 0) return 0;
+  const count = Math.floor(balance / price);
+  return isFinite(count) ? count : 0;
 };
 
 const WalletDetailsModal = ({ isOpen, onClose, walletBalance }) => {
   const { location } = useLocation();
   const [countryName, setCountryName] = useState("India");
   const [currency, setCurrency] = useState({ symbol: "₹", code: "INR" });
-
-  // Update country and currency based on location context
   useEffect(() => {
     if (location?.loaded && location.address) {
-      // Extract country from the address or use default
       const address = location.address.toLowerCase();
-      const isIndia = address.includes('india') || address.includes('indian');
+      const isIndia = address.includes("india") || address.includes("indian");
       setCountryName(isIndia ? "India" : "United States");
-      setCurrency({ 
-        symbol: isIndia ? "₹" : "$", 
-        code: isIndia ? "INR" : "USD" 
+      setCurrency({
+        symbol: isIndia ? "₹" : "$",
+        code: isIndia ? "INR" : "USD",
       });
     }
   }, [location]);
 
-  // Get pricing for a category
-  const getPriceForCategory = (category) => {
-    const categoryKey = categoryMap[category];
-    if (!categoryKey) return 0;
-
-    // First try to find exact country match
-    let countryData = pricingData.find(
+  const countryPricing = useMemo(() => {
+    const exact = pricingData.find(
       (item) => item.Country?.toLowerCase() === countryName.toLowerCase()
     );
+    if (exact) return exact;
 
-    // If exact match not found, try to find a partial match (e.g., "United States" vs "United States of America")
-    if (!countryData) {
-      countryData = pricingData.find(
-        (item) => item.Country?.toLowerCase().includes(countryName.toLowerCase()) ||
-                 countryName.toLowerCase().includes(item.Country?.toLowerCase())
-      );
-    }
+    const partial = pricingData.find(
+      (item) =>
+        item.Country?.toLowerCase().includes(countryName.toLowerCase()) ||
+        countryName.toLowerCase().includes(item.Country?.toLowerCase())
+    );
+    if (partial) return partial;
 
-    // If still not found, fall back to United States pricing
-    if (!countryData) {
-      countryData = pricingData.find(
-        (item) => item.Country?.toLowerCase() === "united states"
-      );
-      if (!countryData) return 0;
-    }
+    return pricingData.find(
+      (item) => item.Country?.toLowerCase() === "united states"
+    );
+  }, [countryName]);
 
-    const priceKey = `${categoryKey}_${currency.code}`;
-    const price = countryData[priceKey];
-    
-    // For India, we have specific pricing in the original format
-    if (countryName.toLowerCase() === 'india') {
-      switch(category) {
-        case 'Marketing': return 0.88;
-        case 'Authentication':
-        case 'Utility': return 0.125;
-        default: return 0;
-      }
-    }
-    
-    return price || 0;
+  const getPriceForCategory = (category) => {
+    const key = categoryMap[category];
+    if (!countryPricing || !key) return 0;
+
+    const priceKey = `${key}_${currency.code}`;
+    const price = countryPricing[priceKey];
+
+    return price ? Number(price) : 0;
   };
 
-  // Categories with dynamic pricing
   const categories = useMemo(() => {
-    const cats = [
+    const base = [
       { name: "Marketing", Icon: Megaphone },
       { name: "Utility", Icon: Zap },
       { name: "Authentication", Icon: ShieldCheck },
     ];
-    return cats.map((cat) => ({ ...cat, price: getPriceForCategory(cat.name) }));
-  }, [countryName, currency.code]);
+    return base.map((cat) => ({
+      ...cat,
+      price: getPriceForCategory(cat.name),
+    }));
+  }, [countryPricing, currency.code]);
 
-  // Optional: Adjust balance for GST
-  // const netBalance = walletBalance / 1.18; // uncomment if GST needs deduction
-  const netBalance = walletBalance;
-
+  const netBalance = walletBalance; 
+const formatPrice = (price, currencyCode) => {
+  if (!price) return 0;
+  const decimals = currencyCode === "USD" ? 4 : 3; // 3 decimals for INR, 4 for USD
+  const factor = Math.pow(10, decimals);
+  return Math.floor(price * factor) / factor; // truncate without rounding
+};
   return (
     <AnimatePresence>
       {isOpen && (
@@ -129,8 +116,7 @@ const WalletDetailsModal = ({ isOpen, onClose, walletBalance }) => {
 
             {/* Body */}
             <div className="p-4 sm:p-6">
-              {/* Balance */}
-              <div className="rounded-lg p-4 mb-6 bg-[#0bA89E]">
+              <div className="rounded-lg p-5 mb-6 bg-[#0AA89E] shadow-sm">
                 <p className="text-sm text-white mb-1">Available Balance</p>
                 <p className="text-2xl font-bold text-white">
                   {currency.symbol}
@@ -139,12 +125,14 @@ const WalletDetailsModal = ({ isOpen, onClose, walletBalance }) => {
                 </p>
               </div>
 
-              {/* Messages Section */}
+              {/* Message Section */}
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between items-center">
-                  <h3 className="font-medium text-gray-700">Message you will get</h3>
+                  <h3 className="font-medium text-gray-700">
+                    Messages You Will Get
+                  </h3>
                   <p className="text-xs text-gray-500 italic">
-                    *Prices are excluding 18% GST
+                    *Prices exclude 18% GST
                   </p>
                 </div>
 
@@ -153,7 +141,7 @@ const WalletDetailsModal = ({ isOpen, onClose, walletBalance }) => {
                     {/* Table Header */}
                     <div className="bg-gray-50 px-5 py-3 flex justify-between items-center text-sm font-semibold text-gray-600 border-b">
                       <span className="w-1/3">Category</span>
-                      <span className="w-1/3 text-center">*Price Per Message</span>
+                      <span className="w-1/3 text-center">Price / Message</span>
                       <span className="w-1/3 text-right">Messages</span>
                     </div>
 
@@ -171,7 +159,8 @@ const WalletDetailsModal = ({ isOpen, onClose, walletBalance }) => {
                         </span>
                         <span className="w-1/3 text-center text-sm text-gray-500">
                           {currency.symbol}
-                          {Number(price).toFixed(currency.code === "USD" ? 4 : 2)}/msg
+                          {formatPrice(price, currency.code)}
+                          /msg
                         </span>
                         <span className="w-1/3 text-right text-gray-800 font-medium">
                           {getMessagesCount(netBalance, price).toLocaleString()}
@@ -201,7 +190,8 @@ const WalletDetailsModal = ({ isOpen, onClose, walletBalance }) => {
                   </div>
                   <div className="ml-3">
                     <p className="text-sm text-yellow-700">
-                      Your recharge balance can be used across all categories in WhatsApp.
+                      Your recharge balance can be used across all WhatsApp message
+                      categories.
                     </p>
                   </div>
                 </div>

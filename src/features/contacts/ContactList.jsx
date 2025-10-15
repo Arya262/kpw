@@ -423,17 +423,15 @@ export default function ContactList() {
     setSelectedContacts((prev) => {
       const updated = { ...prev };
       if (selectAllAcrossPages) {
-        // When in "select all" mode, we only track unchecked contacts
         if (!isChecked) {
-          updated[contactId] = false; // Mark as explicitly unchecked
+          updated[contactId] = false; 
         } else {
-          // If re-checking a previously unchecked contact, remove it from the unchecked list
+          
           if (updated[contactId] === false) {
             delete updated[contactId];
           }
         }
       } else {
-        // In normal mode, just track selected contacts
         if (isChecked) {
           updated[contactId] = true;
         } else {
@@ -448,8 +446,6 @@ export default function ContactList() {
     const checked = event.target.checked;
     setSelectAll(checked);
     setSelectAllAcrossPages(checked);
-    // Don't clear selectedContacts when selecting all across pages
-    // We'll use this to track explicitly unchecked contacts
     if (!checked) {
       setSelectedContacts({});
     }
@@ -517,7 +513,6 @@ export default function ContactList() {
       return;
     }
 
-    // Calculate the actual number of selected contacts
     const selectedCount = selectAllAcrossPages
       ? pagination.totalItems - Object.values(selectedContacts).filter(val => val === false).length
       : Object.values(selectedContacts).filter(Boolean).length;
@@ -538,7 +533,7 @@ export default function ContactList() {
 
   // Check if any contacts are selected
   const hasSelectedContacts = selectAllAcrossPages
-    ? true // If selectAllAcrossPages is true, we're selecting all contacts
+    ? true 
     : Object.values(selectedContacts).some(Boolean);
 
   // Broadcast button handler
@@ -553,7 +548,7 @@ export default function ContactList() {
         const countResponse = await axios.get(API_ENDPOINTS.CONTACTS.GET_ALL, {
           params: {
             customer_id: user?.customer_id,
-            limit: 1, // Just get the count
+            limit: 1, 
             countOnly: true
           },
           withCredentials: true,
@@ -674,7 +669,7 @@ export default function ContactList() {
       });
 
       const data = await res.json();
-      console.log("Group response:", data);
+      // console.log("Group response:", data);
 
       if (!res.ok) {
         throw new Error(data.message || "Failed to create group");

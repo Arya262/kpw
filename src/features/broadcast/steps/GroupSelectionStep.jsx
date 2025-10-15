@@ -195,7 +195,7 @@ const GroupSelectionStep = ({
   fullWidth
   value={customerSearchTerm}
   onChange={(e) => {
-    console.log("Search term changed:", e.target.value); 
+    // console.log("Search term changed:", e.target.value); 
     setCustomerSearchTerm(e.target.value);
   }}
   sx={{

@@ -1,7 +1,9 @@
+import { FaWhatsapp } from "react-icons/fa";
+
 export const API_BASE =
-  import.meta.env.VITE_API_BASEz || "http://localhost:60000";
+  // import.meta.env.VITE_API_BASEz || "http://localhost:60000";
   // import.meta.env.VITE_API_BASE || "https://marketing.foodchow.co.uk";
-  // import.meta.env.VITE_API_BASE || "https://whatsappbackend.foodchow.app";
+  import.meta.env.VITE_API_BASE || "https://whatsappbackend.foodchow.app";
 
 export const API_ENDPOINTS = {
   BROADCASTS: {
@@ -27,6 +29,8 @@ export const API_ENDPOINTS = {
     DELETE_CONVERSATION: `${API_BASE}/deleteconversations`,
     MARK_AS_READ: `${API_BASE}/markMessagesAsRead`,
     SEND_MEDIA: `${API_BASE}/sendMedia`,
+    BLOCK: (customerId) => `${API_BASE}/blockUsers/${customerId}`,
+    UNBLOCK: (customerId) => `${API_BASE}/unblockUsers/${customerId}`,
   },
   TEMPLATES: {
     GET_ALL: `${API_BASE}/templates`,
@@ -76,5 +80,8 @@ export const API_ENDPOINTS = {
   },
     GUPSHUP: {
     CREATE_APP: `${API_BASE}/createGupshupApp`,
+  },
+  WABA: {
+    INFO: (customerId) => `${API_BASE}/getWabaInfo/${customerId}`,
   },
 };

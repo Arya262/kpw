@@ -1,83 +1,34 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../../context/AuthContext";
 import TemplateModal from "../../templates/Modal";
+import { useTemplates } from "../../../hooks/useTemplates";
 
-// Custom hook
 import { useBroadcastForm } from "../hooks/useBroadcastForm";
 
-// Step components
 import CampaignNameStep from "../steps/CampaignNameStep";
 import GroupSelectionStep from "../steps/GroupSelectionStep";
 import TemplateSelectionStep from "../steps/TemplateSelectionStep";
 import ScheduleCampaignStep from "../steps/ScheduleCampaignStep";
 import PreviewStep from "../steps/PreviewStep";
 
-// UI components
 import StepIndicator from "../ui/StepIndicator";
 import InformationCards from "../ui/InformationCards";
 import NavigationButtons from "../ui/NavigationButtons";
 
 const BroadcastForm = ({
-  formData,
-  setFormData,
-  handleInputChange,
-  handleRadioChange,
-  handleMediaChange,
-  selectedDate,
-  setSelectedDate,
-  isTemplateOpen,
-  openTemplate,
-  closeTemplate,
-  SendTemplate,
-  loading,
-  error,
-  customerLists,
-  onSubmit,
-  isSubmitting,
-  onTemplateSelect,
-  step,
-  setStep,
-  wabaInfo,
-}) => {
+  formData, setFormData, handleInputChange, handleRadioChange,handleMediaChange,selectedDate, setSelectedDate,loading, error, 
+  customerLists, onSubmit, isSubmitting, onTemplateSelect, step, setStep, wabaInfo,
+  }) => {
   const { user } = useAuth();
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const { actions: { addTemplate } } = useTemplates();
 
   const {
-    templates,
-    templatesLoading,
-    templatesError,
-    estimatedCost,
-    availableWCC,
-    pagination,
-    validationErrors,
-    templateSearchTerm,
-    setTemplateSearchTerm,
-    customerSearchTerm,
-    setCustomerSearchTerm,
-    showList,
-    setShowList,
-    filteredCustomerLists,
-    warningMessage,
-    setWarningMessage,
-    selectedGroups,
-    totalSelectedContacts,
-    fetchTemplates,
-    loadMoreTemplates,
-    validateStep,
-    validateForm,
-    handleNext,
-    handlePrevious,
-    getStepSequence,
+    templates, templatesLoading, templatesError, estimatedCost, availableWCC, pagination, validationErrors, templateSearchTerm, setTemplateSearchTerm,
+    customerSearchTerm, setCustomerSearchTerm, showList, setShowList, filteredCustomerLists, warningMessage, setWarningMessage, selectedGroups,
+    totalSelectedContacts, fetchTemplates, loadMoreTemplates, validateStep, validateForm, handleNext, handlePrevious, getStepSequence,
   } = useBroadcastForm(
-    formData,
-    setFormData,
-    customerLists,
-    onTemplateSelect,
-    step,
-    setStep,
-    selectedDate,
-    setSelectedDate,
-    wabaInfo
+    formData, setFormData, customerLists, onTemplateSelect, step, setStep, selectedDate, setSelectedDate, wabaInfo
   );
 
   const handleFormSubmit = (e) => {
@@ -162,7 +113,7 @@ const BroadcastForm = ({
                 setTemplateSearchTerm={setTemplateSearchTerm}
                 setIsTemplateModalOpen={setIsTemplateModalOpen}
                 formData={formData}
-                setFormData={setFormData} // Pass setFormData to update placeholders
+                setFormData={setFormData} 
               />
             </>
           )}
@@ -211,9 +162,14 @@ const BroadcastForm = ({
       <TemplateModal
         isOpen={isTemplateModalOpen}
         onClose={() => setIsTemplateModalOpen(false)}
-        onSubmit={() => {
-          setIsTemplateModalOpen(false);
-          fetchTemplates(1, false);
+        onSubmit={async (templateData) => {
+          try {
+            await addTemplate(templateData);
+            setIsTemplateModalOpen(false);
+            fetchTemplates(1, false);
+          } catch (error) {
+            console.error('Error creating template:', error);
+          }
         }}
       />
     </div>

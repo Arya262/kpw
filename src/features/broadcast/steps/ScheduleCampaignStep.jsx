@@ -1,5 +1,6 @@
 import React from "react";
 import ScheduleSelector from "../components/ScheduleSelector";
+import ClickToUpgrade from "../../../components/ClickToUpgrade";
 
 const ScheduleCampaignStep = ({
   formData,
@@ -10,6 +11,7 @@ const ScheduleCampaignStep = ({
   setValidationErrors,
   isSubmitting
 }) => (
+  <ClickToUpgrade permission="canScheduleBroadcast">
   <div className="space-y-4">
     <h3 className="text-lg font-semibold text-gray-800">
       Schedule Campaign
@@ -28,6 +30,7 @@ const ScheduleCampaignStep = ({
       <p className="text-red-500 text-sm">{validationErrors.schedule}</p>
     )}
   </div>
+  </ClickToUpgrade>
 );
 
 export default ScheduleCampaignStep;

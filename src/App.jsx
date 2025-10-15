@@ -24,7 +24,7 @@ const RegisterPage = lazy(() => import("./RegisterPage"));
 const GroupManagement = lazy(() => import("./features/contacts/GroupManagement"));
 const UserSetting = lazy(() => import("./features/flow/UserSetting"));
 const OnboardingGuide = lazy(() => import("./features/onboard/OnboardingGuide"));
-
+const PricingPlans = lazy(() => import("./PricingPlans"));
 function App() {
   return (
     <>
@@ -102,6 +102,14 @@ function App() {
                 <OnboardingGuide />
               </ErrorBoundary>
             }
+          />
+           
+          <Route 
+             path="/pricing" 
+             element={
+               <ErrorBoundary>
+                  <PricingPlans />
+               </ErrorBoundary>} 
           />
 
           {/* Protected Routes */}

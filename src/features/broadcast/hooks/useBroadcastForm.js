@@ -21,32 +21,14 @@ export const useBroadcastForm = (
   // Define step sequence after hooks
   const getStepSequence = useCallback(() => {
     const isDirectBroadcast = location.state?.directBroadcast || formData.isDirectBroadcast;
-    const sequence = [1, 2, 3, 4, 5]; // Always include all steps
-    
-    // console.group('getStepSequence');
-    // console.log('location.state.directBroadcast:', location.state?.directBroadcast);
-    // console.log('formData.isDirectBroadcast:', formData.isDirectBroadcast);
-    // console.log('isDirectBroadcast:', isDirectBroadcast);
-    // console.log('Returning sequence:', sequence);
-    // console.groupEnd();
-    
+    const sequence = [1, 2, 3, 4, 5]; // Always include all steps  
     return sequence;
   }, [location.state?.directBroadcast, formData.isDirectBroadcast]);
   
-  // Log when step changes
   useEffect(() => {
-    // console.group('Step Change');
-    // console.log('Current step:', step);
-    // const sequence = getStepSequence();
-    // console.log('Current sequence:', sequence);
-    // console.log('Is valid step:', sequence.includes(step));
-    // console.log('Current step index:', sequence.indexOf(step));
-    // console.groupEnd();
-    
-    // Ensure we don't stay on step 2 for direct broadcasts
     const isDirectBroadcast = location.state?.directBroadcast || formData.isDirectBroadcast;
     if (isDirectBroadcast && step === 2) {
-      setStep(3); // Skip step 2 for direct broadcasts
+      setStep(3);
     }
   }, [step, getStepSequence, setStep, location.state?.directBroadcast, formData.isDirectBroadcast]);
   const [templates, setTemplates] = useState([]);
@@ -67,7 +49,6 @@ export const useBroadcastForm = (
   const [showList, setShowList] = useState(false);
   const [filteredCustomerLists, setFilteredCustomerLists] = useState(customerLists || []);
   
-  // Get the message limit based on the user's WABA tier
   const getMessageLimit = (wabaInfo) => {
     if (!wabaInfo?.messagingLimit) return 250; // Default to 250 if no tier info
 
@@ -75,22 +56,18 @@ export const useBroadcastForm = (
       'TIER_1K': 1000,
       'TIER_10K': 10000,
       'TIER_100K': 100000,
-      // Add more tiers as needed
     };
 
-    return tierLimits[wabaInfo.messagingLimit] || 250; // Default to 250 if tier not found
+    return tierLimits[wabaInfo.messagingLimit] || 250;
   };
   
   const messageLimit = getMessageLimit(wabaInfo);
   const [warningMessage, setWarningMessage] = useState("");
-  
-  // Step navigation helpers
   const getCurrentStepIndex = useCallback(() => {
     const sequence = getStepSequence();
     return sequence.indexOf(step);
   }, [step, getStepSequence]);
 
-  // Template fetching
   const fetchTemplates = useCallback(
     async (page = 1, append = false, searchTerm = "") => {
       if (!user?.customer_id) {
@@ -116,7 +93,6 @@ export const useBroadcastForm = (
 
       if (!response.ok) {
         if (response.status === 404) {
-          // No templates found for this search
           setTemplates(prev => append ? prev : []);
           setPagination({
             currentPage: 1,
@@ -128,9 +104,7 @@ export const useBroadcastForm = (
         }
         throw new Error(`HTTP ${response.status}`);
       }
-
       const data = await response.json();
-
       if (data && Array.isArray(data.templates)) {
         const normalizedTemplates = data.templates.map(t => ({
           ...t,
@@ -210,19 +184,19 @@ export const useBroadcastForm = (
 
   // Debug effect for step changes
   const stepDebugEffect = useCallback(() => {
-    console.log('Current step changed to:', step);
+    // console.log('Current step changed to:', step);
     const sequence = getStepSequence();
-    console.log('Current sequence:', sequence);
-    console.log('Is last step:', step === sequence[sequence.length - 1]);
+    // console.log('Current sequence:', sequence);
+    // console.log('Is last step:', step === sequence[sequence.length - 1]);
   }, [step, getStepSequence]);
 
   useEffect(() => {
-    console.log('formData updated:', formData);
+    // console.log('formData updated:', formData);
   }, [formData]);
 
   // Debug effect for validation errors
   useEffect(() => {
-    console.log('Current validation errors:', validationErrors);
+    // console.log('Current validation errors:', validationErrors);
   }, [validationErrors]);
 
   // Initial data fetching
@@ -267,15 +241,15 @@ export const useBroadcastForm = (
     // For group broadcasts, sum up contacts from selected groups
     if (!formData.group_id || formData.group_id.length === 0) return 0;
     
-    console.log('Selected groups:', selectedGroups);
-    console.log('Group IDs:', formData.group_id);
+    // console.log('Selected groups:', selectedGroups);
+    // console.log('Group IDs:', formData.group_id);
     
     const total = selectedGroups.reduce((sum, group) => {
-      console.log('Processing group:', group.group_name, 'with contacts:', group.total_contacts);
+      // console.log('Processing group:', group.group_name, 'with contacts:', group.total_contacts);
       return sum + (parseInt(group.total_contacts) || 0);
     }, 0);
     
-    console.log('Total contacts calculated:', total);
+    // console.log('Total contacts calculated:', total);
     return total;
   }, [selectedGroups, formData.isDirectBroadcast, formData.directContacts, formData.group_id]);
 
@@ -312,13 +286,13 @@ export const useBroadcastForm = (
 
   // Validation
   const validateStep = useCallback((currentStep) => {
-    console.log('Validating step:', currentStep);
+    // console.log('Validating step:', currentStep);
     const newErrors = {};
     const isDirectBroadcast = location.state?.directBroadcast || formData.isDirectBroadcast;
     const sequence = getStepSequence();
     const isFinalStep = currentStep === sequence[sequence.length - 1]; // Last step in sequence
     
-    console.log('isDirectBroadcast:', isDirectBroadcast, 'currentStep:', currentStep, 'isFinalStep:', isFinalStep);
+    // console.log('isDirectBroadcast:', isDirectBroadcast, 'currentStep:', currentStep, 'isFinalStep:', isFinalStep);
     
     // Adjust step for direct broadcast flow
     let adjustedStep = currentStep;
@@ -326,7 +300,7 @@ export const useBroadcastForm = (
       adjustedStep = currentStep + 1;
     }
     
-    console.log('isDirectBroadcast:', isDirectBroadcast, 'currentStep:', currentStep, 'adjustedStep:', adjustedStep, 'isFinalStep:', isFinalStep);
+    // console.log('isDirectBroadcast:', isDirectBroadcast, 'currentStep:', currentStep, 'adjustedStep:', adjustedStep, 'isFinalStep:', isFinalStep);
 
     // Common validation for contact limits - only runs on final step
     const validateContactLimits = () => {
@@ -372,28 +346,45 @@ export const useBroadcastForm = (
         }
         break;
 
-      case 3:
-        if (!formData.selectedTemplate) {
-          newErrors.template = "Please select a template";
-          toast.error("Please select a template", { 
-            toastId: "templateRequiredStep3",
-            autoClose: 3000
-          });
-        } else if (formData.templatePlaceholders?.length > 0) {
-          // Check if all placeholders are filled
-          const emptyPlaceholders = formData.templateParameters?.some(
-            (param, index) => !param?.trim() && formData.templatePlaceholders[index]
-          );
-          
-          if (emptyPlaceholders) {
-            newErrors.template = "Please fill in all template variables";
-            toast.error("Please fill in all template variables", {
-              toastId: "templateVariablesRequired",
-              autoClose: 3000
-            });
-          }
+case 3:
+  if (!formData.selectedTemplate) {
+    newErrors.template = "Please select a template";
+    toast.error("Please select a template", { 
+      toastId: "templateRequiredStep3",
+      autoClose: 3000
+    });
+  } else {
+    const templateParams = formData.templateParameters || [];
+    const hasDynamicFields =
+      templateParams.length > 0 ||
+      formData.selectedTemplate?.data?.includes("{{");
+
+    if (hasDynamicFields) {
+      const hasEmptyFields = templateParams.some(param => {
+        if (!param) return true;
+
+        switch (param.type) {
+          case "text":
+            return !param.value?.trim();
+          case "image":
+            return !param.image?.id && !param.image?.url;
+          case "video":
+            return !param.video?.id && !param.video?.url;
+          default:
+            return false;
         }
-        break;
+      });
+
+      if (hasEmptyFields) {
+        newErrors.template = "Please fill in all template variables";
+        toast.error("Please fill in all template variables", {
+          toastId: "templateVariablesRequired",
+          autoClose: 3000
+        });
+      }
+    }
+  }
+  break;
       case 4:
         // Only validate schedule on step 4, not contact limits
         if (formData.schedule === "Yes" && !selectedDate) {
@@ -437,31 +428,36 @@ const validateForm = useCallback(() => {
 }, [getStepSequence, validateStep]);
 
 const handleNext = useCallback(() => {
-  console.log('Current step before validation:', step);
+  // console.log('Current step before validation:', step);
   const isValid = validateStep(step);
-  console.log('Is valid:', isValid);
+  // console.log('Is valid:', isValid);
   
   if (isValid) {
     const sequence = getStepSequence();
     const currentIndex = getCurrentStepIndex();
-    console.log('Current sequence:', sequence);
-    console.log('Current index:', currentIndex);
-    console.log('Next step would be:', sequence[currentIndex + 1]);
+    // console.log('Current sequence:', sequence);
+    // console.log('Current index:', currentIndex);
+    // console.log('Next step would be:', sequence[currentIndex + 1]);
     
     if (currentIndex < sequence.length - 1) {
-      console.log('Setting step to:', sequence[currentIndex + 1]);
+      // console.log('Setting step to:', sequence[currentIndex + 1]);
       setStep(sequence[currentIndex + 1]);
     } else {
-      console.log('Already at the last step');
+      // console.log('Already at the last step');
     }
   } else {
-    console.log('Validation failed with errors:', validationErrors);
+    // console.log('Validation failed with errors:', validationErrors);
   }
 }, [validateStep, getStepSequence, getCurrentStepIndex, setStep, step, validationErrors]);
 
 const handlePrevious = useCallback(() => {
   const sequence = getStepSequence();
   const currentIndex = getCurrentStepIndex();
+  if (step === 3 && (location.state?.directBroadcast || formData.isDirectBroadcast)) {
+    setStep(1);
+    return;
+  }
+
   if (currentIndex > 0) {
     setStep(sequence[currentIndex - 1]);
   }

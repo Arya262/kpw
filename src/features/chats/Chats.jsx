@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+} from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useLocation } from "react-router-dom";
 import { useSocket } from "../../context/SocketContext";
@@ -29,9 +35,13 @@ const Chat = () => {
   const permissions = getPermissions(user);
   const userDetailsRef = useRef(null);
   const profileButtonRef = useRef(null);
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= MOBILE_BREAKPOINT);
+  const [isMobile, setIsMobile] = useState(
+    window.innerWidth <= MOBILE_BREAKPOINT
+  );
   const [showMobileChat, setShowMobileChat] = useState(false);
-  const [width, setWidth] = useState(() => parseInt(localStorage.getItem("sidebarWidth")) || 300);
+  const [width, setWidth] = useState(
+    () => parseInt(localStorage.getItem("sidebarWidth")) || 300
+  );
   const isResizing = useRef(false);
 
   // ✅ Multiple select state
@@ -39,7 +49,8 @@ const Chat = () => {
   const [isSelectMode, setIsSelectMode] = useState(false);
 
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth <= MOBILE_BREAKPOINT);
+    const handleResize = () =>
+      setIsMobile(window.innerWidth <= MOBILE_BREAKPOINT);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
@@ -51,6 +62,7 @@ const Chat = () => {
     sendMessage,
     deleteChat,
     setupChatEventListener,
+    updateBlockStatus,
   } = useChatLogic({
     user,
     socket,
@@ -89,7 +101,8 @@ const Chat = () => {
       }
     };
     document.addEventListener("click", handleClickOutside, true);
-    return () => document.removeEventListener("click", handleClickOutside, true);
+    return () =>
+      document.removeEventListener("click", handleClickOutside, true);
   }, []);
 
   useEffect(() => {
@@ -97,7 +110,10 @@ const Chat = () => {
     return cleanup;
   }, [setupChatEventListener]);
 
-  const toggleUserDetails = useCallback(() => setShowUserDetails(prev => !prev), []);
+  const toggleUserDetails = useCallback(
+    () => setShowUserDetails((prev) => !prev),
+    []
+  );
 
   const handleSendMessageWithSessionUpdate = async (message) => {
     await sendMessage(message);
@@ -106,9 +122,9 @@ const Chat = () => {
       setSelectedContact((prev) =>
         prev
           ? {
-            ...prev,
-            lastMessageTime: new Date().toISOString(),
-          }
+              ...prev,
+              lastMessageTime: new Date().toISOString(),
+            }
           : prev
       );
     }
@@ -167,29 +183,33 @@ const Chat = () => {
     };
   }, [width]);
 
-  const handleSelectContact = useCallback((contact, e) => {
-    if (isSelectMode) {
+  const handleSelectContact = useCallback(
+    (contact, e) => {
+      if (isSelectMode) {
+        e?.preventDefault();
+        toggleContactSelection(contact);
+      } else {
+        const fullContact = contacts.find(
+          (c) =>
+            (c.contact_id && c.contact_id === contact.contact_id) ||
+            (c.mobile_no && c.mobile_no === contact.mobile_no)
+        );
 
-      e?.preventDefault();
-      toggleContactSelection(contact);
-    } else {
-
-      const fullContact = contacts.find(c =>
-        (c.contact_id && c.contact_id === contact.contact_id) ||
-        (c.mobile_no && c.mobile_no === contact.mobile_no)
-      );
-
-      selectContact(fullContact || contact);
-      if (isMobile) setShowMobileChat(true);
-    }
-  }, [contacts, selectContact, isMobile, isSelectMode, toggleContactSelection]);
+        selectContact(fullContact || contact);
+        if (isMobile) setShowMobileChat(true);
+      }
+    },
+    [contacts, selectContact, isMobile, isSelectMode, toggleContactSelection]
+  );
 
   const handleDeleteSelected = useCallback(async () => {
     if (selectedContacts.size === 0) return;
 
     try {
       const contactIds = Array.from(selectedContacts);
-      const contactsToDelete = contacts.filter(c => contactIds.includes(c.contact_id));
+      const contactsToDelete = contacts.filter((c) =>
+        contactIds.includes(c.contact_id)
+      );
 
       for (const contact of contactsToDelete) {
         await deleteChat(contact);
@@ -202,55 +222,67 @@ const Chat = () => {
         setSelectedContact(null);
       }
 
-      toast.success(`${contactIds.length} conversation${contactIds.length > 1 ? 's' : ''} deleted`);
+      toast.success(
+        `${contactIds.length} conversation${
+          contactIds.length > 1 ? "s" : ""
+        } deleted`
+      );
     } catch (error) {
-      console.error('Error deleting conversations:', error);
-      toast.error('Failed to delete conversations');
+      console.error("Error deleting conversations:", error);
+      toast.error("Failed to delete conversations");
     }
   }, [selectedContacts, deleteChat, selectedContact, contacts]);
 
-  const handleSearchChange = useCallback((e) => setSearchQuery(e.target.value), []);
+const handleSearchChange = useCallback(
+  (e) => {
+    const query = e.target.value;
+    setSearchQuery(query);
+
+    // Fetch contacts for the new search query, resetting previous results
+    fetchContacts({ search: query, cursor: null, limit: 20 });
+  },
+  [fetchContacts]
+);
 
   const toggleSelectMode = useCallback(() => {
-    setIsSelectMode(prev => !prev);
+    setIsSelectMode((prev) => !prev);
     if (!isSelectMode) {
       setSelectedContacts(new Set());
     }
   }, [isSelectMode]);
 
   return (
-    
     <div className="flex flex-col md:flex-row w-full flex-1 min-h-0 h-full md:border md:rounded-2xl border-gray-300 bg-white overflow-hidden">
-       <ToastContainer position="top-right" autoClose={3000} />
+      <ToastContainer position="top-right" autoClose={3000} />
       {/* Sidebar */}
-{loading ? (
-  <div className="basis-full md:basis-1/4 border-r border-gray-200 overflow-y-auto">
-    <ContactsLoader />
-  </div>
-) : (
-  (!isMobile || !showMobileChat) && (
-    <div
-      className="relative border-r border-gray-200 overflow-y-auto"
-      style={{ width: isMobile ? "100%" : `${width}px` }}
-    >
-      <ChatSidebar
-        contacts={contacts}
-        selectedContact={selectedContact}
-        searchQuery={searchQuery}
-        onSearchChange={handleSearchChange}
-        onSelectContact={handleSelectContact}
-        fetchContacts={fetchContacts}
-      />
-      {/* Drag handle */}
-      <div
-        className="absolute top-0 right-0 h-full w-[4px] cursor-col-resize group"
-        onMouseDown={startResizing}
-      >
-        <div className="h-full w-[2px] mx-auto bg-gray-300 group-hover:bg-gray-500 transition-colors" />
-      </div>
-    </div>
-  )
-)}
+      {loading ? (
+        <div className="basis-full md:basis-1/4 border-r border-gray-200 overflow-y-auto">
+          <ContactsLoader />
+        </div>
+      ) : (
+        (!isMobile || !showMobileChat) && (
+          <div
+            className="relative border-r border-gray-200 overflow-y-auto"
+            style={{ width: isMobile ? "100%" : `${width}px` }}
+          >
+            <ChatSidebar
+              contacts={contacts}
+              selectedContact={selectedContact}
+              searchQuery={searchQuery}
+              onSearchChange={handleSearchChange}
+              onSelectContact={handleSelectContact}
+              fetchContacts={fetchContacts}
+            />
+            {/* Drag handle */}
+            <div
+              className="absolute top-0 right-0 h-full w-[4px] cursor-col-resize group"
+              onMouseDown={startResizing}
+            >
+              <div className="h-full w-[2px] mx-auto bg-gray-300 group-hover:bg-gray-500 transition-colors" />
+            </div>
+          </div>
+        )
+      )}
 
       {/* Main Chat Area */}
       {(!isMobile || (isMobile && showMobileChat)) && (
@@ -263,7 +295,9 @@ const Chat = () => {
                 ref={profileButtonRef}
                 isMobile={isMobile}
                 onBack={() => setShowMobileChat(false)}
-                onDeleteChat={permissions.canDeleteChats ? deleteChat : undefined}
+                onDeleteChat={
+                  permissions.canDeleteChats ? deleteChat : undefined
+                }
                 authCustomerId={user?.customer_id}
                 canDeleteChat={permissions.canDeleteChats}
               />
@@ -283,7 +317,10 @@ const Chat = () => {
                       onSendMessage={
                         permissions.canSendMessages
                           ? handleSendMessageWithSessionUpdate
-                          : () => toast.error("You do not have permission to send messages.")
+                          : () =>
+                              toast.error(
+                                "You do not have permission to send messages."
+                              )
                       }
                       selectedContact={selectedContact}
                       canSendMessage={permissions.canSendMessages}
@@ -298,6 +335,7 @@ const Chat = () => {
                       selectedContact={selectedContact}
                       isExpanded={true}
                       setIsExpanded={() => setShowUserDetails(false)}
+                      updateBlockStatus={updateBlockStatus}
                     />
                   </div>
                 )}
@@ -305,7 +343,10 @@ const Chat = () => {
             </>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-gray-400 text-lg px-4 text-center">
-              <MessageCircle className="w-16 h-16 mb-4 text-blue-500" aria-hidden="true" />
+              <MessageCircle
+                className="w-16 h-16 mb-4 text-blue-500"
+                aria-hidden="true"
+              />
               <p>Select a contact to start a conversation</p>
             </div>
           )}

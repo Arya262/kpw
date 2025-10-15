@@ -8,15 +8,12 @@ import { API_ENDPOINTS } from "./config/api";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Loader from "./components/Loader";
-import { Link } from "react-router-dom";
 
 const LoginPage = () => {
   const { login, user } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect already authenticated users
 React.useEffect(() => {
-  // Existing redirect if user is already logged in
   if (user) {
     if (user.role === "admin" || user.role === "super_admin") {
       navigate("/admin/dashboard", { replace: true });
@@ -117,7 +114,6 @@ React.useEffect(() => {
 
       if (success) {
         login(user);
-
         if (user.role === "admin" || user.role === "super_admin") {
           navigate("/admin/dashboard", { replace: true });
         } else {

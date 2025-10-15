@@ -350,6 +350,7 @@ const SendTemplate = ({ onSelect, onClose, returnFullTemplate = false }) => {
       templateId: previewTemplate.id,
       element_name: previewTemplate.element_name || previewTemplate.name,
       templateType: previewTemplate.template_type?.toUpperCase(),
+      category: previewTemplate.category,
       headerType: finalHeaderType,
       headerValue: finalHeaderValue,
       headerIsId: finalHeaderIsId,

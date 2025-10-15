@@ -92,13 +92,13 @@ export const NotificationProvider = ({ children }) => {
   };
 
   const handleIncomingMessage = async (data) => {
-    console.log("📩 Raw incoming data:", data);
+    // console.log("📩 Raw incoming data:", data);
     if (!data) return;
 
     const message = normalizeMessageData(data);
     if (!message) return;
 
-    console.log("📩 Parsed message:", message);
+    // console.log("📩 Parsed message:", message);
 
     // ✅ Normalize conversationId using shared utility
     const conversationId = extractConversationId(message);
@@ -110,7 +110,7 @@ export const NotificationProvider = ({ children }) => {
     // Skip if user is already viewing this conversation
     const currentSelectedId = selectedConversationIdRef.current;
     if (conversationId === currentSelectedId) {
-      console.log("Skipping notification for selected conversation");
+      // console.log("Skipping notification for selected conversation");
       return;
     }
 
@@ -204,26 +204,26 @@ export const NotificationProvider = ({ children }) => {
 
     const onAny = (event, ...args) => {
       try {
-        console.log("[Socket][onAny]", event, args?.[0]);
+        // console.log("[Socket][onAny]", event, args?.[0]);
       } catch (e) {
-        console.log("[Socket][onAny]", event);
+        // console.log("[Socket][onAny]", event);
       }
     };
 
     const handleMessage = (data) => {
-      console.log("[NotificationContext] newMessage received", data);
+      // console.log("[NotificationContext] newMessage received", data);
       handleIncomingMessage(data);
       // Dispatch custom event for chat logic to handle
       window.dispatchEvent(new CustomEvent('chatMessage', { detail: data }));
     };
 
     const handleAlert = (alert) => {
-      console.log("[NotificationContext] newMessageAlert received", alert);
+      // console.log("[NotificationContext] newMessageAlert received", alert);
       const { contact_id, name, content } = alert;
       const conversationId = String(contact_id);
 
       if (conversationId === selectedConversationIdRef.current) {
-        console.log("Skipping alert for active conversation");
+        // console.log("Skipping alert for active conversation");
         return;
       }
 
