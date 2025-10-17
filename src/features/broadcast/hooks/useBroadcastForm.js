@@ -4,7 +4,7 @@ import { API_ENDPOINTS } from "../../../config/api";
 import { useAuth } from "../../../context/AuthContext";
 import pricingData from "../../../pricing.json";
 import { toast } from "react-toastify";
-
+import axios from "axios";
 export const useBroadcastForm = (
   formData,
   setFormData,
@@ -69,81 +69,96 @@ export const useBroadcastForm = (
   }, [step, getStepSequence]);
 
   const fetchTemplates = useCallback(
-    async (page = 1, append = false, searchTerm = "") => {
+    async (page = 1, append = false, searchTerm = "",) => {
       if (!user?.customer_id) {
         setTemplatesError("Missing customer ID");
         return;
       }
-
+  
       if (page === 1) {
-      setTemplatesLoading(true);
-    } else {
-      setPagination(prev => ({ ...prev, isLoadingMore: true }));
-    }
-    setTemplatesError(null);
-
-    try {
-      const response = await fetch(
-        `${API_ENDPOINTS.TEMPLATES.GET_ALL}?customer_id=${user.customer_id}&page=${page}&search=${encodeURIComponent(searchTerm)}`,
-        {
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-        }
-      );
-
-      if (!response.ok) {
-        if (response.status === 404) {
-          setTemplates(prev => append ? prev : []);
+        setTemplatesLoading(true);
+      } else {
+        setPagination(prev => ({ ...prev, isLoadingMore: true }));
+      }
+  
+      setTemplatesError(null);
+  
+      try {
+        // Build query params
+        const params = {
+          customer_id: user.customer_id,
+          page,
+          search: searchTerm,
+          sub_category: "PROMOTION",
+          status: "APPROVED",
+        };
+  
+        // 🟩 Log outgoing request details
+        // console.log("🔍 Fetching templates with params:", params);
+        // console.log("📡 Endpoint:", API_ENDPOINTS.TEMPLATES.GET_ALL);
+  
+        // Send request via axios
+        const response = await axios.get(API_ENDPOINTS.TEMPLATES.GET_ALL, {
+          params,
+          withCredentials: true,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+  
+        // 🟦 Log raw backend response
+        // console.log("✅ Raw Axios Response:", response);
+        // console.log("📦 Response Data:", response.data);
+  
+        const data = response.data;
+  
+        if (data && Array.isArray(data.templates)) {
+          const normalizedTemplates = data.templates.map(t => ({
+            ...t,
+            container_meta: {
+              ...t.container_meta,
+              sampleText:
+                t.container_meta?.sampleText || t.container_meta?.sample_text,
+            },
+          }));
+  
+          // 🟨 Log normalized templates
+          // console.log("🧩 Normalized Templates:", normalizedTemplates);
+          // console.log("📄 Pagination Info:", data.pagination);
+  
+          setTemplates(prev =>
+            append ? [...prev, ...normalizedTemplates] : normalizedTemplates
+          );
+  
+          const { page: current = page, totalPages = 1 } = data.pagination || {};
+          setPagination({
+            currentPage: current,
+            totalPages,
+            hasMore: current < totalPages,
+            isLoadingMore: false,
+          });
+        } else {
+          console.warn("⚠️ No templates array found in response:", data);
+          setTemplates(prev => (append ? prev : []));
           setPagination({
             currentPage: 1,
             totalPages: 1,
             hasMore: false,
             isLoadingMore: false,
           });
-          return;
         }
-        throw new Error(`HTTP ${response.status}`);
+      } catch (err) {
+        console.error("❌ Error fetching templates:", err);
+        console.error("🟥 Backend Error Response:", err.response?.data);
+        const message =
+          err.response?.data?.message || "Failed to fetch templates";
+        setTemplatesError(message);
+      } finally {
+        setTemplatesLoading(false);
       }
-      const data = await response.json();
-      if (data && Array.isArray(data.templates)) {
-        const normalizedTemplates = data.templates.map(t => ({
-          ...t,
-          container_meta: {
-            ...t.container_meta,
-            sampleText: t.container_meta?.sampleText || t.container_meta?.sample_text,
-          },
-        }));
-
-        setTemplates(prev =>
-          append ? [...prev, ...normalizedTemplates] : normalizedTemplates
-        );
-
-        const { page: current = page, totalPages = 1 } = data.pagination || {};
-        setPagination({
-          currentPage: current,
-          totalPages,
-          hasMore: current < totalPages,
-          isLoadingMore: false,
-        });
-      } else {
-       
-        setTemplates(append ? templates : []);
-        setPagination({
-          currentPage: 1,
-          totalPages: 1,
-          hasMore: false,
-          isLoadingMore: false,
-        });
-      }
-    } catch (err) {
-      console.error("Error fetching templates:", err);
-      setTemplatesError("Failed to fetch templates");
-    } finally {
-      setTemplatesLoading(false);
-    }
-  },
-  [user?.customer_id]
-);
+    },
+    [user?.customer_id]
+  );
 
   const loadMoreTemplates = useCallback(() => {
     if (pagination.hasMore && !pagination.isLoadingMore) {

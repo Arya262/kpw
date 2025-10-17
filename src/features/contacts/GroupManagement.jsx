@@ -118,15 +118,22 @@ const GroupForm = ({ group, onSave, onCancel }) => {
   };
 
   // File validation
+  // File validation - make file optional during edit
   const validateFile = () => {
-    if (!file && !group?.file_name) {
-      setFileError("Please upload a file.");
-      return false;
+    // If editing and no new file is selected, skip file validation
+    if (group?.id && !file) {
+      setFileError("");
+      return true;
     }
-    if (file && !(file.name.endsWith(".csv") || file.name.endsWith(".docx"))) {
-      setFileError("Only .csv or .docx files are allowed.");
-      return false;
+    
+    // For new groups or when a file is selected
+    if (file) {
+      if (!(file.name.endsWith(".csv") || file.name.endsWith(".docx"))) {
+        setFileError("Only .csv or .docx files are allowed.");
+        return false;
+      }
     }
+    
     setFileError("");
     return true;
   }
@@ -267,8 +274,10 @@ const GroupForm = ({ group, onSave, onCancel }) => {
     const validFile = validateFile();
     let validCsv = true;
     
-    if (file && file.name.endsWith(".csv")) {
-      validCsv = await validateCsvContent(file);
+    if (file) {
+      if (file.name.endsWith(".csv")) {
+        validCsv = await validateCsvContent(file);
+      }
     }
     
     if (!validName || !validFile || !validCsv) return;
@@ -287,21 +296,43 @@ const GroupForm = ({ group, onSave, onCancel }) => {
       const groupData = {
         customer_id: customer_id, 
         group_name: name.trim(),   
-        description: description.trim(),
-        contacts: (file.parsedContacts || []).map(contact => ({
-          name: contact.name,
-          mobile: contact.mobile 
-        }))
+        description: description.trim()
       };
+
+      // Handle contacts - include existing ones when editing without a new file
+      const contacts = [];
+      
+      // If a new file is uploaded, use its contacts
+      if (file) {
+        groupData.file = file;
+        if (file.parsedContacts) {
+          contacts.push(...file.parsedContacts.map(contact => ({
+            name: contact.name,
+            mobile: contact.mobile 
+          })));
+        }
+      } 
+      // If editing and no new file, include existing contacts
+      else if (group?.id) {
+        // If the group has existing contacts, include them
+        if (group.contacts && group.contacts.length > 0) {
+          contacts.push(...group.contacts);
+        }
+      }
+      
+      // Always include contacts in the request, even if empty array
+      groupData.contacts = contacts;
+      
+      // Logging for debugging
       // console.log('=== Sending to Backend ===');
       // console.log('Customer ID:', groupData.customer_id);
       // console.log('Group Name:', groupData.group_name);
       // console.log('Description:', groupData.description);
-      // console.log('File:', file.name);
-      // console.log('Parsed Contacts Count:', groupData.contacts.length);
+      // console.log('File:', file?.name || 'No new file');
+      // console.log('Parsed Contacts Count:', contacts.length);
       
-     
-      if (groupData.contacts.length > 0) {
+      // Only log sample contacts if we have any
+      if (contacts.length > 0) {
         const sampleContacts = groupData.contacts.slice(0, 3).map(contact => ({
           name: contact.name,
           phoneNumber: `+${contact.mobile}`,
@@ -365,10 +396,15 @@ const GroupForm = ({ group, onSave, onCancel }) => {
           rows="3"
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"/>
       </div>
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Upload File (.csv or .docx)
-        </label>
+        <div className="mb-6">
+        <div className="flex items-center justify-between">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Upload File (.csv or .docx) {!group?.id && <span className="text-red-500">*</span>}
+          </label>
+          {!group?.id ? null : (
+            <span className="text-xs text-gray-500">Optional - leave empty to keep existing file</span>
+          )}
+        </div>
         <div
           className={`mb-2 border-2 rounded-md p-4 text-center transition-all duration-200 ${
             isDragging
@@ -645,23 +681,28 @@ export default function GroupManagement() {
     fetchGroups(1, newItemsPerPage);
   };
 
-  // In all handlers, check permissions.canManageGroups before proceeding
-  const handleCreateGroup = async (groupData) => {
+  
+ const handleCreateGroup = async (groupData) => {
     if (!permissions.canManageGroups) return;
     try {
       const customerId = user?.customer_id;
+      
+      // Check if contacts are provided (from file upload)
+      if (!groupData.contacts || groupData.contacts.length === 0) {
+        throw new Error('Please upload a file with contacts to create a new group');
+      }
       
       // Prepare the request body as JSON with contacts_json
       const requestBody = {
         customer_id: customerId,
         group_name: groupData.group_name || groupData.name || "",
         description: groupData.description || "",
-        contacts_json: (groupData.contacts || []).map((contact, index) => ({
-          // contact_id: index + 1, // Auto-incrementing ID, replace with actual ID if available
+        contacts_json: groupData.contacts.map(contact => ({
           name: contact.name || "",
-          phone: `+${contact.mobile}`, // Add + prefix to mobile
+          phone: contact.mobile ? `+${contact.mobile.replace(/^\+/, '')}` : "",
         }))
       };
+
 
       const response = await fetch(`${API_ENDPOINTS.GROUPS.CREATE}`, {
         method: "POST",
@@ -693,15 +734,22 @@ export default function GroupManagement() {
         throw new Error('Customer ID is required');
       }
 
+      // Prepare contacts data - use existing contacts if no new ones are provided
+      const contactsToUpdate = groupData.contacts || [];
+      
       const requestBody = {
         group_id: editingGroup.id,
-        customer_id: customerId,  // Added customer_id
+        customer_id: customerId,
         group_name: groupData.group_name || groupData.name || "",
         description: groupData.description || "",
-        contacts_json: (groupData.contacts || []).map((contact, index) => ({
-          name: contact.name || "",
-          phone: `+${contact.mobile}`, 
-        }))
+        // Only include contacts_json if we have contacts to update
+        ...(contactsToUpdate.length > 0 && {
+          contacts_json: contactsToUpdate.map(contact => ({
+            name: contact.name || "",
+            phone: contact.mobile ? `+${contact.mobile.replace(/^\+/, '')}` : "",
+            ...(contact.contact_id && { contact_id: contact.contact_id })
+          }))
+        })
       };
 
       const response = await fetch(API_ENDPOINTS.GROUPS.UPDATE, {
@@ -724,6 +772,42 @@ export default function GroupManagement() {
     } catch (error) {
       console.error('Error updating group:', error);
       toast.error(error.response?.data?.message || 'Failed to update group');
+    }
+  };
+
+  const handleEditGroup = async (group) => {
+    if (!permissions.canManageGroups) return;
+    try {
+      setLoading(true);
+      // Fetch the group with its contacts using proper query parameters
+      const response = await axios.get(API_ENDPOINTS.GROUPS.GET_ALL, {
+        params: {
+          customer_id: user?.customer_id,
+          group_id: group.id,
+          include_contacts: true
+        },
+        withCredentials: true
+      });
+
+      if (response.data && response.data.data && response.data.data.length > 0) {
+        // Update the editing group with the fetched data including contacts
+        const groupData = response.data.data[0];
+        setEditingGroup({
+          ...group,
+          contacts: groupData.contacts || [],
+          contact_count: groupData.total_contacts || 0
+        });
+      } else {
+        // If no data returned, just set the group without contacts
+        setEditingGroup(group);
+      }
+    } catch (error) {
+      console.error("Error fetching group details:", error);
+      toast.error(error.response?.data?.message || "Failed to load group details");
+      // Still set the group to allow editing basic info even if contacts fail to load
+      setEditingGroup(group);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -762,10 +846,21 @@ export default function GroupManagement() {
     setSelectedGroup(group);
   };
 
-  const handleSave = (groupData) => {
+  const handleSave = async (groupData) => {
     if (editingGroup) {
-      handleUpdateGroup(groupData);
+      // When editing, include existing contacts if no new file is uploaded
+      const updateData = {
+        ...groupData,
+        // Only include file/contacts if a new file was uploaded, otherwise keep existing contacts
+        ...(groupData.file ? {} : { 
+          file: undefined,
+          // Use existing contacts if available, otherwise use empty array
+          contacts: editingGroup.contacts || []
+        })
+      };
+      handleUpdateGroup(updateData);
     } else {
+      // For new groups, require the file/contacts
       handleCreateGroup(groupData);
     }
   };
@@ -782,7 +877,7 @@ export default function GroupManagement() {
       g.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
   
-  // Derived selection helpers (mirror ContactList.jsx)
+  
   const explicitlyUnselectedCount = Object.values(selectedGroups).filter((v) => v === false).length;
   const explicitlySelectedCount = Object.values(selectedGroups).filter(Boolean).length;
   const selectedCount = selectAllAcrossPages
