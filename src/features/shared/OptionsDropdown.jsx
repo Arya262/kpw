@@ -5,10 +5,9 @@ import { Edit2, Trash2 } from 'lucide-react';
 export default function OptionsDropdown({
   onEdit,
   onDelete,
-  items = [
-    { label: 'Edit', icon: <Edit2 className="w-4 h-4" />, onClick: onEdit, className: 'text-gray-700' },
-    { label: 'Delete', icon: <Trash2 className="w-4 h-4" />, onClick: onDelete, className: 'text-red-600' },
-  ],
+  canEdit = true,
+  canDelete = true,
+  items,
   buttonClassName = 'p-2 rounded-full hover:bg-gray-100',
   dropdownClassName = 'w-44 bg-white border border-gray-200 rounded-md shadow-lg z-20',
   menuButton = (
@@ -27,6 +26,23 @@ export default function OptionsDropdown({
     </svg>
   ),
 }) {
+  // Default items if not provided
+  const defaultItems = items || [
+    { 
+      label: 'Edit', 
+      icon: <Edit2 className="w-4 h-4" />, 
+      onClick: onEdit, 
+      className: 'text-gray-700',
+      disabled: !canEdit
+    },
+    { 
+      label: 'Delete', 
+      icon: <Trash2 className="w-4 h-4" />, 
+      onClick: onDelete, 
+      className: 'text-red-600',
+      disabled: !canDelete
+    },
+  ];
   const [isOpen, setIsOpen] = useState(false);
   const [shouldFlipUp, setShouldFlipUp] = useState(false);
   const dropdownRef = useRef(null);
@@ -108,20 +124,31 @@ export default function OptionsDropdown({
             zIndex: 9999
           }}
         >
-          {items.map((item, index) => (
-            <button
-              key={index}
-              onClick={(e) => {
-                e.stopPropagation();
-                item.onClick?.(e);
-                setIsOpen(false);
-              }}
-              className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2 ${item.className || ''}`}
-            >
-              {item.icon}
-              {item.label}
-            </button>
-          ))}
+          {defaultItems.map((item, index) => {
+            const isDisabled = item.disabled || false;
+            return (
+              <button
+                key={index}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!isDisabled) {
+                    item.onClick?.(e);
+                    setIsOpen(false);
+                  }
+                }}
+                disabled={isDisabled}
+                className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${
+                  isDisabled 
+                    ? 'opacity-50 cursor-not-allowed text-gray-400' 
+                    : `hover:bg-gray-100 ${item.className || ''}`
+                }`}
+                title={isDisabled ? "You do not have permission for this action" : ""}
+              >
+                {item.icon}
+                {item.label}
+              </button>
+            );
+          })}
         </div>,
         document.body
       )}

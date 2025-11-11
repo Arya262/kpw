@@ -8,6 +8,7 @@ import {
 } from "@mui/material";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import FolderOffIcon from "@mui/icons-material/FolderOff";
+import { getMessageLimit } from "../utils/messageLimits";
 
 const GroupSelectionStep = ({
   formData,
@@ -35,21 +36,7 @@ const GroupSelectionStep = ({
     c.group_name.toLowerCase().includes(customerSearchTerm.toLowerCase())
   );
 
-  // Get the message limit based on the user's tier
-  const getMessageLimit = () => {
-    if (!wabaInfo?.messagingLimit) return 250; // Default to 250 if no tier info
-    
-    const tierLimits = {
-      'TIER_1K': 1000,
-      'TIER_10K': 10000,
-      'TIER_100K': 100000,
-      // Add more tiers as needed
-    };
-    
-    return tierLimits[wabaInfo.messagingLimit] || 250; // Default to 250 if tier not found
-  };
-
-  const messageLimit = getMessageLimit();
+  const messageLimit = getMessageLimit(wabaInfo);
   const totalContacts = selectedGroupId
     ? customerLists?.find((g) => g.group_id === selectedGroupId)
         ?.total_contacts || 0
@@ -57,13 +44,14 @@ const GroupSelectionStep = ({
 
   const handleGroupChange = (customer) => {
     if (selectedGroupId === customer.group_id) {
-      // Deselect
       setSelectedGroupId(null);
       setFormData((prev) => ({ ...prev, group_id: [] }));
     } else {
       if (customer.total_contacts > messageLimit) {
         setWarningMessage(
-          `Selecting "${customer.group_name}" exceeds the ${messageLimit.toLocaleString()} contact limit.`
+          `Selecting "${
+            customer.group_name
+          }" exceeds the ${messageLimit.toLocaleString()} contact limit.`
         );
         setTimeout(() => setWarningMessage(""), 3000);
         return;
@@ -76,7 +64,12 @@ const GroupSelectionStep = ({
   };
 
   return (
-    <Box display="flex" gap={6} p={1} flexDirection={{ xs: "column", md: "row" }}>
+    <Box
+      display="flex"
+      gap={6}
+      p={1}
+      flexDirection={{ xs: "column", md: "row" }}
+    >
       {/* Left Circle / Tier */}
       <Box
         sx={{
@@ -107,8 +100,14 @@ const GroupSelectionStep = ({
               bottom: -8,
               padding: "8px",
               background: `conic-gradient(
-                #10B981 0% ${Math.min((totalContacts / messageLimit) * 100, 100)}%,
-                transparent ${Math.min((totalContacts / messageLimit) * 100, 100)}% 100%
+                #10B981 0% ${Math.min(
+                  (totalContacts / messageLimit) * 100,
+                  100
+                )}%,
+                transparent ${Math.min(
+                  (totalContacts / messageLimit) * 100,
+                  100
+                )}% 100%
               )`,
               borderRadius: "50%",
               WebkitMask:
@@ -143,10 +142,13 @@ const GroupSelectionStep = ({
           </Box>
         </Box>
         <Typography mt={2} variant="body2" color="textSecondary">
-          {wabaInfo?.messagingLimit ? `TIER ${wabaInfo.messagingLimit}` : 'TIER 2'}
+          {wabaInfo?.messagingLimit
+            ? `TIER ${wabaInfo.messagingLimit}`
+            : "TIER 2"}
         </Typography>
         <Typography variant="body2" mt={1} color="text.secondary">
-          You can send up to {messageLimit.toLocaleString()} unique contacts in 24 hrs
+          You can send up to {messageLimit.toLocaleString()} unique contacts in
+          24 hrs
         </Typography>
       </Box>
 
@@ -179,9 +181,13 @@ const GroupSelectionStep = ({
               "&:hover": { borderColor: "#CBD5E1" },
             }}
           >
-            <Typography color={selectedCount > 0 ? "text.primary" : "text.secondary"}>
+            <Typography
+              color={selectedCount > 0 ? "text.primary" : "text.secondary"}
+            >
               {selectedCount > 0
-                ? `${selectedCount} list${selectedCount > 1 ? "s" : ""} with ${totalContacts} customers selected`
+                ? `${selectedCount} list${
+                    selectedCount > 1 ? "s" : ""
+                  } with ${totalContacts} customers selected`
                 : `Select list (max ${messageLimit.toLocaleString()} contacts)`}
             </Typography>
             <ArrowDropDownIcon />
@@ -189,29 +195,28 @@ const GroupSelectionStep = ({
         ) : (
           <>
             <TextField
-  placeholder="Search contact lists"
-  variant="outlined"
-  size="small"
-  fullWidth
-  value={customerSearchTerm}
-  onChange={(e) => {
-    // console.log("Search term changed:", e.target.value); 
-    setCustomerSearchTerm(e.target.value);
-  }}
-  sx={{
-    "& label.Mui-focused": {
-      color: "#0AA89E",
-    },
-    "& .MuiOutlinedInput-root": {
-      "&.Mui-focused fieldset": {
-        borderColor: "#0AA89E",
-      },
-    },
-    "& .MuiInputBase-input": {
-      caretColor: "#0AA89E",
-    },
-  }}
-/>
+              placeholder="Search contact lists"
+              variant="outlined"
+              size="small"
+              fullWidth
+              value={customerSearchTerm}
+              onChange={(e) => {
+                setCustomerSearchTerm(e.target.value);
+              }}
+              sx={{
+                "& label.Mui-focused": {
+                  color: "#0AA89E",
+                },
+                "& .MuiOutlinedInput-root": {
+                  "&.Mui-focused fieldset": {
+                    borderColor: "#0AA89E",
+                  },
+                },
+                "& .MuiInputBase-input": {
+                  caretColor: "#0AA89E",
+                },
+              }}
+            />
             <Box
               border="1px solid #E5E7EB"
               borderRadius="8px"
@@ -221,7 +226,9 @@ const GroupSelectionStep = ({
               display="flex"
               flexDirection="column"
               alignItems="center"
-              justifyContent={filteredCustomerLists.length === 0 ? "center" : "flex-start"}
+              justifyContent={
+                filteredCustomerLists.length === 0 ? "center" : "flex-start"
+              }
               sx={{ scrollbarWidth: "none" }}
             >
               {filteredCustomerLists.length === 0 ? (
@@ -255,7 +262,10 @@ const GroupSelectionStep = ({
                             {`${customer.group_name} (${customer.total_contacts} contacts)`}
                           </Typography>
                           {customer.initial_contacts && (
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
                               Initial contacts: {customer.initial_contacts}
                               {customer.unsubscribed_contacts
                                 ? ` | Unsubscribed contacts: ${customer.unsubscribed_contacts}`

@@ -15,7 +15,7 @@ import MessageInput from "./MessageInput";
 import UserDetails from "./UserDetails";
 import { MessageCircle } from "lucide-react";
 import { useChatLogic } from "../../hooks/useChatLogic";
-import { getPermissions } from "../../utils/getPermissions";
+import { usePermissions } from "../../hooks/usePermissions";
 import Loader from "../../components/Loader";
 import ContactsLoader from "./ContactsLoader";
 const MOBILE_BREAKPOINT = 768;
@@ -32,7 +32,7 @@ const Chat = () => {
   const location = useLocation();
   const socket = useSocket();
   const { user } = useAuth();
-  const permissions = getPermissions(user);
+  const { hasPermission } = usePermissions(); // RBAC system only
   const userDetailsRef = useRef(null);
   const profileButtonRef = useRef(null);
   const [isMobile, setIsMobile] = useState(
@@ -71,7 +71,7 @@ const Chat = () => {
     setMessages,
     setContacts,
     contacts,
-    permissions,
+    hasPermission,
   });
 
   useEffect(() => {
@@ -296,10 +296,10 @@ const handleSearchChange = useCallback(
                 isMobile={isMobile}
                 onBack={() => setShowMobileChat(false)}
                 onDeleteChat={
-                  permissions.canDeleteChats ? deleteChat : undefined
+                  hasPermission('chats', 'delete') ? deleteChat : undefined
                 }
                 authCustomerId={user?.customer_id}
-                canDeleteChat={permissions.canDeleteChats}
+                canDeleteChat={hasPermission('chats', 'delete')}
               />
 
               <div className="flex-1 flex flex-row min-h-0 h-full">
@@ -315,7 +315,7 @@ const handleSearchChange = useCallback(
                   <div className="bg-white flex-shrink-0">
                     <MessageInput
                       onSendMessage={
-                        permissions.canSendMessages
+                        hasPermission('chats', 'send')
                           ? handleSendMessageWithSessionUpdate
                           : () =>
                               toast.error(
@@ -323,7 +323,7 @@ const handleSearchChange = useCallback(
                               )
                       }
                       selectedContact={selectedContact}
-                      canSendMessage={permissions.canSendMessages}
+                      canSendMessage={hasPermission('chats', 'send')}
                     />
                   </div>
                 </div>
@@ -342,7 +342,7 @@ const handleSearchChange = useCallback(
               </div>
             </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-gray-400 text-lg px-4 text-center">
+            <div className="flex-1 flex flex-col items-center justify-center text-gray-600 text-lg px-4 text-center">
               <MessageCircle
                 className="w-16 h-16 mb-4 text-blue-500"
                 aria-hidden="true"

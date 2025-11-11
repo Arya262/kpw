@@ -94,7 +94,17 @@ const Templates = () => {
 
   const handleDelete = async (templatesToDelete) => {
     try {
-      const success = await deleteTemplate(templatesToDelete[0]?.element_name, templatesToDelete[0]?.id);
+      // Handle both single template (object) and multiple templates (array)
+      const templatesArray = Array.isArray(templatesToDelete) ? templatesToDelete : [templatesToDelete];
+      
+      // Delete each template in the array
+      const deletePromises = templatesArray.map(template => 
+        deleteTemplate(template.element_name || template.elementName, template.id)
+      );
+      
+      const results = await Promise.all(deletePromises);
+      const success = results.every(Boolean);
+      
       if (success) {
         await fetchTemplates(currentPage, itemsPerPage, searchTerm);
       }

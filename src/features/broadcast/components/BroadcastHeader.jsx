@@ -9,8 +9,7 @@ const BroadcastHeader = ({ onClose, highlightClose }) => {
           highlightClose
             ? "bg-red-500 text-white hover:bg-red-600 animate-pulse"
             : "bg-[#0AA89E] text-white hover:bg-[#08847C] "
-        }`}
-      >
+        }`}>
         ×
       </button>
     </div>

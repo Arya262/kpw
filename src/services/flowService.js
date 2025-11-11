@@ -75,7 +75,7 @@ class FlowService {
       }
     }));
 
-    // Process edges to define flow sequence
+    // Process edges to
     const flowSequence = this.buildFlowSequence(processedNodes, edges);
 
     return {
@@ -123,7 +123,7 @@ class FlowService {
         nodeId: node.id,
         nodeType: node.type,
         messageConfig: node.data,
-        delay: node.data.delay || 0 // Optional delay between messages
+        delay: node.data.delay || 0 
       });
 
       // Find next nodes

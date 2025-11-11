@@ -127,12 +127,14 @@ const NotificationBell = () => {
             <button
               onClick={toggleNotifications}
               title={isNotificationEnabled ? "Disable notifications" : "Enable notifications"}
+              aria-label={isNotificationEnabled ? "Disable notifications" : "Enable notifications"}
               className="p-1 text-gray-500 hover:text-gray-700"
             >
               {isNotificationEnabled ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
             </button>
             <button
               onClick={() => setIsOpen(false)}
+              aria-label="Close notifications panel"
               className="p-1 text-gray-500 hover:text-gray-700"
             >
               <X className="w-4 h-4" />

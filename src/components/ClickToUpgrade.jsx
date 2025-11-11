@@ -1,6 +1,7 @@
 import React, { useState, cloneElement } from 'react';
 import { usePlanPermissions } from '../hooks/usePlanPermissions';
 import PlansModal from '../features/dashboard/PlansModal';
+import { usePayment } from '../hooks/usePayment';
 
 const ClickToUpgrade = ({ 
   children, 
@@ -11,39 +12,28 @@ const ClickToUpgrade = ({
 }) => {
   const { checkPermission, userPlan, permissions } = usePlanPermissions(usersMatrix);
   const [showPlansModal, setShowPlansModal] = useState(false);
-  
-  // Debug logs
-  // console.log('usersMatrix:', usersMatrix);
-  // console.log('userPlan:', userPlan);
-  // console.log('permissions:', permissions);
-  // console.log('hasPermission:', checkPermission(permission));
-  
-  // If user has permission, render children normally
+  const { handlePayment } = usePayment();
+
   if (checkPermission(permission)) {
     return children;
   }
 
-  // If no permission, clone the child element and override its onClick
+
   const handleClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    // console.log('Upgrade button clicked');
     if (!disabled) {
-      // console.log('Showing plans modal');
       setShowPlansModal(true);
     }
   };
 
-  // Clone the child element and override its onClick handler
+  
   const clonedChild = React.cloneElement(children, {
     onClick: handleClick,
     title: "Upgrade to unlock this feature",
     style: { cursor: 'pointer' },
-    // Ensure the button is not disabled when we want to show the upgrade modal
     disabled: false
   });
-
-  // console.log('Rendering ClickToUpgrade, showPlansModal:', showPlansModal);
   
   return (
     <>
@@ -55,8 +45,9 @@ const ClickToUpgrade = ({
         <PlansModal
           isOpen={showPlansModal}
           onClose={() => setShowPlansModal(false)}
-          onPay={() => {}}
+          onPay={handlePayment}
           userPlan={userPlan}
+          onStartTrial={null} // No trial start functionality in ClickToUpgrade
         />
       )}
     </>

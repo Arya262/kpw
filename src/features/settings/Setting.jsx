@@ -247,7 +247,7 @@ const FlowEditor = () => {
                         ...node,
                         data: {
                           ...node.data,
-                          keywords: [...node.data.keywords, keyword],
+                          keywords: [...node.data.keywords],
                         },
                       }
                     : node

@@ -108,7 +108,7 @@ const ChatMessages = ({
       }
     }
     prevContactId.current = selectedContact?.contact_id;
-  }, [selectedContact?.contact_id]);
+  }, [selectedContact?.contact_id, messages.length]);
 
   // 🔹 Auto scroll when new messages arrive
   useEffect(() => {
@@ -178,7 +178,28 @@ const ChatMessages = ({
 
   const groupMessagesByDate = (msgs) =>
     msgs.reduce((acc, msg) => {
-      const rawDate = msg.sent_at ? new Date(msg.sent_at) : new Date();
+      // Use original sent_at if available, otherwise try sent_at
+      const dateStr = msg.originalSentAt || msg.sent_at;
+      let rawDate;
+      if (dateStr instanceof Date) {
+        rawDate = dateStr;
+      } else if (typeof dateStr === 'string') {
+        // Check if it's already a formatted time string (contains 'am' or 'pm')
+        if (dateStr.toLowerCase().includes('am') || dateStr.toLowerCase().includes('pm')) {
+          // Use current date as fallback since we only have time
+          rawDate = new Date();
+        } else {
+          rawDate = new Date(dateStr);
+        }
+      } else {
+        rawDate = new Date();
+      }
+      
+      // Check if date is valid
+      if (isNaN(rawDate.getTime())) {
+        rawDate = new Date();
+      }
+      
       const label = getDateLabel(rawDate);
       if (!acc[label]) acc[label] = [];
       acc[label].push(msg);
@@ -190,19 +211,26 @@ const ChatMessages = ({
     [messages]
   );
 
-  const renderMessage = (msg, index) => {
-    const sent = msg.status !== "received";
-    const time = msg.sent_at
-      ? new Date(msg.sent_at)
-          .toLocaleTimeString("en-US", {
-            hour: "numeric",
-            minute: "2-digit",
-            hour12: true,
-          })
-          .toLowerCase()
-      : "";
+  const formatMessageTime = useCallback((sentAt) => {
+    if (!sentAt) return "";
+    // Handle both Date objects and ISO strings
+    const date = sentAt instanceof Date ? sentAt : new Date(sentAt);
+    if (isNaN(date.getTime())) return "";
+    return date
+      .toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      })
+      .toLowerCase();
+  }, []);
 
-    const message = { ...msg, sent_at: time };
+  const renderMessage = useCallback((msg, index) => {
+    const sent = msg.status !== "received";
+    const time = formatMessageTime(msg.sent_at);
+
+    // Create message object with formatted time while preserving original sent_at for grouping
+    const message = { ...msg, sent_at: time, originalSentAt: msg.sent_at };
 
     switch (msg.message_type) {
       case "text":
@@ -229,7 +257,7 @@ const ChatMessages = ({
           </div>
         );
     }
-  };
+  }, [formatMessageTime]);
 
   return (
     <div className="relative h-full min-h-0">
@@ -289,6 +317,13 @@ const ChatMessages = ({
             )}
 
         <div ref={messagesEndRef} />
+        
+        {/* Typing Indicator */}
+        {isTyping && (
+          <div className="mb-4 px-2" role="listitem">
+            <TypingIndicator />
+          </div>
+        )}
       </div>
 
       {/* 🔹 Floating scroll button */}

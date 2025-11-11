@@ -65,7 +65,7 @@ const LocationMessage = ({ msg, sent }) => {
 
           {/* Timestamp and Status */}
           <div className="flex justify-end items-center space-x-1 mt-2">
-            <span className="text-[10px] text-gray-500">{msg.sent_at}</span>
+            <span className="text-[10px] text-gray-600">{msg.sent_at}</span>
             {sent && (
               <span className="text-[#53bdeb]">
                 {msg.status === "read" ? <CheckCheck size={12} /> : <Check size={12} />}

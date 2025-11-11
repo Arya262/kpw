@@ -14,6 +14,8 @@ import {
   Contact,
   FolderKanban,
   Workflow,
+  Tag,
+  Zap,
 } from "lucide-react";
 import { useNotifications } from "../context/NotificationContext";
 
@@ -28,6 +30,7 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
   const menuItems = [
     { name: "Dashboard", icon: <LayoutDashboard size={22} />, path: "/dashboard" },
     { name: "Campaign", icon: <Megaphone size={22} />, path: "/broadcast" },
+    { name: "Drip Campaign", icon: <Zap size={22} />, path: "/drip-campaigns" },
     { name: "LiveChat", icon: <MessageCircle size={22} />, path: "/chats" },
     {
       name: "My Contact",
@@ -48,7 +51,15 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
       ],
     },
     { name: "Flow", icon: <Workflow size={22} />, path: "/flow" },
-    { name: "Setting", icon: <Settings size={22} />, path: "/settings" },
+    {
+      name: "Setting",
+      icon: <Settings size={22} />,
+      submenu: true,
+      submenuItems: [
+        { name: "Users", path: "/settings", icon: <Users size={20} /> },
+        { name: "Tags", path: "/settings/tags", icon: <Tag size={20} /> },
+      ],
+    },
     { name: "Help", icon: <HelpCircle size={22} />, path: "/help" },
   ];
 

@@ -1,6 +1,7 @@
 import React, { useCallback } from "react";
 import FormInput from "./FormInput";
 import RoutePermissionsSection from "./RoutePermissionsSection";
+import PermissionSelection from "./PermissionSelection";
 
 const UserFormModal = React.memo(({
   isOpen,
@@ -9,6 +10,7 @@ const UserFormModal = React.memo(({
   formData,
   onUpdateField,
   onToggleRoute,
+  onUpdatePermission,
   roleOptions,
   allRoutes,
   isEdit = false,
@@ -151,6 +153,20 @@ const UserFormModal = React.memo(({
             allowedRoutes={formData.allowedRoutes}
             onToggleRoute={onToggleRoute}
             allRoutes={allRoutes}
+          />
+
+          {/* Granular Permissions (RBAC) */}
+          <PermissionSelection
+            permissions={formData.permissions}
+            onUpdatePermission={onUpdatePermission}
+            onSelectTemplate={(template) => {
+              // Apply template permissions
+              Object.keys(template).forEach((module) => {
+                Object.keys(template[module]).forEach((action) => {
+                  onUpdatePermission(module, action, template[module][action]);
+                });
+              });
+            }}
           />
 
           {/* Form Actions */}

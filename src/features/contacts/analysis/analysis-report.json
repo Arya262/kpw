@@ -1,0 +1,127 @@
+{
+  "useState": {
+    "count": 16,
+    "declarations": [
+      {
+        "variable": "searchTerm",
+        "initialValue": "\"\""
+      },
+      {
+        "variable": "filter",
+        "initialValue": "\"All\""
+      },
+      {
+        "variable": "filterDialogOpen",
+        "initialValue": "false"
+      },
+      {
+        "variable": "isPopupOpen",
+        "initialValue": "false"
+      },
+      {
+        "variable": "editContact",
+        "initialValue": "null"
+      },
+      {
+        "variable": "deleteContact",
+        "initialValue": "null"
+      },
+      {
+        "variable": "showDeleteDialog",
+        "initialValue": "false"
+      },
+      {
+        "variable": "showExitDialog",
+        "initialValue": "false"
+      },
+      {
+        "variable": "showGroupDialog",
+        "initialValue": "false"
+      },
+      {
+        "variable": "showExportDialog",
+        "initialValue": "false"
+      },
+      {
+        "variable": "exportFormat",
+        "initialValue": "'csv'"
+      },
+      {
+        "variable": "showPlansModal",
+        "initialValue": "false"
+      },
+      {
+        "variable": "actionRequiringPlan",
+        "initialValue": "null"
+      },
+      {
+        "variable": "isSubmittingGroup",
+        "initialValue": "false"
+      }
+    ]
+  },
+  "setState": {
+    "count": 43,
+    "calls": [
+      "setIsPopupOpen",
+      "setShowExitDialog",
+      "setShowDeleteDialog",
+      "setSelectedContactsForGroup",
+      "setShowGroupDialog",
+      "setIsSubmittingGroup",
+      "setLoading",
+      "setShowExportDialog",
+      "setDeleteContact",
+      "setActionRequiringPlan",
+      "setShowPlansModal",
+      "setEditContact",
+      "setError",
+      "setFilterDialogOpen",
+      "setFilterOptions"
+    ]
+  },
+  "complexUpdates": {
+    "count": 8,
+    "examples": [
+      {
+        "setter": "setLoading",
+        "context": "Object.keys(selection.selected);      try {       setLoading((prev) => ({ ...prev, delete: true }));       const payload = {         contact_ids: sele"
+      },
+      {
+        "setter": "setLoading",
+        "context": "elete contacts.\", \"error\");     } finally {       setLoading((prev) => ({ ...prev, delete: false }));     }   }, [permissions, selection, fetchAllCont"
+      },
+      {
+        "setter": "setLoading",
+        "context": "ndler = useCallback(async () => {     try {       setLoading((prev) => ({ ...prev, export: true }));       const contactsToExport = await getContactsT"
+      },
+      {
+        "setter": "setLoading",
+        "context": "xport contacts.\", \"error\");     } finally {       setLoading((prev) => ({ ...prev, export: false }));     }   }, [getContactsToExport, setLoading]);"
+      },
+      {
+        "setter": "setLoading",
+        "context": "contacts\", permissions)) return;     try {       setLoading((prev) => ({ ...prev, delete: true }));       const payload = {         contact_ids: [con"
+      },
+      {
+        "setter": "setLoading",
+        "context": "delete contact.\", \"error\");     } finally {       setLoading((prev) => ({ ...prev, delete: false }));       setDeleteContact(null);     }   }, [permis"
+      },
+      {
+        "setter": "setLoading",
+        "context": "\", \"error\");       return;     }      try {       setLoading((prev) => ({ ...prev, contacts: true }));              // Call the sync API endpoint"
+      },
+      {
+        "setter": "setLoading",
+        "context": "sync contacts.\", \"error\");     } finally {       setLoading((prev) => ({ ...prev, contacts: false }));     }   }, [user?.customer_id, fetchContacts,"
+      }
+    ]
+  },
+  "stateGroups": {
+    "modals": 7,
+    "loading": 1,
+    "filters": 2,
+    "selection": 0,
+    "data": 4
+  }
+}

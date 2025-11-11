@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import {Users,Plus,Edit2,Trash2,UserCheck,CloudUpload,} from "lucide-react";
+import {Plus} from "lucide-react";
 import { API_ENDPOINTS } from "../../config/api";
 import axios from "axios";
 import { useAuth } from "../../context/AuthContext";
@@ -7,511 +7,29 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Loader from "../../components/Loader";
 import GroupRow from "./GroupRow";
+import EmptyState from "./EmptyState";
+import ErrorDisplay from "./ErrorDisplay";
+import GroupForm from "./GroupForm";
+import DeleteConfirmationModal from "./DeleteConfirmationModal";
 import vectorIcon from "../../assets/Vector.png";
 import { getPermissions } from "../../utils/getPermissions";
 import Pagination from "../shared/Pagination";
 import ConfirmationDialog from "../shared/ExitConfirmationDialog";
 
-const EmptyState = ({ searchTerm }) => (
-  <tr>
-    <td colSpan="8" className="text-center py-8">
-      <div className="text-gray-500">
-        {searchTerm ? `No groups match "${searchTerm}"` : "No groups found."}
-      </div>
-    </td>
-  </tr>
-);
-
-const ErrorDisplay = ({ error, setError }) => {
-  if (!error) return null;
-  return (
-    <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
-      {error}
-      <button
-        onClick={() => setError(null)}
-        className="float-right font-bold hover:text-red-900"
-        aria-label="Dismiss error"
-      >
-        ×
-      </button>
-    </div>
-  );
-};
-
-const GroupCard = ({ group, onEdit, onDelete, onViewContacts }) => {
-  return (
-    <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200 hover:shadow-lg transition-shadow">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center">
-            <Users className="w-5 h-5 text-teal-600" />
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-gray-800">
-              {group.name}
-            </h3>
-            <p className="text-sm text-gray-500">
-              {group.contact_count || 0} contacts
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => onEdit(group)}
-            className="p-2 text-gray-600 hover:bg-gray-100 rounded-full"
-            title="Edit group">
-            <Edit2 className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => onDelete(group)}
-            className="p-2 text-red-600 hover:bg-red-50 rounded-full"
-            title="Delete group">
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      {group.description && (
-        <p className="text-sm text-gray-600 mb-4">{group.description}</p>
-      )}
-
-      <div className="flex items-center justify-between text-xs text-gray-500">
-        <span>Created: {new Date(group.created_at).toLocaleDateString()}</span>
-        {group.updated_at && (
-          <span>
-            Updated: {new Date(group.updated_at).toLocaleDateString()}
-          </span>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// Refactor GroupForm to only render the form content, not modal wrappers
-const GroupForm = ({ group, onSave, onCancel }) => {
-  const [name, setName] = useState(group?.name || "");
-  const [description, setDescription] = useState(group?.description || "");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [file, setFile] = useState(null);
-  const [fileRemoved, setFileRemoved] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
-  const [groupNameError, setGroupNameError] = useState("");
-  const [fileError, setFileError] = useState("");
-  const [csvHeaders, setCsvHeaders] = useState([]);
-
-  // Group name validation
-  const validateGroupName = () => {
-    if (!name.trim()) {
-      setGroupNameError("Group name is required.");
-      return false;
-    }
-    if (name.trim().length < 2) {
-      setGroupNameError("Group name must be at least 2 characters long.");
-      return false;
-    }
-    if (name.trim().length > 50) {
-      setGroupNameError("Group name must be less than 50 characters.");
-      return false;
-    }
-    setGroupNameError("");
-    return true;
-  };
-
-  // File validation
-  // File validation - make file optional during edit
-  const validateFile = () => {
-    // If editing and no new file is selected, skip file validation
-    if (group?.id && !file) {
-      setFileError("");
-      return true;
-    }
-    
-    // For new groups or when a file is selected
-    if (file) {
-      if (!(file.name.endsWith(".csv") || file.name.endsWith(".docx"))) {
-        setFileError("Only .csv or .docx files are allowed.");
-        return false;
-      }
-    }
-    
-    setFileError("");
-    return true;
-  }
-  // Extract contact data from CSV row
-  const extractContactData = (headers, rowData) => {
-    // console.log('Processing row data:', rowData);
-    const contact = {};
-    headers.forEach((header, index) => {
-      const lowerHeader = header.toLowerCase().trim();
-      const value = (rowData[index] || '').trim();
-      // console.log(`Processing header: ${header}, value: ${value}`);
-      
-      // Match name fields
-      if ((lowerHeader.includes('name') || lowerHeader.includes('fullname')) && !contact.name) {
-        contact.name = value;
-      } 
-      // Match country code
-      else if ((lowerHeader.includes('country') && lowerHeader.includes('code')) || lowerHeader === 'countrycode') {
-        contact.countryCode = value.replace(/\D/g, ''); // Remove non-digits
-      } 
-      // Match mobile number
-      else if (lowerHeader.includes('mobile') || lowerHeader.includes('phone') || lowerHeader.includes('number')) {
-        contact.mobile = value.replace(/\D/g, ''); // Remove non-digits
-      }
-    });
-    // console.log('Extracted contact:', contact);
-    return contact;
-  };
-
-  const validateCsvContent = (selectedFile) => {
-    return new Promise((resolve) => {
-      if (!selectedFile || !selectedFile.name.endsWith(".csv")) {
-        resolve(true);
-        return;
-      }
-      
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        try {
-          let text = event.target.result;
-          if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
-          const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
-          if (lines.length < 2) { 
-            setFileError("CSV file is empty or has no data rows.");
-            resolve(false);
-            return;
-          }
-          
-          const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-          const hasNameHeader = headers.some(h => h.includes('name'));
-          const hasMobileHeader = headers.some(h => 
-            h.includes('mobile') || h.includes('phone') || h.includes('number')
-          );
-          
-          if (!hasNameHeader || !hasMobileHeader) {
-            setFileError("CSV must contain 'Name' and 'Mobile' columns.");
-            resolve(false);
-            return;
-          }
-          
-          const contacts = [];
-          for (let i = 1; i < lines.length; i++) {
-            const rowData = lines[i].split(',').map(cell => cell.trim().replace(/^"|"$/g, ''));
-            const contact = extractContactData(headers, rowData);
-            if (contact.name && contact.mobile && contact.countryCode) {
-              const fullMobile = contact.countryCode + contact.mobile;
-              
-              contacts.push({
-                name: contact.name,
-                mobile: fullMobile, 
-                countryCode: contact.countryCode,
-                originalMobile: contact.mobile, 
-                timestamp: new Date().toISOString()
-              });
-            } else if (contact.name && contact.mobile) {
-              // console.log('Skipping contact - missing country code:', contact);
-            }
-          }
-          
-          if (contacts.length === 0) {
-            setFileError("No valid contacts found in the CSV.");
-            resolve(false);
-            return;
-          }
-          
-          // Store parsed contacts in the file object for later use
-          selectedFile.parsedContacts = contacts;
-          // console.log('Successfully parsed contacts:', contacts);
-          // console.log('Total valid contacts:', contacts.length);
-          resolve(true);
-          
-        } catch (error) {
-          // console.error("Error processing CSV:", error);
-          setFileError("Error processing the CSV file. Please check the format.");
-          resolve(false);
-        }
-      };
-      
-      reader.onerror = () => {
-        setFileError("Error reading the file.");
-        setFile(null);
-        resolve(false);
-      };
-      
-      reader.readAsText(selectedFile);
-    });
-  };
-
-  const handleFileChange = async (e) => {
-    const selectedFile = e.target.files[0];
-    setFileError("");
-    setCsvHeaders([]);
-    if (!selectedFile) {
-      setFile(null);
-      return;
-    }
-    if (
-      !(
-        selectedFile.name.endsWith(".csv") ||
-        selectedFile.name.endsWith(".docx")
-      )
-    ) {
-      setFileError("Only .csv or .docx files are allowed.");
-      setFile(null);
-      return;
-    }
-    setFile(selectedFile);
-    setFileRemoved(false);
-    if (selectedFile.name.endsWith(".csv")) {
-      await validateCsvContent(selectedFile);
-    }
-  };
-  const { user } = useAuth();
-  
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const validName = validateGroupName();
-    const validFile = validateFile();
-    let validCsv = true;
-    
-    if (file) {
-      if (file.name.endsWith(".csv")) {
-        validCsv = await validateCsvContent(file);
-      }
-    }
-    
-    if (!validName || !validFile || !validCsv) return;
-    
-    setIsSubmitting(true);
-    try {
-      const customer_id = user?.customer_id;
-      
-      if (!customer_id) {
-        console.error('No customer_id found in user context');
-        setError('User authentication error. Please log in again.');
-        return;
-      }
-
-      // Prepare the data to match backend expectations
-      const groupData = {
-        customer_id: customer_id, 
-        group_name: name.trim(),   
-        description: description.trim()
-      };
-
-      // Handle contacts - include existing ones when editing without a new file
-      const contacts = [];
-      
-      // If a new file is uploaded, use its contacts
-      if (file) {
-        groupData.file = file;
-        if (file.parsedContacts) {
-          contacts.push(...file.parsedContacts.map(contact => ({
-            name: contact.name,
-            mobile: contact.mobile 
-          })));
-        }
-      } 
-      // If editing and no new file, include existing contacts
-      else if (group?.id) {
-        // If the group has existing contacts, include them
-        if (group.contacts && group.contacts.length > 0) {
-          contacts.push(...group.contacts);
-        }
-      }
-      
-      // Always include contacts in the request, even if empty array
-      groupData.contacts = contacts;
-      
-      // Logging for debugging
-      // console.log('=== Sending to Backend ===');
-      // console.log('Customer ID:', groupData.customer_id);
-      // console.log('Group Name:', groupData.group_name);
-      // console.log('Description:', groupData.description);
-      // console.log('File:', file?.name || 'No new file');
-      // console.log('Parsed Contacts Count:', contacts.length);
-      
-      // Only log sample contacts if we have any
-      if (contacts.length > 0) {
-        const sampleContacts = groupData.contacts.slice(0, 3).map(contact => ({
-          name: contact.name,
-          phoneNumber: `+${contact.mobile}`,
-          originalMobile: contact.originalMobile,
-          countryCode: contact.countryCode
-        }));
-        // console.log('Sample contacts:', sampleContacts);
-      }
-      
-      // console.log('Full request payload:', groupData);
-      // console.log('==========================');
-      
-      await onSave(groupData);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const confirmExit = () => {
-    setIsPopupOpen(false);
-    setShowExitDialog(false);
-    setIsCrossHighlighted(false);
-  };
-
-  const cancelExit = () => {
-    setShowExitDialog(false);
-    setShowForm(false);
-    setEditingGroup(null);
-  };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Group Name *
-        </label>
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => {
-            setName(e.target.value);
-            setGroupNameError("");
-          }}
-          placeholder="Enter group name"
-          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 ${
-            groupNameError ? "border-red-500" : "border-gray-300"
-          }`}
-          required/>
-        {groupNameError && (
-          <p className="text-red-500 text-sm mt-1">{groupNameError}</p>
-        )}
-      </div>
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Description (Optional)
-        </label>
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Enter group description"
-          rows="3"
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"/>
-      </div>
-        <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Upload File (.csv or .docx) {!group?.id && <span className="text-red-500">*</span>}
-          </label>
-          {!group?.id ? null : (
-            <span className="text-xs text-gray-500">Optional - leave empty to keep existing file</span>
-          )}
-        </div>
-        <div
-          className={`mb-2 border-2 rounded-md p-4 text-center transition-all duration-200 ${
-            isDragging
-              ? "border-[#0AA89E] bg-blue-50"
-              : "border-dashed border-gray-300"
-          }`}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setIsDragging(true);
-          }}
-          onDragLeave={(e) => {
-            e.preventDefault();
-            setIsDragging(false);
-          }}
-          onDrop={async (e) => {
-            e.preventDefault();
-            setIsDragging(false);
-            const droppedFile = e.dataTransfer.files[0];
-            if (droppedFile) {
-              const fakeEvent = { target: { files: [droppedFile] } };
-              await handleFileChange(fakeEvent);
-            }
-          }}>
-          <input
-            type="file"
-            accept=".csv,.docx"
-            onChange={handleFileChange}
-            className="hidden"
-            id="fileUpload"/>
-          <label
-            htmlFor="fileUpload"
-            className="cursor-pointer text-gray-500 flex flex-col items-center">
-            <CloudUpload className="w-12 h-12 mb-2" />
-            <p className="text-sm">Drag & drop a CSV or DOCX file here</p>
-            <p className="text-xs mt-1">Max 50MB and 200K contacts allowed.</p>
-          </label>
-          {fileError && (
-            <p className="text-red-500 text-sm mt-1">{fileError}</p>
-          )}
-          {file && (
-            <div className="mt-4 flex items-center justify-center gap-4">
-              <span className="text-sm text-green-700">{file.name}</span>
-              <button
-                type="button"
-                onClick={() => {
-                  setFile(null);
-                  setFileError("");
-                  setCsvHeaders([]);
-                }}
-                className="text-red-600 text-sm underline hover:text-red-800">
-                Remove
-              </button>
-            </div>
-          )}
-          {!file && group?.file_name && !fileRemoved && (
-            <div className="mb-2 text-sm text-gray-500 flex items-center gap-2">
-              <span>
-                Current file: <b>{group.file_name}</b>
-                {group.total_contacts !== undefined && (
-                  <>
-                    {" "}
-                    | Contacts: <b>{group.total_contacts}</b>
-                  </>
-                )}
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  setFileRemoved(true);
-                  setFileError("");
-                  setCsvHeaders([]); 
-                }}
-                className="text-red-600 underline">
-                Remove
-              </button>
-            </div>
-          )}
-          <div className="text-xs text-gray-500 mt-2">
-            <a href="/sample.csv" download className="text-[#0AA89E] underline">
-              Download sample CSV file
-            </a>
-          </div>
-        </div>
-      </div>
-      <div className="flex justify-end gap-2">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="px-4 py-2 bg-gray-300 text-gray-600 rounded-md  hover:text-gray-800 cursor-pointer">
-          Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={isSubmitting || !name.trim()}
-          className="px-4 py-2 bg-teal-500 text-white rounded-md hover:bg-teal-600 disabled:opacity-50 cursor-pointer flex items-center justify-center">
-          {isSubmitting ? (
-            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-          ) : (
-            "Submit"
-          )}
-        </button>
-      </div>
-    </form>
-  );
-};
-
 export default function GroupManagement() {
+  // Update page title and meta for SEO
+  useEffect(() => {
+    document.title = "Group Management - Foodchow";
+    const metaDescription = document.querySelector('meta[name="description"]');
+    if (metaDescription) {
+      metaDescription.setAttribute('content', 'Manage your contact groups efficiently. Create, edit, and organize groups for better communication management.');
+    } else {
+      const meta = document.createElement('meta');
+      meta.name = 'description';
+      meta.content = 'Manage your contact groups efficiently. Create, edit, and organize groups for better communication management.';
+      document.head.appendChild(meta);
+    }
+  }, []);
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -1035,10 +553,19 @@ export default function GroupManagement() {
       </div>
       <div className="overflow-x-auto">
         <div className="min-w-[900px] bg-white rounded-2xl shadow-[0px_-0.91px_3.66px_0px_#00000042] overflow-hidden">
-          <table className="w-full text-sm text-center overflow-hidden table-auto">
+          <table className="w-full text-sm text-center">
+            <colgroup>
+              <col className="w-12" />
+              <col className="w-[15%]" />
+              <col />
+              <col className="w-[12%]" />
+              <col className="w-[12%]" />
+              <col className="w-[15%]" />
+              <col />
+            </colgroup>
             <thead className="bg-[#F4F4F4] border-b-2 shadow-sm border-gray-300">
               <tr>
-                <th className="px-2 py-3 sm:px-6">
+                <th className="px-2 py-4 sm:px-6 sm:py-4">
                   <div className="flex items-center justify-center h-full">
                     <input
                       type="checkbox"
@@ -1094,22 +621,22 @@ export default function GroupManagement() {
                 )}
                 {!hasSelection && (
                   <>
-                    <th className="px-2 py-3 sm:px-6 text-center font-semibold font-sans text-gray-700">
-                      LIST NAME
-                    </th>
-                    <th className="px-2 py-3 sm:px-6 text-center font-semibold font-sans text-gray-700">
-                      DESCRIPTION
-                    </th>
-                    <th className="px-2 py-3 sm:px-6 text-center font-semibold font-sans text-gray-700">
-                      CATEGORY
-                    </th>
-                    <th className="px-2 py-3 sm:px-6 text-center font-semibold font-sans text-gray-700">
-                      NO. OF CONTACTS
-                    </th>
-                    <th className="px-2 py-3 sm:px-6 text-center font-semibold font-sans text-gray-700">
+                    <th className="px-2 py-4 sm:px-6 sm:py-4 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">
                       CREATED ON
                     </th>
-                    <th className="px-2 py-3 sm:px-6 text-center font-semibold font-sans text-gray-700">
+                    <th className="px-2 py-4 sm:px-6 sm:py-4 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">
+                      Group Name
+                    </th>
+                    <th className="px-2 py-4 sm:px-6 sm:py-4 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">
+                      DESCRIPTION
+                    </th>
+                    <th className="px-2 py-4 sm:px-6 sm:py-4 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">
+                      CATEGORY
+                    </th>
+                    <th className="px-2 py-4 sm:px-6 sm:py-4 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">
+                    NO. OF CONTACTS
+                    </th>
+                    <th className="px-2 py-4 sm:px-6 sm:py-4 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">
                       ACTIONS
                     </th>
                   </>
@@ -1150,7 +677,7 @@ export default function GroupManagement() {
         </div>
       </div>
       {pagination.totalItems > 0 && (
-        <div className="border-t border-gray-200">
+        <div className="border-t border-gray-200" style={{ minHeight: '72px' }}>
           <Pagination
             currentPage={pagination.currentPage}
             totalPages={pagination.totalPages}
@@ -1162,36 +689,14 @@ export default function GroupManagement() {
         </div>
       )}
       {/* Bulk Delete Confirmation Dialog */}
-      {showDeleteDialog && (
-        <div className="fixed inset-0 bg-[#000]/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-lg">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">
-              Delete Confirmation
-            </h3>
-            <p className="text-gray-600 mb-6">
-              Are you sure you want to delete {selectedCount} selected group{selectedCount === 1 ? "" : "s"}? This action cannot be undone.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowDeleteDialog(false)}
-                disabled={isDeleting}
-                className="px-3 py-2 w-[70px] bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors duration-200 cursor-pointer">
-                Cancel
-              </button>
-              <button
-                onClick={handleDeleteSelected}
-                disabled={isDeleting}
-                className="px-3 py-2 w-[70px] bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200  flex items-center justify-center cursor-pointer">
-                {isDeleting ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                ) : (
-                  "Delete"
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DeleteConfirmationModal
+        show={showDeleteDialog}
+        title="Delete Confirmation"
+        message={`Are you sure you want to delete ${selectedCount} selected group${selectedCount === 1 ? "" : "s"}? This action cannot be undone.`}
+        onCancel={() => setShowDeleteDialog(false)}
+        onConfirm={handleDeleteSelected}
+        isDeleting={isDeleting}
+      />
       {/* Group Form Modal */}
       {(showForm || editingGroup) && (
         <div
@@ -1243,42 +748,19 @@ export default function GroupManagement() {
         </div>
       )}
       {/* Group Delete Confirmation Dialog */}
-      {deletingGroup && (
-        <div className="fixed inset-0 bg-[#000]/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-lg">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">
-              Delete Confirmation
-            </h3>
-            <p className="text-gray-600 mb-6">
-              Are you sure you want to delete the group "{deletingGroup.name}"?
-              This action cannot be undone.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setDeletingGroup(null)}
-                disabled={isDeleting}
-                className="px-3 py-2 w-[70px] bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors duration-200 cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={async () => {
-                  await handleDeleteGroup(deletingGroup);
-                  setDeletingGroup(null);
-                }}
-                disabled={isDeleting}
-                className="px-3 py-2 w-[70px] bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200  flex items-center justify-center cursor-pointer"
-              >
-                {isDeleting ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                ) : (
-                  "Delete"
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DeleteConfirmationModal
+        show={!!deletingGroup}
+        title="Delete Confirmation"
+        message={deletingGroup ? `Are you sure you want to delete the group "${deletingGroup.name}"? This action cannot be undone.` : ""}
+        onCancel={() => setDeletingGroup(null)}
+        onConfirm={async () => {
+          if (deletingGroup) {
+            await handleDeleteGroup(deletingGroup);
+            setDeletingGroup(null);
+          }
+        }}
+        isDeleting={isDeleting}
+      />
       <ToastContainer />
     </div>
   );

@@ -1,22 +1,17 @@
 import React from "react";
+import { getMessageLimit, getTierDisplayName } from "../utils/messageLimits";
 
-const InformationCards = ({ formData, wabaInfo, totalSelectedContacts = 0 }) => {
-  // Get the message limit based on the user's tier
-  const getMessageLimit = () => {
-    if (!wabaInfo?.messagingLimit) return 250; // Default to 250 if no tier info
-    
-    const tierLimits = {
-      'TIER_1K': 1000,
-      'TIER_10K': 10000,
-      'TIER_100K': 100000,
-      // Add more tiers as needed
-    };
-    
-    return tierLimits[wabaInfo.messagingLimit] || 250; // Default to 250 if tier not found
-  };
-
-  const messageLimit = getMessageLimit();
-  const tierName = wabaInfo?.messagingLimit ? wabaInfo.messagingLimit.replace('TIER_', '') : '0';
+const InformationCards = ({ 
+  formData, 
+  wabaInfo, 
+  totalSelectedContacts = 0, 
+  remainingQuota = 0, 
+  quotaUsage = 0,
+  timeUntilReset = null,
+  uniqueContactsCount = 0
+}) => {
+  const messageLimit = getMessageLimit(wabaInfo);
+  const tierName = getTierDisplayName(wabaInfo);
   return (
   <div className="bg-green-50 border border-green-200 rounded-lg p-5">
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
@@ -31,7 +26,25 @@ const InformationCards = ({ formData, wabaInfo, totalSelectedContacts = 0 }) => 
       {/* Remaining Quota */}
       <div>
         <p className="text-sm font-medium text-gray-500">Remaining Quota</p>
-        <p className="text-base font-semibold text-gray-900">{messageLimit.toLocaleString()}</p>
+        <p className="text-base font-semibold text-gray-900">{remainingQuota.toLocaleString()}</p>
+        {quotaUsage > 0 && (
+          <div className="mt-1">
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div 
+                className="bg-teal-500 h-2 rounded-full transition-all duration-300" 
+                style={{ width: `${(quotaUsage / messageLimit) * 100}%` }}
+              ></div>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              {quotaUsage.toLocaleString()} / {messageLimit.toLocaleString()} used
+            </p>
+          </div>
+        )}
+        {timeUntilReset && (
+          <p className="text-xs text-gray-500 mt-1">
+            Resets in {timeUntilReset.hours}h {timeUntilReset.minutes}m
+          </p>
+        )}
       </div>
 
       {/* Selected Audience */}
@@ -42,11 +55,14 @@ const InformationCards = ({ formData, wabaInfo, totalSelectedContacts = 0 }) => 
         </p>
       </div>
       
-      {/* Final Audience */}
+      {/* Unique Contacts Messaged Today */}
       <div>
-        <p className="text-sm font-medium text-gray-500">Final Audience</p>
+        <p className="text-sm font-medium text-gray-500">Unique Contacts Today</p>
         <p className="text-base font-semibold text-gray-900">
-          {totalSelectedContacts.toLocaleString()}
+          {uniqueContactsCount.toLocaleString()}
+        </p>
+        <p className="text-xs text-gray-500 mt-1">
+          Already messaged today
         </p>
       </div>
     </div>

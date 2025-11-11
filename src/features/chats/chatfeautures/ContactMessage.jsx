@@ -30,7 +30,7 @@ const ContactMessage = ({ msg, sent }) => {
 
       {/* Sent Timestamp & Status */}
       <div className="flex justify-end items-center gap-1 px-2 py-1 mt-1">
-        <span className="text-[10px] text-gray-500">{msg?.sent_at}</span>
+        <span className="text-[10px] text-gray-600">{msg?.sent_at}</span>
         {sent && (
           <span className="text-blue-500">
             {msg?.status === "read" ? (

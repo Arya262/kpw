@@ -139,7 +139,7 @@ const formatPrice = (price, currencyCode) => {
                 <div className="overflow-x-auto">
                   <div className="min-w-[400px] border border-gray-300 rounded-lg overflow-hidden">
                     {/* Table Header */}
-                    <div className="bg-gray-50 px-5 py-3 flex justify-between items-center text-sm font-semibold text-gray-600 border-b">
+                    <div className="bg-gray-50 px-5 py-3 flex justify-between items-center text-sm font-semibold text-gray-600 border-b border-gray-100">
                       <span className="w-1/3">Category</span>
                       <span className="w-1/3 text-center">Price / Message</span>
                       <span className="w-1/3 text-right">Messages</span>

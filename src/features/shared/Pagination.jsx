@@ -77,10 +77,15 @@ export default function Pagination({
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600">Rows per page:</span>
           <div className="relative">
+            <label htmlFor="items-per-page-select" className="sr-only">
+              Items per page
+            </label>
             <select
+              id="items-per-page-select"
               value={safeLimit}
               onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
               className="appearance-none bg-white border border-gray-300 rounded-md pl-3 pr-8 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 cursor-pointer"
+              aria-label="Select number of items to display per page"
             >
               <option value={5}>5</option>
               <option value={10}>10</option>
@@ -104,6 +109,7 @@ export default function Pagination({
                 ? "text-gray-400 cursor-not-allowed"
                 : "text-gray-700 hover:bg-gray-100 hover:shadow-sm"
             }`}
+            aria-label="Go to previous page"
           >
             Prev
           </button>
@@ -111,6 +117,7 @@ export default function Pagination({
           <button
             onClick={handlePrevArrow}
             disabled={windowStart === 1}
+            aria-label="Go to previous page group"
             className={`p-1.5 rounded-md transition-all duration-300 ease-in-out transform hover:scale-105 ${
               windowStart === 1
                 ? "text-gray-400 cursor-not-allowed"
@@ -137,6 +144,7 @@ export default function Pagination({
           <button
             onClick={handleNextArrow}
             disabled={windowStart + windowSize - 1 >= totalPages}
+            aria-label="Go to next page group"
             className={`p-1.5 rounded-md transition-all duration-300 ease-in-out transform hover:scale-105 ${
               windowStart + windowSize - 1 >= totalPages
                 ? "text-gray-400 cursor-not-allowed"
@@ -154,6 +162,7 @@ export default function Pagination({
                 ? "text-gray-400 cursor-not-allowed"
                 : "text-gray-700 hover:bg-gray-100 hover:shadow-sm"
             }`}
+            aria-label="Go to next page"
           >
             Next
           </button>
@@ -177,10 +186,15 @@ export default function Pagination({
         {/* Rows per page */}
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600">Rows per page:</span>
+          <label htmlFor="items-per-page-mobile" className="sr-only">
+            Items per page
+          </label>
           <select
+            id="items-per-page-mobile"
             value={safeLimit}
             onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
             className="bg-white border border-gray-300 rounded-md text-sm py-1 px-2"
+            aria-label="Select number of items per page"
           >
             <option value={5}>5</option>
             <option value={10}>10</option>

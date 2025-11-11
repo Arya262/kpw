@@ -4,6 +4,7 @@ import { useAuth } from "../../context/AuthContext";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
 import Papa from "papaparse";
+import TagSelector from "../tags/components/TagSelector";
 
 // Define all possible fields
 const ALL_FIELDS = ["First Name", "Last Name", "Full Name", "Mobile"];
@@ -40,6 +41,8 @@ export default function BulkContactForm({
   fieldMapping,
   setFieldMapping,
   onDataExtracted,
+  selectedTags = [],
+  setSelectedTags,
 }) {
   const [countryCode, setCountryCode] = useState({ dialCode: "91", countryCode: "in" });
   const { user } = useAuth();
@@ -108,6 +111,10 @@ export default function BulkContactForm({
           fullName: fullNameForBackend,
           mobile,
           country_code: `+${currentCountry.dialCode}`,
+          tags: selectedTags.map(tag => ({
+            tag_id: tag.tag_id || tag.id,
+            tag_name: tag.tag_name || tag.name
+          })),
           _row: index + 2,
           _hasErrors: !hasName || !hasValidMobile,
           _errors: [
@@ -378,6 +385,24 @@ export default function BulkContactForm({
               This country code will be applied to all imported numbers.
             </p>
           </div>
+        </div>
+      )}
+
+      {/* Tag Selection */}
+      {csvHeaders.length > 0 && (
+        <div className="mt-6 mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Tags (Optional)
+          </label>
+          <p className="text-xs text-gray-500 mb-2">
+            These tags will be applied to all imported contacts.
+          </p>
+          <TagSelector
+            selectedTags={selectedTags}
+            onTagsChange={setSelectedTags}
+            placeholder="Select or create tags for all contacts..."
+            allowCreate={true}
+          />
         </div>
       )}
 

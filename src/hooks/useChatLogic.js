@@ -18,7 +18,7 @@ export const useChatLogic = ({
   setMessages,
   setContacts,
   contacts,
-  permissions,
+  hasPermission, // RBAC permission checker function
 }) => {
   const { markConversationAsRead, setSelectedConversationId } = useNotifications();
   const selectedContactRef = useRef(selectedContact);
@@ -132,6 +132,7 @@ export const useChatLogic = ({
           lastMessageTime: c.last_message_time,
           unreadCount: c.unread_count || 0,
           block: c.block === 1,
+          tags: c.tags || [],
         }));
 
         setContacts((prev) =>
@@ -338,7 +339,7 @@ export const useChatLogic = ({
   // ===== Send Message (text or template) =====
 const sendMessage = useCallback(
   async (input) => {
-    if (permissions && !permissions.canSendMessages) return;
+    if (!hasPermission('chats', 'send')) return;
     if (!selectedContact) return;
 
     let contact_id = selectedContact.contact_id;
@@ -449,12 +450,12 @@ const sendMessage = useCallback(
       toast.error("Failed to send message");
     }
   },
-  [selectedContact, setContacts, fetchMessagesForContact, permissions, user]
+  [selectedContact, setContacts, fetchMessagesForContact, hasPermission, user]
 );
 
  const deleteChat = useCallback(
   async (contact) => {
-    if (!permissions?.canDeleteChats) {
+    if (!hasPermission('chats', 'delete')) {
       toast.error("You do not have permission to delete chats.");
       return;
     }
@@ -506,7 +507,7 @@ const sendMessage = useCallback(
     setContacts,
     setMessages,
     setSelectedContact,
-    permissions,
+    hasPermission,
     fetchContacts,
   ]
 );

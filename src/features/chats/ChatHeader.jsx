@@ -96,9 +96,14 @@ const ChatHeader = forwardRef(
         <div className="relative flex items-center space-x-2" ref={dropdownRef}>
           {!isMobile ? (
             <button
-              className="p-1 rounded hover:bg-red-100"
-              onClick={handleDelete}
-              disabled={deleting}
+              className={`p-1 rounded ${
+                onDeleteChat
+                  ? "hover:bg-red-100"
+                  : "opacity-50 cursor-not-allowed"
+              }`}
+              onClick={onDeleteChat ? handleDelete : undefined}
+              disabled={deleting || !onDeleteChat}
+              title={!onDeleteChat ? "You do not have permission to delete chats" : ""}
             >
               {deleting ? (
                 <div className="flex items-center space-x-2">
@@ -142,9 +147,14 @@ const ChatHeader = forwardRef(
                     Hide Notification
                   </button>
                   <button
-                    className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-100 text-left"
-                    onClick={handleDelete}
-                    disabled={deleting}
+                    className={`flex items-center w-full px-4 py-2 text-sm ${
+                      onDeleteChat
+                        ? "text-red-600 hover:bg-red-100"
+                        : "text-gray-400 cursor-not-allowed opacity-50"
+                    } text-left`}
+                    onClick={onDeleteChat ? handleDelete : undefined}
+                    disabled={deleting || !onDeleteChat}
+                    title={!onDeleteChat ? "You do not have permission to delete chats" : ""}
                   >
                     <Trash2 className="w-4 h-4 mr-2" />
                     {deleting ? "Deleting..." : "Delete Chat"}

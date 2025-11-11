@@ -150,14 +150,12 @@ const filteredCounts = useMemo(() => {
   };
 
   const handleDeleteClick = (template) => {
-    if (!canDelete) {
-      toast.error("You do not have permission to delete templates.", {
-        position: "top-right",
-        autoClose: 3000,
-      });
-      return;
-    }
-    setSelectedTemplate(template);
+    if (!canDelete) return;
+    setSelectedTemplate({
+      ...template,
+      _selectedIds: [template.id],
+      element_name: template.element_name || template.elementName
+    });
     setShowDeleteDialog(true);
     setMenuOpen(null);
   };
@@ -175,33 +173,64 @@ const filteredCounts = useMemo(() => {
   };
 
   const handleDeleteConfirm = async () => {
-    if (!selectedTemplate) return;
+  if (!selectedTemplate) return;
+  
+  try {
+    setIsDeleting(true);
     
-    try {
-      setIsDeleting(true);
-      const payload = await getDeletePayload();
+    // Get the latest payload with all selected templates
+    const payload = await getDeletePayload();
+    
+    if (payload.length === 0) {
+      setShowDeleteDialog(false);
+      return;
+    }
+
+    // Delete all selected templates in parallel
+    const deletePromises = payload.map(template => 
+      onDelete(template)
+    );
+    
+    const results = await Promise.all(deletePromises);
+    const allSucceeded = results.every(Boolean);
+    
+    if (allSucceeded) {
+      setSelectedRows({});
+      setSelectAll(false);
+      setSelectAllAcrossPages(false);
       
-      if (payload.length > 0) {
-        const success = await onDelete(payload);
-        if (success) {
-          setSelectedRows({});
-          setSelectAll(false);
-          setSelectAllAcrossPages(false);
-        
-          if (pagination?.onPageChange) {
-            pagination.onPageChange(1); 
-          }
+     
+      // const message = payload.length === 1 
+      //   ? "Template deleted successfully" 
+      //   : `${payload.length} templates deleted successfully`;
+      
+      // toast.success(message, {
+      //   position: "top-right",
+      //   autoClose: 3000,
+      // });
+      
+      // Refresh the table
+      if (pagination?.onPageChange) {
+        const currentItemsCount = templates.length;
+        if (currentItemsCount <= payload.length && pagination.currentPage > 1) {
+          pagination.onPageChange(pagination.currentPage - 1);
+        } else {
+          pagination.onPageChange(pagination.currentPage);
         }
       }
-    } catch (error) {
-      console.error("Error in handleDeleteConfirm:", error);
-      toast.error("An error occurred while deleting templates.", { autoClose: 3000 });
-    } finally {
-      setIsDeleting(false);
-      setShowDeleteDialog(false);
-      setSelectedTemplate(null);
     }
-  };
+  } catch (error) {
+    console.error("Error in handleDeleteConfirm:", error);
+    toast.error("Failed to delete templates", {
+      position: "top-right",
+      autoClose: 3000,
+    });
+  } finally {
+    setIsDeleting(false);
+    setShowDeleteDialog(false);
+    setSelectedTemplate(null);
+  }
+};
 
   const handleDeleteCancel = () => {
     setShowDeleteDialog(false);
@@ -263,22 +292,30 @@ const filteredCounts = useMemo(() => {
           </div>
         </div>
       </div>
-      <div className="w-full font-sans scrollbar-hide scroll-smooth bg-white shadow-[0px_0.91px_3.66px_0px_#00000042] overflow-hidden">
-        <div className="overflow-x-auto">
-          <div className="min-w-[900px] bg-white shadow-[0px_-0.91px_3.66px_0px_#00000042] overflow-hidden">
-            <table className="w-full text-sm text-center table-auto">
-              <thead className="bg-[#F4F4F4] border-b-2 shadow-sm border-gray-300">
-                <tr>
-                  <th className="px-2 py-3 sm:px-6">
-                    <div className="flex items-center justify-center h-full">
-                      <input
-                        type="checkbox"
-                        className="form-checkbox w-4 h-4"
-                        checked={selectAllAcrossPages ? true : selectAll}
-                        onChange={handleSelectAllChange}
-                      />
-                    </div>
-                  </th>
+      <div className="overflow-x-auto">
+        <div className="min-w-[900px] bg-white rounded-2xl shadow-[0px_-0.91px_3.66px_0px_#00000042] overflow-hidden">
+          <table className="w-full text-sm text-center">
+            <colgroup>
+              <col className="w-12" />
+              <col className="w-[15%]" />
+              <col className="w-[12%]" />
+              <col />
+              <col className="w-[12%]" />
+              <col className="w-[15%]" />
+              <col />
+            </colgroup>
+            <thead className="bg-[#F4F4F4] border-b-2 shadow-sm border-gray-300">
+              <tr>
+                <th className="px-2 py-4 sm:px-6 sm:py-4">
+                  <div className="flex items-center justify-center h-full">
+                    <input
+                      type="checkbox"
+                      className="form-checkbox w-4 h-4"
+                      checked={selectAllAcrossPages ? true : selectAll}
+                      onChange={handleSelectAllChange}
+                    />
+                  </div>
+                </th>
                   {(selectAllAcrossPages || Object.values(selectedRows).some(Boolean)) ? (
                     <th colSpan="6" className="px-4 py-2">
                       <div className="flex items-center justify-between">
@@ -331,22 +368,22 @@ const filteredCounts = useMemo(() => {
                     </th>
                   ) : (
                     <>
-                      <th className="px-2 py-3 sm:px-6 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">
+                      <th className="px-2 py-4 sm:px-6 sm:py-4 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">
                         Created Date
                       </th>
-                      <th className="px-2 py-3 sm:px-6 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">
+                      <th className="px-2 py-4 sm:px-6 sm:py-4 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">
                         Status
                       </th>
-                      <th className="px-2 py-3 sm:px-6 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">
+                      <th className="px-2 py-4 sm:px-6 sm:py-4 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">
                         Template Name
                       </th>
-                      <th className="px-2 py-3 sm:px-6 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">
+                      <th className="px-2 py-4 sm:px-6 sm:py-4 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">
                         Type
                       </th>
-                      <th className="px-2 py-3 sm:px-6 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">
+                      <th className="px-2 py-4 sm:px-6 sm:py-4 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">
                         Template Type
                       </th>
-                      <th className="px-2 py-3 sm:px-6 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">
+                      <th className="px-2 py-4 sm:px-6 sm:py-4 text-center text-[12px] sm:text-[16px] font-semibold font-sans text-gray-700">
                         Action
                       </th>
                     </>
@@ -375,7 +412,7 @@ const filteredCounts = useMemo(() => {
                       ref={(el) => (rowRefs.current[idx] = el)}
                       className="border-t border-b border-b-[#C3C3C3] hover:bg-gray-50 text-md"
                     >
-                      <td className="px-2 py-4 sm:px-4">
+                      <td className="px-2 py-4 sm:px-6 sm:py-4">
                         <div className="flex items-center justify-center h-full">
                           <input
                             type="checkbox"
@@ -385,10 +422,10 @@ const filteredCounts = useMemo(() => {
                           />
                         </div>
                       </td>
-                      <td className="px-2 py-4 sm:px-4 sm:py-4 whitespace-nowrap text-[12px] sm:text-[16px] text-gray-700 font-medium">
+                      <td className="px-2 py-4 sm:px-6 sm:py-4 whitespace-nowrap text-[12px] sm:text-[16px] text-gray-700 font-medium">
                         {formatDate(template.created_on)}
                       </td>
-                      <td className="px-2 py-4 text-[12px] sm:text-[16px] font-semibold rounded text-center">
+                      <td className="px-2 py-4 sm:px-6 sm:py-4 text-[12px] sm:text-[16px] font-semibold rounded text-center">
                         <span
                           className={`px-3 py-1 rounded-full inline-block text-center min-w-[100px] font-medium
                                       shadow-sm transition-colors duration-200
@@ -405,22 +442,22 @@ const filteredCounts = useMemo(() => {
                           {template.status}
                         </span>
                       </td>
-                      <td className="px-2 py-4 text-[12px] sm:text-[16px] text-gray-700 font-medium">
+                      <td className="px-2 py-4 sm:px-6 sm:py-4 text-[12px] sm:text-[16px] text-gray-700 font-medium">
                         {template.element_name || "-"}
                       </td>
-                      <td className="px-2 py-4 text-[12px] sm:text-[16px] text-gray-700 font-medium">
+                      <td className="px-2 py-4 sm:px-6 sm:py-4 text-[12px] sm:text-[16px] text-gray-700 font-medium">
                         {template.template_type
                           ? template.template_type.charAt(0).toUpperCase() +
                             template.template_type.slice(1)
                           : "-"}
                       </td>
-                      <td className="px-2 py-4 text-[12px] sm:text-[16px] text-gray-700 font-medium">
+                      <td className="px-2 py-4 sm:px-6 sm:py-4 text-[12px] sm:text-[16px] text-gray-700 font-medium">
                         {template.category
                           ? template.category.charAt(0).toUpperCase() +
                             template.category.slice(1)
                           : "-"}
                       </td>
-                      <td className="relative py-4">
+                      <td className="px-2 py-4 sm:px-6 sm:py-4 relative">
                         <div
                           ref={(el) => (dropdownRefs.current[idx] = el)}
                           className="flex justify-center">
@@ -474,10 +511,9 @@ const filteredCounts = useMemo(() => {
               </tbody>
             </table>
           </div>
+          {/* Pagination */}
+          {pagination}
         </div>
-        {/* Pagination */}
-        {pagination}
-      </div>
       <DeleteConfirmationDialog
         showDialog={showDeleteDialog}
         title="Delete Template"

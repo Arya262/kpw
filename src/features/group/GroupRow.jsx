@@ -1,46 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Edit2, Trash2 } from "lucide-react";
-import { createPortal } from "react-dom";
-import ContactList from "./ContactList";
+import PortalDropdown from "./PortalDropdown";
 import { toast } from "react-toastify";
-
-function PortalDropdown({ children, position, onClose }) {
-  const dropdownRef = useRef(null);
-
-  useEffect(() => {
-    const handleClick = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        if (onClose) onClose();
-      }
-    };
-    const handleScroll = () => {
-      if (onClose) onClose();
-    };
-    document.addEventListener("mousedown", handleClick);
-    document.addEventListener("scroll", handleScroll, true);
-    return () => {
-      document.removeEventListener("mousedown", handleClick);
-      document.removeEventListener("scroll", handleScroll, true);
-    };
-  }, [onClose]);
-
-  return createPortal(
-    <div
-      ref={dropdownRef}
-      style={{
-        position: "absolute",
-        top: position.top,
-        left: position.left,
-        zIndex: 9999,
-        minWidth: 176,
-      }}
-      className="bg-white border border-gray-200 rounded-md shadow-lg"
-    >
-      {children}
-    </div>,
-    document.body
-  );
-}
 
 export default function GroupRow({
   group,
@@ -109,7 +70,7 @@ export default function GroupRow({
       ref={rowRef}
       className="border-t border-b border-b-[#C3C3C3] hover:bg-gray-50 text-md"
     >
-      <td className="px-2 py-4 sm:px-4">
+      <td className="px-2 py-4 sm:px-6 sm:py-4">
         <div className="flex items-center justify-center h-full">
           <input
             type="checkbox"
@@ -120,25 +81,25 @@ export default function GroupRow({
           />
         </div>
       </td>
-      <td className="px-2 py-4 sm:px-4 whitespace-nowrap text-[12px] sm:text-[16px] text-gray-700 font-medium  text-center">
+      <td className="px-2 py-4 sm:px-6 sm:py-4 text-[12px] sm:text-[16px] text-center text-gray-700 font-medium">
+        {group.created_at ? formatDate(group.created_at) : "-"}
+      </td>
+      <td className="px-2 py-4 sm:px-6 sm:py-4 whitespace-nowrap text-[12px] sm:text-[16px] text-gray-700 font-medium text-center">
         {group.name}
       </td>
       <td
-        className="px-2 py-4 text-[12px] sm:text-[16px] text-gray-700 cursor-pointer hover:text-[#0AA89E] font-medium max-w-[180px] truncate"
+        className="px-2 py-4 sm:px-6 sm:py-4 text-[12px] sm:text-[16px] text-gray-700 cursor-pointer hover:text-[#0AA89E] font-medium max-w-[180px] truncate"
         title={group.description || "-"}
       >
         {group.description || "-"}
       </td>
-      <td className="px-2 py-4 text-[12px] sm:text-[16px] text-center text-gray-700 font-medium">
+      <td className="px-2 py-4 sm:px-6 sm:py-4 text-[12px] sm:text-[16px] text-center text-gray-700 font-medium">
         {group.category || "Imported Data"}
       </td>
-      <td className="px-2 py-4 text-[12px] sm:text-[16px] text-center text-gray-700 font-medium ">
+      <td className="px-2 py-4 sm:px-6 sm:py-4 text-[12px] sm:text-[16px] text-center text-gray-700 font-medium">
         {group.total_contacts || 0}
       </td>
-      <td className="px-2 py-4 text-[12px] sm:text-[16px] text-center text-gray-700 font-medium">
-        {group.created_at ? formatDate(group.created_at) : "-"}
-      </td>
-      <td className="relative py-4">
+      <td className="px-2 py-4 sm:px-6 sm:py-4 relative">
         <div className="flex justify-center">
           <button
             ref={dropdownBtnRef}

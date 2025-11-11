@@ -6,6 +6,7 @@ import BroadcastForm from "./components/BroadcastForm";
 import ConfirmationDialog from "./components/ConfirmationDialog";
 import { API_ENDPOINTS } from "../../config/api";
 import { useAuth } from "../../context/AuthContext";
+import { getMessageLimit } from "./utils/messageLimits";
 
 const BroadcastPages = ({ onClose, showCustomAlert, onBroadcastCreated }) => {
   const [step, setStep] = useState(1);
@@ -26,10 +27,8 @@ const BroadcastPages = ({ onClose, showCustomAlert, onBroadcastCreated }) => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [isTemplateOpen, setIsTemplateOpen] = useState(false);
-  const [customerLists, setCustomerLists] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState(null);
 
   // Clear location state after using it
   useEffect(() => {
@@ -51,42 +50,6 @@ const BroadcastPages = ({ onClose, showCustomAlert, onBroadcastCreated }) => {
     setIsTemplateOpen(false);
   }, []);
 
-  // Fetch customer lists
-  useEffect(() => {
-    let isMounted = true;
-
-    const fetchCustomerLists = async () => {
-      setLoading(true);
-      try {
-        const response = await fetch(
-          `${API_ENDPOINTS.GROUPS.GET_ALL}?customer_id=${user?.customer_id}`,
-          { headers: { "Content-Type": "application/json" }, credentials: "include" }
-        );
-
-        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-        const result = await response.json();
-
-        if (isMounted && result.success && Array.isArray(result.data)) {
-          setCustomerLists(result.data);
-          setError(null);
-        } else {
-          throw new Error("Invalid data format received from API");
-        }
-      } catch (err) {
-        if (isMounted) {
-          console.error("Error fetching customer lists:", err);
-          setError("Unable to load customer lists. Please try again later.");
-          setCustomerLists([]);
-        }
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
-
-    fetchCustomerLists();
-    return () => { isMounted = false; };
-  }, [user?.customer_id]);
-
   // Input handlers
   const handleInputChange = e => {
     const { name, value } = e.target;
@@ -106,37 +69,19 @@ const BroadcastPages = ({ onClose, showCustomAlert, onBroadcastCreated }) => {
     reader.readAsDataURL(file);
   };
 
-  const getMessageLimit = () => {
-    if (!wabaInfo?.messagingLimit) return 250;
-    const tierLimits = { TIER_1K: 1000, TIER_10K: 10000, TIER_100K: 100000 };
-    return tierLimits[wabaInfo.messagingLimit] || 250;
-  };
-
   // Submit broadcast
-  const handleSubmit = async e => {
+  const handleSubmit = async (e, { consumeQuota, totalSelectedContacts, selectedGroups, customerLists }) => {
     e.preventDefault();
     setIsSubmitting(true);
     setError(null);
-
     try {
-      const messageLimit = getMessageLimit();
-      let totalContacts = 0;
-
-      if (formData.isDirectBroadcast) {
-        totalContacts = formData.directContacts?.length || 0;
-      } else if (formData.group_id?.length > 0) {
-        totalContacts = formData.group_id.reduce((sum, groupId) => {
-          const group = customerLists?.find(g => g.group_id === groupId);
-          return sum + (group?.total_contacts || 0);
-        }, 0);
-      }
-
+      const messageLimit = getMessageLimit(wabaInfo);
+      const totalContacts = totalSelectedContacts || 0;
       if (totalContacts > messageLimit) {
         throw new Error(
           `You can only send to a maximum of ${messageLimit.toLocaleString()} contacts. Your selection contains ${totalContacts.toLocaleString()} contacts.`
         );
       }
-
       const broadcastData = {
         customer_id: user?.customer_id,
         broadcastName: formData.broadcastName,
@@ -147,29 +92,29 @@ const BroadcastPages = ({ onClose, showCustomAlert, onBroadcastCreated }) => {
         status: formData.schedule === "No" ? "Live" : "Scheduled",
         type: formData.isDirectBroadcast ? "Direct Broadcast" : "Manual Broadcast",
       };
-
       if (formData.isDirectBroadcast && formData.directContacts) {
         broadcastData.contacts = formData.directContacts;
         broadcastData.total_contacts = formData.directContacts.length;
       } else {
         broadcastData.group_id = Array.isArray(formData.group_id) ? formData.group_id[0] : formData.group_id;
       }
-
       if (formData.selectedTemplate) {
         broadcastData.template_id = formData.selectedTemplate.id;
         broadcastData.template_name = formData.selectedTemplate.element_name;
-      
         if (formData.templateParameters?.length > 0) {
           const headerParam = formData.templateParameters.find(p =>
             ["image", "video", "document"].includes(p.type)
           );
-      
           if (headerParam) {
-            broadcastData.headerType = headerParam.type;             
-            broadcastData.headerValue = headerParam.image?.id || ""; 
-            broadcastData.headerIsId = true;                         
+            broadcastData.headerType = headerParam.type;
+            if (headerParam.image?.url) {
+              broadcastData.headerValue = headerParam.image.url;
+              broadcastData.headerIsId = false;  
+            } else if (headerParam.image?.id) {
+              broadcastData.headerValue = headerParam.image.id;
+              broadcastData.headerIsId = true;   
+            }
           }
-
           const bodyParams = formData.templateParameters
             .filter(p => p.type === "text")
             .map(p => p.value || "");
@@ -178,28 +123,93 @@ const BroadcastPages = ({ onClose, showCustomAlert, onBroadcastCreated }) => {
           }
         }
       }
-      
-
       const endpoint = formData.isDirectBroadcast ? API_ENDPOINTS.BROADCASTS.GET_DIRECT : API_ENDPOINTS.BROADCASTS.GET_CUSTOMERS;
-      // console.log('Sending request to:', endpoint);
-      // console.log('Request data:', broadcastData);
+      console.log('Sending request to:', endpoint);
+      console.log('Request data:', broadcastData);
       const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify(broadcastData),
       });
-
-      // console.log('Response status:', response.status);
+      console.log('Response status:', response.status);
       const result = await response.json();
-      if (!response.ok) throw new Error(result.message || "Failed to create broadcast");
+      
+      // Check for errors in response even if status is 200
+      if (!response.ok || (result.success === false)) {
+        throw new Error(result.message || "Failed to create broadcast");
+      }
+      
       const successMessage = formData.isDirectBroadcast
         ? `Broadcast sent to ${broadcastData.total_contacts} contacts!`
         : "Broadcast created successfully!";
+      // toast.success(successMessage);
+      
+      if (consumeQuota && totalContacts > 0) {
+        try {
+          let contactIds = [];
+          if (formData.isDirectBroadcast && formData.directContacts) {
+            contactIds = formData.directContacts.map(contact => {
+             
+              if (contact.contact_id) {
+                return String(contact.contact_id);
+              }
+              const phoneNumber = contact.Phone || contact.phone || contact.phoneNumber || contact.mobile_no;
+              const countryCode = contact.CountryCode || contact.country_code || '';
+              if (phoneNumber) {
+                return `${countryCode}${phoneNumber}`.trim();
+              }
+              return contact.id ? String(contact.id) : null;
+            }).filter(Boolean); // Remove any undefined/null values
+          } else if (selectedGroups && Array.isArray(selectedGroups) && selectedGroups.length > 0) {
+
+            contactIds = selectedGroups.flatMap(group => {
+              if (!group) return [];
+              
+              // If group has contacts array, use it
+              if (Array.isArray(group.contacts) && group.contacts.length > 0) {
+                return group.contacts.map(contact => 
+                  contact?.phone || contact?.phoneNumber || contact?.id
+                ).filter(Boolean);
+              }
+              
+              return [];
+            });
+          }
+          
+          if (contactIds.length > 0) {
+            const quotaResult = consumeQuota(contactIds);
+            if (quotaResult && typeof quotaResult === 'object') {
+              // New format: returns { success, consumed, total }
+              if (quotaResult.success) {
+                if (quotaResult.consumed > 0) {
+                  console.log(`✓ Quota consumed: ${quotaResult.consumed} new unique contact${quotaResult.consumed !== 1 ? 's' : ''} out of ${quotaResult.total} total`);
+                } else {
+                  console.log(`✓ All ${quotaResult.total} contact${quotaResult.total !== 1 ? 's' : ''} were already messaged today (no new quota consumed)`);
+                }
+              } else {
+                console.warn('Failed to consume quota - this should not happen after validation');
+              }
+            } else {
+              // Legacy format: returns boolean (backward compatibility)
+              if (quotaResult) {
+                console.log(`✓ Quota processed for ${contactIds.length} contact${contactIds.length !== 1 ? 's' : ''}`);
+              } else {
+                console.warn('Failed to consume quota - this should not happen after validation');
+              }
+            }
+          } else if (!formData.isDirectBroadcast) {
+            console.log('Quota tracking skipped for group-based broadcast (handled server-side)');
+          } else {
+            console.warn('No contact IDs found for quota consumption');
+          }
+        } catch (quotaError) {
+          console.error('Error consuming quota:', quotaError);
+        }
+      }
       onBroadcastCreated();
       onClose();
       navigate("/broadcast", { replace: true });
-
     } catch (err) {
       setError(err.message || "Unable to save broadcast. Please try again later.");
       toast.error(err.message || "Failed to save broadcast. Please try again.");
@@ -210,6 +220,7 @@ const BroadcastPages = ({ onClose, showCustomAlert, onBroadcastCreated }) => {
 
   const openTemplate = () => setIsTemplateOpen(true);
   const closeTemplate = () => setIsTemplateOpen(false);
+
   const confirmExit = () => {
     onClose();
     navigate("/broadcast");
@@ -221,6 +232,7 @@ const BroadcastPages = ({ onClose, showCustomAlert, onBroadcastCreated }) => {
     if (typeof value === "object" && value !== null) return Object.keys(value).length > 0;
     return value && !["Select Customer List", "Text Message", "Pre-approved template message", "No"].includes(value);
   });
+
   useEffect(() => {
     const handleBeforeUnload = e => {
       if (hasUnsavedChanges) e.preventDefault();
@@ -246,9 +258,8 @@ const BroadcastPages = ({ onClose, showCustomAlert, onBroadcastCreated }) => {
           openTemplate={openTemplate}
           closeTemplate={closeTemplate}
           SendTemplate={SendTemplate}
-          loading={loading}
-          error={error}
-          customerLists={customerLists}
+          loading={false}
+          error={null}
           onSubmit={handleSubmit}
           isSubmitting={isSubmitting}
           onTemplateSelect={handleTemplateSelect}

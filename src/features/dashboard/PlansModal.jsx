@@ -153,7 +153,7 @@ const PlansModal = ({ isOpen, onClose, onPay, userPlan = null }) => {
   const currentDay = currentDate.getDate();
   const targetMonth = currentDate.getMonth() + currentCycle.renewalMonths;
   
-  nextRenewal.setMonth(targetMonth, 1); 
+  nextRenewal.setMonth(targetMonth, 1);
 
   const lastDayOfMonth = new Date(
     nextRenewal.getFullYear(),

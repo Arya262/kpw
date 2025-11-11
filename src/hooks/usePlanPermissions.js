@@ -11,7 +11,7 @@ export const usePlanPermissions = (usersMatrix = []) => {
         canScheduleBroadcast: false,
         canUseAdvancedAnalytics: false,
         canUseAPIs: false,
-        canBulkUpload: true,
+        canBulkUpload: false,
         canAddSubUser: usersMatrix.length < 1,
         trialDays: 14,
       },
@@ -37,20 +37,19 @@ export const usePlanPermissions = (usersMatrix = []) => {
     
     return plans[planType] || plans.trial;
   };
-
-  const permissions = getPlanPermissions(user?.plan);
   
+  const normalizedPlan = (user?.plan || 'trial').toLowerCase();
+  const permissions = getPlanPermissions(normalizedPlan);
+    
   const checkPermission = (permission) => {
     return permissions[permission] || false;
   };
 
   const requireUpgrade = (feature, currentPlan) => {
-    // Logic to determine if user needs to upgrade for a feature
     const upgradeMap = {
-      'canUseDynamicTemplates': { required: 'pro', current: currentPlan },
       'canScheduleBroadcast': { required: 'pro', current: currentPlan },
       'canUseAPIs': { required: 'pro', current: currentPlan },
-      'canBulkUpload': { required: 'trial', current: currentPlan },
+      'canBulkUpload': { required: 'pro', current: currentPlan },
       'canAddSubUser': { 
         required: currentPlan === 'trial' || currentPlan === 'basic' ? 'pro' : null, 
         current: currentPlan 
@@ -60,15 +59,10 @@ export const usePlanPermissions = (usersMatrix = []) => {
     return upgradeMap[feature];
   };
 
-  // Debug logs
-  // console.log('Current plan:', user?.plan || 'trial');
-  // console.log('Permissions for plan:', permissions);
-  // console.log('Users count for canAddSubUser:', usersMatrix?.length || 0);
-  
   return {
     permissions,
     checkPermission,
     requireUpgrade,
-    userPlan: user?.plan || 'trial'
+    userPlan: normalizedPlan 
   };
 };

@@ -7,6 +7,7 @@ import PrivateRoute from "./PrivateRoute";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import PrivacyPolicy from "./PrivacyPolicy";
+import { ContactProvider } from "./features/contacts/context/ContactContext";
 
 const ContactList = lazy(() => import("./features/contacts/ContactList"));
 const Templates = lazy(() => import("./features/templates/Templates"));
@@ -21,10 +22,16 @@ const ExploreTemplates = lazy(() => import("./features/templates/ExploreTemplate
 const LoginRedirectHandler = lazy(() => import("./LoginRedirectHandler"));
 const ForgotPassword = lazy(() => import("./ForgotPassword"));
 const RegisterPage = lazy(() => import("./RegisterPage"));
-const GroupManagement = lazy(() => import("./features/contacts/GroupManagement"));
+const GroupManagement = lazy(() => import("./features/group/GroupManagement"));
 const UserSetting = lazy(() => import("./features/flow/UserSetting"));
+const TagsManagement = lazy(() => import("./features/tags/TagsManagement"));
 const OnboardingGuide = lazy(() => import("./features/onboard/OnboardingGuide"));
 const PricingPlans = lazy(() => import("./PricingPlans"));
+const DripCampaigns = lazy(() => import("./features/drip/DripCampaigns"));
+const DripCampaignEditor = lazy(() => import("./features/drip/DripCampaignEditor"));
+const DripCampaignAnalytics = lazy(() => import("./features/drip/DripCampaignAnalytics"));
+const Subscription = lazy(() => import("./pages/Subscription"));
+
 function App() {
   return (
     <>
@@ -53,7 +60,8 @@ function App() {
       />
 
       <Suspense fallback={<Loader />}>
-        <Routes>
+        <ContactProvider>
+          <Routes>
           {/* Public Routes */}
           <Route
             path="/login"
@@ -172,6 +180,46 @@ function App() {
                 }
               />
               <Route
+                path="/drip-campaigns"
+                element={
+                  <ErrorBoundary>
+                    <DripCampaigns />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/drip-campaigns/create"
+                element={
+                  <ErrorBoundary>
+                    <DripCampaignEditor />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/drip-campaigns/edit/:campaignId"
+                element={
+                  <ErrorBoundary>
+                    <DripCampaignEditor />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/drip-campaigns/analytics/:campaignId"
+                element={
+                  <ErrorBoundary>
+                    <DripCampaignAnalytics />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/settings/tags"
+                element={
+                  <ErrorBoundary>
+                    <TagsManagement />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
                 path="/settings"
                 element={
                   <ErrorBoundary>
@@ -196,6 +244,14 @@ function App() {
                 }
               />
               <Route
+                path="/subscription"
+                element={
+                  <ErrorBoundary>
+                    <Subscription />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
                 path="/contacts"
                 element={<Navigate to="/contact" replace />}
               />
@@ -214,7 +270,8 @@ function App() {
               </ErrorBoundary>
             }
           />
-        </Routes>
+          </Routes>
+        </ContactProvider>
       </Suspense>
     </>
   );

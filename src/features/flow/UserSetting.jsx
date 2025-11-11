@@ -1,11 +1,13 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { ROLE_PERMISSIONS } from "../../context/permissions";
-import { User, Shield, Star, Crown, Pencil, Trash2 } from "lucide-react";
+import { User, Crown, Pencil, Trash2 } from "lucide-react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import ReactDOM from "react-dom";
-
+import PlansModal from "../dashboard/PlansModal";
+import ClickToUpgrade from "../../components/ClickToUpgrade";
+import { usePlanPermissions } from "../../hooks/usePlanPermissions";
 // Import new components and hooks
 import DeleteConfirmationDialog from "../shared/DeleteConfirmationDialog";
 import UserFormModal from "./components/UserFormModal";
@@ -71,7 +73,7 @@ const UserSetting = () => {
 
   // Use custom hooks
   const {
-    usersMatrix,
+    usersMatrix = [],
     isLoading,
     createUser,
     updateUser,
@@ -79,6 +81,7 @@ const UserSetting = () => {
     updateUserRole,
   } = useUserManagement(user);
 
+  const { checkPermission } = usePlanPermissions(usersMatrix);
   const addUserForm = useFormState();
   const editUserForm = useFormState();
 
@@ -120,6 +123,8 @@ const roleOptions = [
   const popoverRefs = useRef({});
   const [popoverPosition, setPopoverPosition] = useState("bottom");
   const [popoverAnchorRect, setPopoverAnchorRect] = useState(null);
+  const [showPlansModal, setShowPlansModal] = useState(false);
+  const [actionRequiringPlan, setActionRequiringPlan] = useState(null);
 
   // Handle add user
   const handleAddUser = async () => {
@@ -150,7 +155,22 @@ const roleOptions = [
   // Handle edit user
   const handleEditUser = (userData) => {
     setEditUser(userData);
-    editUserForm.loadUserData(userData);
+    // Debug: Log user data to see what we're loading
+    console.log('Loading user for edit:', {
+      name: userData.name,
+      email: userData.email,
+      allowed_routes: userData.allowed_routes,
+      permissions: userData.permissions
+    });
+    
+    // Ensure permissions object is properly structured
+    const userWithPermissions = {
+      ...userData,
+      permissions: userData.permissions && typeof userData.permissions === 'object' && userData.permissions !== null
+        ? userData.permissions 
+        : null
+    };
+    editUserForm.loadUserData(userWithPermissions);
   };
 
   const handleSaveEditUser = async () => {
@@ -192,8 +212,49 @@ const roleOptions = [
   };
 
   // Handle role change
-  const handleRoleChange = (userId, newRole) => {
-    updateUserRole(userId, newRole);
+  const handleRoleChange = async (userId, newRole) => {
+    if (!permissions.canManageUsers) {
+      toast.error("You do not have permission to change user roles.");
+      return;
+    }
+
+    // Find the user to get their current data
+    const userToUpdate = usersMatrix.find(u => (u.id === userId || u.user_id === userId));
+    if (!userToUpdate) {
+      toast.error("User not found.");
+      return;
+    }
+
+    // Store the IDs and current role for rollback
+    const localId = userToUpdate.id; // For optimistic update (hook checks u.id)
+    const apiId = userToUpdate.user_id || userToUpdate.id; // For API call
+    const originalRole = userToUpdate.role;
+
+    // Optimistically update local state (hook expects u.id)
+    if (localId) {
+      updateUserRole(localId, newRole);
+    }
+
+    // Update via API
+    try {
+      const result = await updateUser(apiId, { role: newRole });
+      
+      if (result.success) {
+        toast.success("Role updated successfully!");
+      } else {
+        // Rollback on error
+        if (localId) {
+          updateUserRole(localId, originalRole);
+        }
+        toast.error(result.message || "Failed to update role.");
+      }
+    } catch (error) {
+      // Rollback on error
+      if (localId) {
+        updateUserRole(localId, originalRole);
+      }
+      toast.error("Failed to update role. Please try again.");
+    }
   };
 
   // Popover positioning effect
@@ -236,10 +297,14 @@ const roleOptions = [
             {/* You can add filter buttons here if needed */}
           </div>
           <div >
+             <ClickToUpgrade 
+              permission="canAddSubUser"
+              usersMatrix={usersMatrix}
+            >
             <button
                 className="bg-gradient-to-r from-[#0AA89E] to-cyan-500 text-white flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl shadow-lg hover:shadow-xl  transition-all cursor-pointer"
                   onClick={() => {
-                    if (permissions.canManageUsers) {
+                    if (checkPermission('canAddSubUser') && permissions.canManageUsers) {
                       setShowAddUser(true);
                     } else {
                       toast.error("You do not have permission to add users.");
@@ -249,6 +314,7 @@ const roleOptions = [
               <img src={vendor} alt="plus sign" className="w-5 h-5" />
               Add User
             </button>
+            </ClickToUpgrade>
           </div>
         </div>
         {/* Add User Modal */}
@@ -262,6 +328,7 @@ const roleOptions = [
           formData={addUserForm.formData}
           onUpdateField={addUserForm.updateField}
           onToggleRoute={addUserForm.toggleRoute}
+          onUpdatePermission={addUserForm.updatePermission}
           roleOptions={roleOptions}
           allRoutes={allRoutes}
           isEdit={false}
@@ -279,6 +346,7 @@ const roleOptions = [
           formData={editUserForm.formData}
           onUpdateField={editUserForm.updateField}
           onToggleRoute={editUserForm.toggleRoute}
+          onUpdatePermission={editUserForm.updatePermission}
           roleOptions={roleOptions}
           allRoutes={allRoutes}
           isEdit={true}
@@ -305,17 +373,27 @@ const roleOptions = [
                 </tr>
               </thead>
               <tbody className="max-h-[calc(100vh-300px)] overflow-y-auto scrollbar-hide">
-                {Array.isArray(usersMatrix) && usersMatrix.length === 0 && (
+                {isLoading && (
+                  <tr>
+                    <td colSpan="4" className="text-center py-8 text-gray-500">
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-teal-600"></div>
+                        <span>Loading users...</span>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                {!isLoading && Array.isArray(usersMatrix) && usersMatrix.length === 0 && (
                   <tr>
                     <td colSpan="4" className="text-center py-4 text-gray-500">
                       No users found.
                     </td>
                   </tr>
                 )}
-                {Array.isArray(usersMatrix) &&
+                {!isLoading && Array.isArray(usersMatrix) &&
                   usersMatrix.map((u, idx) => (
                     <tr
-                      key={u.id || u.user_id || idx}
+                      key={u.user_id || u.id || idx}
                       className="border-t border-b border-b-[#C3C3C3] hover:bg-gray-50 text-md"
                     >
                       <td className="px-2 py-4 sm:px-4 sm:py-4 whitespace-nowrap text-[12px] sm:text-[16px] text-gray-700 text-center">
@@ -338,16 +416,17 @@ const roleOptions = [
                             <select
                               value={u.role || "subuser"}
                               onChange={(e) =>
-                                handleRoleChange(u.id, e.target.value)
+                                handleRoleChange(u.user_id || u.id, e.target.value)
                               }
+                              disabled={isLoading || !permissions.canManageUsers}
                               className={`appearance-none pr-8 pl-3 py-1 rounded-full text-xs font-medium border-none 
-    focus:outline-none focus:ring-2 focus:ring-teal-400
-    flex items-center justify-center text-center leading-tight
-    ${
-      u.role === "subuser"
-        ? "bg-yellow-100 text-yellow-700" 
-        : "bg-gray-100 text-gray-700"
-    }`}
+                              focus:outline-none focus:ring-2 focus:ring-teal-400
+                              flex items-center justify-center text-center leading-tight
+                              ${
+                                u.role === "subuser"
+                                  ? "bg-yellow-100 text-yellow-700" 
+                                  : "bg-gray-100 text-gray-700"
+                              }`}
                               style={{ minWidth: 120 }}
                             >
                               {roleOptions
@@ -385,7 +464,7 @@ const roleOptions = [
                                   );
                                   return (
                                     <span
-                                      key={`${u.id}_route_${routeKey}_${idx}`}
+                                      key={`${u.user_id || u.id}_route_${routeKey}_${idx}`}
                                       className="inline-block bg-teal-100 text-teal-700 px-2 py-1 rounded-full text-xs font-medium mr-1 mb-1"
                                     >
                                       {route ? route.label : routeKey}
@@ -398,7 +477,7 @@ const roleOptions = [
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setOpenPopover({
-                                      userId: u.id,
+                                      userId: u.user_id || u.id,
                                       type: "routes",
                                     });
                                     const rect =
@@ -406,13 +485,13 @@ const roleOptions = [
                                     setPopoverAnchorRect(rect);
                                   }}
                                   ref={(el) =>
-                                    (popoverRefs.current[`${u.id}_routes`] = el)
+                                    (popoverRefs.current[`${u.user_id || u.id}_routes`] = el)
                                   }
                                 >
                                   +{u.allowed_routes.length - 3} more
                                 </span>
                               )}
-                              {openPopover.userId === u.id &&
+                              {openPopover.userId === (u.user_id || u.id) &&
                                 openPopover.type === "routes" &&
                                 popoverAnchorRect && (
                                   <PopoverPortal
@@ -435,7 +514,7 @@ const roleOptions = [
                                       );
                                       return (
                                         <div
-                                          key={`${u.id}_popover_route_${routeKey}_${idx}`}
+                                          key={`${u.user_id || u.id}_popover_route_${routeKey}_${idx}`}
                                           className="mb-1"
                                         >
                                           <span className="inline-block bg-teal-100 text-teal-700 px-2 py-1 rounded-full text-xs font-medium mr-1 mb-1">
@@ -508,6 +587,15 @@ const roleOptions = [
         title="Delete User"
         message="Are you sure you want to delete this user? This action cannot be undone."
       />
+                  {showPlansModal && (
+        <PlansModal
+          isOpen={showPlansModal}
+          onClose={() => {
+            setShowPlansModal(false);
+            setActionRequiringPlan(null);
+          }}
+        />
+      )}
     </>
   );
 };

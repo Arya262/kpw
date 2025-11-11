@@ -156,7 +156,7 @@ const getVideoFromTemplate = () => {
 
           {/* Time & Status */}
           <div className={`flex items-center gap-1 px-3 pb-2 ${sent ? "justify-end" : "justify-start"}`}>
-            <span className="text-[10px] text-gray-500">{msg.sent_at}</span>
+            <span className="text-[10px] text-gray-600">{msg.sent_at}</span>
             {sent && <MessageStatusIcon status={msg.status} />}
           </div>
         </div>

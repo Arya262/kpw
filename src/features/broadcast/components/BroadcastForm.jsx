@@ -17,7 +17,7 @@ import NavigationButtons from "../ui/NavigationButtons";
 
 const BroadcastForm = ({
   formData, setFormData, handleInputChange, handleRadioChange,handleMediaChange,selectedDate, setSelectedDate,loading, error, 
-  customerLists, onSubmit, isSubmitting, onTemplateSelect, step, setStep, wabaInfo,
+  onSubmit, isSubmitting, onTemplateSelect, step, setStep, wabaInfo,
   }) => {
   const { user } = useAuth();
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
@@ -27,13 +27,16 @@ const BroadcastForm = ({
     templates, templatesLoading, templatesError, estimatedCost, availableWCC, pagination, validationErrors, templateSearchTerm, setTemplateSearchTerm,
     customerSearchTerm, setCustomerSearchTerm, showList, setShowList, filteredCustomerLists, warningMessage, setWarningMessage, selectedGroups,
     totalSelectedContacts, fetchTemplates, loadMoreTemplates, validateStep, validateForm, handleNext, handlePrevious, getStepSequence,
+    customerLists, remainingQuota, quotaUsage, quotaUsagePercentage, timeUntilReset, consumeQuota, uniqueContactsCount
   } = useBroadcastForm(
-    formData, setFormData, customerLists, onTemplateSelect, step, setStep, selectedDate, setSelectedDate, wabaInfo
+    formData, setFormData, onTemplateSelect, step, setStep, selectedDate, setSelectedDate, wabaInfo
   );
 
   const handleFormSubmit = (e) => {
     e.preventDefault();
-    if (validateForm()) onSubmit(e);
+    if (validateForm()) {
+      onSubmit(e, { consumeQuota, totalSelectedContacts, selectedGroups, customerLists });
+    }
   };
 
   useEffect(() => {
@@ -44,7 +47,7 @@ const BroadcastForm = ({
     return () => clearTimeout(timer);
   }, [templateSearchTerm, fetchTemplates]);
 
-  // Handle dynamic template parameter input
+ 
   const handleTemplateParameterChange = (index, value) => {
     setFormData((prev) => {
       const updatedParams = [...(prev.templateParameters || [])];
@@ -62,6 +65,10 @@ const BroadcastForm = ({
           formData={formData}
           wabaInfo={wabaInfo}
           totalSelectedContacts={totalSelectedContacts}
+          remainingQuota={remainingQuota}
+          quotaUsage={quotaUsage}
+          timeUntilReset={timeUntilReset}
+          uniqueContactsCount={uniqueContactsCount}
         />
       )}
 
@@ -76,7 +83,7 @@ const BroadcastForm = ({
             />
           )}
 
-          {step === 2 && (
+          {step === 2 && !formData.isDirectBroadcast && (
             <GroupSelectionStep
               formData={formData}
               setFormData={setFormData}

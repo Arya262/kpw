@@ -1,9 +1,7 @@
-import { FaWhatsapp } from "react-icons/fa";
-
 export const API_BASE =
-  // import.meta.env.VITE_API_BASEz || "http://localhost:60000";
+  import.meta.env.VITE_API_BASEz || "http://localhost:60000";
   // import.meta.env.VITE_API_BASE || "https://marketing.foodchow.co.uk";
-  import.meta.env.VITE_API_BASE || "https://whatsappbackend.foodchow.app";
+  // import.meta.env.VITE_API_BASE || "https://whatsappbackend.foodchow.app";
 
 export const API_ENDPOINTS = {
   BROADCASTS: {
@@ -21,6 +19,7 @@ export const API_ENDPOINTS = {
     DELETE: `${API_BASE}/deletecontact`,
     UPDATE: `${API_BASE}/updatecontact`,
     BULK_IMPORT: `${API_BASE}/addBulkContact`,
+    SYNC: (customerId) => `${API_BASE}/sync-contacts?customer_id=${customerId}`,
   },
   CHAT: {
     CONVERSATIONS: `${API_BASE}/conversations`,
@@ -83,5 +82,32 @@ export const API_ENDPOINTS = {
   },
   WABA: {
     INFO: (customerId) => `${API_BASE}/getWabaInfo/${customerId}`,
+  },
+  TAGS: {
+    GET_ALL: `${API_BASE}/tags`,
+    CREATE: `${API_BASE}/tags`,
+    UPDATE: (tagId) => `${API_BASE}/tags/${tagId}`,
+    DELETE: (tagId) => `${API_BASE}/tags/${tagId}`,
+  },
+  DRIP_CAMPAIGNS: {
+    GET_ALL: `${API_BASE}/drip-campaigns`,
+    GET_BY_ID: (campaignId) => `${API_BASE}/drip-campaigns/${campaignId}`,
+    CREATE: `${API_BASE}/drip-campaigns`,
+    UPDATE: (campaignId) => `${API_BASE}/drip-campaigns/${campaignId}`,
+    DELETE: (campaignId) => `${API_BASE}/drip-campaigns/${campaignId}`,
+    TOGGLE_STATUS: (campaignId) => `${API_BASE}/drip-campaigns/${campaignId}/toggle-status`,
+    ENROLL: (campaignId) => `${API_BASE}/drip-campaigns/${campaignId}/enroll`,
+    UNENROLL: (campaignId) => `${API_BASE}/drip-campaigns/${campaignId}/unenroll`,
+    ANALYTICS: (campaignId) => `${API_BASE}/drip-campaigns/${campaignId}/analytics`,
+    ENROLLMENTS: (campaignId) => `${API_BASE}/drip-campaigns/${campaignId}/enrollments`,
+  },
+  PROFILE: {
+    GET_DETAILS: (customerId) => `${API_BASE}/${customerId}/details`,
+    GET_ABOUT: (customerId) => `${API_BASE}/${customerId}/about`,
+    GET_PHOTO: (customerId) => `${API_BASE}/${customerId}/photo`,
+    UPDATE_DETAILS: (customerId) => `${API_BASE}/${customerId}/details`,
+    UPDATE_ABOUT: (customerId) => `${API_BASE}/${customerId}/about`,
+    UPDATE_PHOTO: (customerId) => `${API_BASE}/${customerId}/photo`,
+    SYNC_WABA: (customerId) => `${API_BASE}/${customerId}/waba-info/sync`,
   },
 };

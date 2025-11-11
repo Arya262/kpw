@@ -40,7 +40,7 @@ const templateSchema = z.object({
       required_error: "Please select an interactive action",
     })
     .optional(),
-authButtonText: z
+  authButtonText: z
     .string()
     .max(25, "Button text must be 25 characters or less")
     .optional(),
@@ -100,6 +100,7 @@ const TemplateModal = ({
   const [includeExpiry, setIncludeExpiry] = useState(false);
   const [expiryMinutes, setExpiryMinutes] = useState(10);
   const [mediaFileName, setMediaFileName] = useState("");
+  const [phoneNumberError, setPhoneNumberError] = useState("");
   // Upload file to server and return media identifier
   const uploadFile = async (file) => {
     const formData = new FormData();
@@ -152,6 +153,12 @@ const TemplateModal = ({
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    // Clean up previous preview URL if it exists
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl("");
+    }
 
     const validTypes = {
       Image: {
@@ -297,7 +304,6 @@ const TemplateModal = ({
     setFormat("");
     setFooter("");
     setUrlCtas([{ title: "", url: "" }]);
-    setCategory("MARKETING");
     setTemplateName("");
     setLanguage("en");
     setPhoneCta({ title: "", country: "", number: "" });
@@ -309,11 +315,17 @@ const TemplateModal = ({
     setSelectedFile(null);
     setPreviewUrl("");
     setExampleMedia("");
+    setMediaFileName("");
     setErrors({});
     setHasUnsavedChanges(false);
     setShowExitDialog(false);
     setIsUploading(false);
     setAuthButtonText("");
+    setIncludeSecurityMessage(false);
+    setIncludeExpiry(false);
+    setExpiryMinutes(10);
+    setTemplateType("None");
+    setPhoneNumberError("");
   };
 
   // Detect variables from format
@@ -417,7 +429,7 @@ const TemplateModal = ({
       setCategory(initialValues.category || "MARKETING");
       setSubCategory(initialValues.sub_category || "");
       setTemplateName(initialValues.elementName || "");
-      setLanguage(initialValues.languageCode);
+      setLanguage(initialValues.languageCode || "en");
       setTemplateType(
         initialValues.templateType
           ? initialValues.templateType.charAt(0).toUpperCase() +
@@ -488,7 +500,8 @@ const TemplateModal = ({
         setSampleValues({});
       }
     }
-  }, [isOpen, mode, initialValues]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, mode, initialValues?.elementName, initialValues?.category]);
 
   // Validation function
   const validateForm = () => {
@@ -519,7 +532,37 @@ const TemplateModal = ({
         return false;
       }
 
+      // Validate phone number if phone CTA is provided
+      if (phoneCta.title || phoneCta.number) {
+        if (!phoneCta.number || phoneCta.number.trim() === "") {
+          setPhoneNumberError("Phone number is required when phone CTA is added");
+          return false;
+        }
+        if (!/^\d+$/.test(phoneCta.number)) {
+          setPhoneNumberError("Phone number must contain only digits");
+          return false;
+        }
+        if (!phoneCta.title || phoneCta.title.trim() === "") {
+          setErrors((prev) => ({
+            ...prev,
+            phoneCtaTitle: "Button title is required for phone CTA",
+          }));
+          return false;
+        }
+      }
+
+      // Validate dynamic variables sequence and duplicates
+      if (category !== "AUTHENTICATION" && sub_category !== 'PROMOTION') {
+        const dynamicValidation = validateDynamicVariables(format);
+        if (!dynamicValidation.isValid) {
+          toast.error(dynamicValidation.message);
+          setErrors((prev) => ({ ...prev, format: dynamicValidation.message }));
+          return false;
+        }
+      }
+
       setErrors({});
+      setPhoneNumberError("");
       return true;
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -545,10 +588,62 @@ const TemplateModal = ({
     }
   };
 
+  // Validate dynamic variables sequence and duplicates
+  const validateDynamicVariables = (formatString) => {
+    if (!formatString) return { isValid: true };
+
+    // Extract all variable numbers from format string (e.g., {{1}}, {{2}})
+    const regex = /{{\s*(\d+)\s*}}/g;
+    const matches = [...formatString.matchAll(regex)];
+    const variableNumbers = matches.map(match => parseInt(match[1], 10));
+
+    if (variableNumbers.length === 0) {
+      return { isValid: true };
+    }
+
+    // Check for duplicates
+    const uniqueNumbers = [...new Set(variableNumbers)];
+    if (uniqueNumbers.length !== variableNumbers.length) {
+      const duplicates = variableNumbers.filter((num, index) => variableNumbers.indexOf(num) !== index);
+      return {
+        isValid: false,
+        message: `Duplicate variable detected: {{${duplicates[0]}}}. Each variable number can only be used once.`
+      };
+    }
+
+    // Check for sequential order starting from 1
+    const sortedNumbers = [...uniqueNumbers].sort((a, b) => a - b);
+    for (let i = 0; i < sortedNumbers.length; i++) {
+      if (sortedNumbers[i] !== i + 1) {
+        return {
+          isValid: false,
+          message: `Variables must be in sequential order starting from {{1}}. Found {{${sortedNumbers[i]}}} but expected {{${i + 1}}}.`
+        };
+      }
+    }
+
+    // Check if any variable is at the end of the string
+    const trimmedFormat = formatString.trim();
+    const endRegex = /{{\s*(\d+)\s*}}\s*$/;
+    if (endRegex.test(trimmedFormat)) {
+      const endMatch = trimmedFormat.match(endRegex);
+      return {
+        isValid: false,
+        message: `Dynamic variable {{${endMatch[1]}}} cannot be at the end of the template. Add text after the variable.`
+      };
+    }
+
+    return { isValid: true };
+  };
+
   // Real-time validation for individual fields
   const validateField = (fieldName, value) => {
     try {
       const fieldSchema = templateSchema.shape[fieldName];
+      if (!fieldSchema) {
+        // Field doesn't exist in schema, skip validation
+        return;
+      }
       fieldSchema.parse(value);
       setErrors((prev) => ({ ...prev, [fieldName]: null }));
     } catch (error) {
@@ -591,12 +686,17 @@ const TemplateModal = ({
     e.preventDefault();
     if (!validateForm()) return;
 
-    const generateSampleText = (formatString, samples) => {
-      return formatString.replace(/{{\s*(\d+)\s*}}/g, (match, number) => {
-        return samples[number] || match;
-      });
-    };
-    const sampleText = generateSampleText(format, sampleValues);
+    if (isSubmitting || isUploading) return;
+
+    setIsSubmitting(true);
+
+    try {
+      const generateSampleText = (formatString, samples) => {
+        return formatString.replace(/{{\s*(\d+)\s*}}/g, (match, number) => {
+          return samples[number] || match;
+        });
+      };
+      const sampleText = generateSampleText(format, sampleValues);
 
     const buttons =
       category === "AUTHENTICATION"
@@ -660,7 +760,13 @@ const TemplateModal = ({
       }),
     };
     // console.log("Submitting template:", newTemplate);
-    onSubmit(newTemplate);
+    await onSubmit(newTemplate);
+    } catch (error) {
+      toast.error(error?.message || "Failed to submit template");
+      console.error("Template submission error:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -708,7 +814,7 @@ const TemplateModal = ({
         <div className="flex-1 flex flex-col lg:flex-row bg-gray-50">
           <div className="w-full lg:flex-1 overflow-y-auto scrollbar-hide p-4 lg:p-6 max-h-[calc(100vh-50px)]">
             <div className="bg-white p-4 lg:p-6 shadow rounded-md">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-6 items-end">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-6">
                 {/* Template Name */}
                 <div className="flex flex-col">
                   <div className="min-h-[65px]">
@@ -737,8 +843,9 @@ const TemplateModal = ({
                     disabled={mode === "edit"}
                   />
                   {errors.templateName && (
-                    <p className="text-red-500 text-sm mt-1">{errors.templateName}</p>
+                    <p className="text-red-500 text-sm mt-1 min-h-[20px]">{errors.templateName}</p>
                   )}
+                  {!errors.templateName && <div className="min-h-[20px]"></div>}
                 </div>
 
                 {/* Template Category */}
@@ -768,8 +875,9 @@ const TemplateModal = ({
                     placeholder="Select Template Category"
                   />
                   {errors.category && (
-                    <p className="text-red-500 text-sm mt-1">{errors.category}</p>
+                    <p className="text-red-500 text-sm mt-1 min-h-[20px]">{errors.category}</p>
                   )}
+                  {!errors.category && <div className="min-h-[20px]"></div>}
                 </div>
 
                 {/* Language */}
@@ -865,8 +973,9 @@ const TemplateModal = ({
                     placeholder="Select Language"
                   />
                   {errors.language && (
-                    <p className="text-red-500 text-sm mt-1">{errors.language}</p>
+                    <p className="text-red-500 text-sm mt-1 min-h-[20px]">{errors.language}</p>
                   )}
+                  {!errors.language && <div className="min-h-[20px]"></div>}
                 </div>
               </div>
 
@@ -887,11 +996,16 @@ const TemplateModal = ({
                             checked={templateType === type}
                             onChange={(e) => {
                               const selectedType = e.target.value;
+                              // Clean up previous preview URL before changing type
+                              if (previewUrl) {
+                                URL.revokeObjectURL(previewUrl);
+                              }
                               setTemplateType(selectedType);
                               validateField("templateType", selectedType);
                               setSelectedFile(null);
                               setPreviewUrl("");
                               setExampleMedia("");
+                              setMediaFileName("");
                               setErrors((prev) => ({ ...prev, file: null }));
                             }}
                           />
@@ -1123,6 +1237,26 @@ const TemplateModal = ({
                       }
                     }
 
+                    // Validate dynamic variables sequence and duplicates (skip for AUTHENTICATION)
+                    if (category !== "AUTHENTICATION" && sub_category !== 'PROMOTION') {
+                      const validation = validateDynamicVariables(newValue);
+                      if (!validation.isValid) {
+                        toast.error(validation.message);
+                        // Still update the format so user can see what they typed
+                        // but set an error state
+                        setErrors((prev) => ({ ...prev, format: validation.message }));
+                      } else {
+                        // Clear format error if validation passes
+                        setErrors((prev) => {
+                          const newErrors = { ...prev };
+                          if (newErrors.format && (newErrors.format.includes('Duplicate') || newErrors.format.includes('sequential'))) {
+                            delete newErrors.format;
+                          }
+                          return newErrors;
+                        });
+                      }
+                    }
+
                     // For all cases, update the format if within length limit
                     if (newValue.length <= 1024) {
                       setFormat(newValue);
@@ -1160,15 +1294,13 @@ const TemplateModal = ({
                       id="includeSecurityMessage"
                       checked={includeSecurityMessage}
                       onChange={(e) => {
-                        setIncludeSecurityMessage(e.target.checked);
-                        if (e.target.checked) {
-                          setFormat(
-                            "{{1}} is your verification code. For your security, do not share this code."
-                          );
-                        } else {
-                          setFormat("{{1}} is your verification code.");
-                        }
-                        validateField("format", format);
+                        const checked = e.target.checked;
+                        setIncludeSecurityMessage(checked);
+                        const newFormat = checked
+                          ? "{{1}} is your verification code. For your security, do not share this code."
+                          : "{{1}} is your verification code.";
+                        setFormat(newFormat);
+                        validateField("format", newFormat);
                       }}
                       className="mr-2"
                     />
@@ -1442,6 +1574,8 @@ const TemplateModal = ({
                         phoneCta={phoneCta}
                         setPhoneCta={setPhoneCta}
                         selectedAction={selectedAction}
+                        phoneNumberError={phoneNumberError}
+                        setPhoneNumberError={setPhoneNumberError}
                       />
                     )}
 

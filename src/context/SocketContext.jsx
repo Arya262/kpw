@@ -22,7 +22,7 @@ export const SocketProvider = ({ children }) => {
 
     // User logged in => create socket if not already connected
     if (!socket) {
-      const newSocket = io("https://whatsappbackend.foodchow.app", {
+      const newSocket = io("http://localhost:60000", {
         transports: ["websocket"],
         withCredentials: true,
       });

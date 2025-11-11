@@ -2,6 +2,8 @@ import React, { useMemo } from "react";
 import { FileText, Users, Calendar, MessageSquare, CreditCard } from "lucide-react";
 import { renderMedia } from "../../../utils/renderMedia";
 import { API_ENDPOINTS, API_BASE } from "../../../config/api";
+import { getMessageLimit, isContactLimitExceeded } from "../utils/messageLimits";
+import { hasSufficientBalance } from "../utils/costCalculation";
 
 const PreviewStep = ({
   formData,
@@ -26,50 +28,32 @@ const PreviewStep = ({
       );
     }
 
-    // Get the template and its parameters
     const { selectedTemplate, templateParameters = [] } = formData;
+    let content = selectedTemplate.data || selectedTemplate.container_meta?.sampleText || '';
     
-    // console.log('Template Parameters:', JSON.stringify(templateParameters, null, 2));
-    // console.log('Selected Template:', {
-    //   container_meta: selectedTemplate.container_meta,
-    //   data: selectedTemplate.data,
-    //   template_type: selectedTemplate.template_type
-    // });
-  
-     let content = selectedTemplate.data || selectedTemplate.container_meta?.sampleText || '';
-    // console.log('Initial content:', content);
-    
-    // Find the uploaded image if it exists
     const uploadedImage = templateParameters.find(
       param => param?.type === 'image' && (param?.image?.id || param?.image?.previewUrl || param?.image?.url)
     )?.image;
 
     const getMediaUrl = (urlOrFile) => {
-      // console.log('getMediaUrl called with:', { urlOrFile, uploadedImage });
       if (uploadedImage?.url) {
-        // console.log('Using uploaded image URL:', uploadedImage.url);
         return uploadedImage.url;
       }
 
       if (uploadedImage?.fileName) {
         const mediaUrl = `${API_BASE}/uploads/media/${uploadedImage.fileName}`;
-        // console.log('Using media URL with filename:', mediaUrl);
         return mediaUrl;
       }
       
       if (urlOrFile && (urlOrFile.startsWith('http') || urlOrFile.startsWith('blob:'))) {
-        // console.log('Using existing URL:', urlOrFile);
         return urlOrFile;
       }
       
-      // If we have a template media URL, use that
       if (selectedTemplate.container_meta?.mediaUrl) {
         const mediaUrl = `${API_BASE}/uploads/media/${selectedTemplate.container_meta.mediaUrl}`;
-        // console.log('Using template media URL:', mediaUrl);
         return mediaUrl;
       }
       
-      // Fallback to using the ID in the URL (shouldn't normally reach here)
       if (urlOrFile) {
         const mediaUrl = `${API_BASE}/uploads/media/${urlOrFile}`;
         console.warn('Falling back to media ID URL:', mediaUrl);
@@ -84,20 +68,11 @@ const PreviewStep = ({
                      uploadedImage?.previewUrl ||
                      selectedTemplate.container_meta?.mediaUrl || 
                      selectedTemplate.media_url;
-    // console.log('Media file selected for display:', mediaFile);
 
-    // Always use the server URL if we have a fileName
-    if (uploadedImage?.fileName) {
-      const serverUrl = `${API_BASE}/uploads/media/${uploadedImage.fileName}`;
-      // console.log('Using server URL for media:', serverUrl);
-    }
-
-    // File metadata - prioritize the filename from the uploaded image object
     const fileName = uploadedImage?.fileName || 
                    uploadedImage?.image?.fileName ||
                    (mediaFile ? mediaFile.split('/').pop().split('?')[0] : '');
 
-    // Get file extension in a safe way
     const fileExtension = fileName.includes('.') 
       ? fileName.split('.').pop().toLowerCase()
       : '';
@@ -108,52 +83,25 @@ const PreviewStep = ({
                    (uploadedImage?.type || '').startsWith('video/');
     const hasMedia = isImage || isVideo;
     
-    // Log detailed media info for debugging
-    // console.log('Media File Info:', {
-    //   mediaFile,
-    //   fileName,
-    //   fileExtension,
-    //   isImage,
-    //   isVideo,
-    //   hasMedia,
-    //   uploadedImage: uploadedImage ? { 
-    //     ...uploadedImage, 
-    //     image: uploadedImage.image ? { 
-    //       ...uploadedImage.image, 
-    //       file: uploadedImage.image.file ? '[File object]' : undefined 
-    //     } : null 
-    //   } : null,
-    //   templateMedia: selectedTemplate.container_meta?.mediaUrl || selectedTemplate.media_url,
-    //   templateType: selectedTemplate.template_type
-    // });
-
     if (templateParameters.length > 0) {
       const placeholderMap = {};
       
-      // console.log('Processing parameters:');
       templateParameters.forEach((param, index) => {
-        // console.log(`Parameter ${index}:`, param);
         if (param.type === 'text' && param.value) {
           const placeholder = param.placeholder || `{{${index + 1}}}`;
-          // console.log(`  - Mapping placeholder: ${placeholder} = ${param.value}`);
           placeholderMap[placeholder] = param.value;
         }
       });
       
-      // console.log('Placeholder map:', placeholderMap);
-      // console.log('Before replacements:', content);
       Object.entries(placeholderMap).forEach(([placeholder, value]) => {
         const escapedPlaceholder = placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const regex = new RegExp(escapedPlaceholder, 'g');
         
-        // console.log(`Looking for placeholder: ${placeholder} in content`);
         if (content.includes(placeholder)) {
-          // console.log(`Found exact match for ${placeholder}, replacing with ${value}`);
           content = content.replace(regex, value);
         } else {
           const trimmedPlaceholder = placeholder.trim();
           if (content.includes(trimmedPlaceholder)) {
-            // console.log(`Found trimmed match for ${placeholder}, replacing with ${value}`);
             const trimmedRegex = new RegExp(trimmedPlaceholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
             content = content.replace(trimmedRegex, value);
           } else {
@@ -194,16 +142,13 @@ const PreviewStep = ({
                     opacity: 0
                   }}
                   onLoad={(e) => {
-                    // console.log('Image loaded successfully:', e.target.src);
                     e.target.style.opacity = '1';
                   }}
                   onError={(e) => {
                     console.error('Error loading image:', e.target.src);
                     
-                    // If we were using a blob URL and have a filename, try the server URL
                     if (e.target.src.startsWith('blob:') && uploadedImage?.fileName) {
                       const serverUrl = `${API_BASE}/uploads/media/${uploadedImage.fileName}`;
-                      // console.log('Trying server URL:', serverUrl);
                       e.target.src = serverUrl;
                       return;
                     }
@@ -285,22 +230,15 @@ const PreviewStep = ({
     );
   };
 
-  const getMessageLimit = (wabaInfo) => {
-    if (!wabaInfo?.messagingLimit) return 250; 
-    const tierLimits = {
-      'TIER_1K': 1000,
-      'TIER_10K': 10000,
-      'TIER_100K': 100000,
-    };
-    return tierLimits[wabaInfo.messagingLimit] || 250;
-  };
   const messageLimit = getMessageLimit(wabaInfo);
+  const isContactLimitExceededFlag = isContactLimitExceeded(totalSelectedContacts, wabaInfo);
+  const isInsufficientBalance = !hasSufficientBalance(estimatedCost, availableWCC);
 
   return (
     <div className="space-y-6">
       {/* Campaign Overview */}
       <div className="bg-gradient-to-r from-teal-50 to-blue-50 p-6 rounded-xl border border-teal-100">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
           <MessageSquare className="w-5 h-5 text-teal-500" />
           Campaign Overview
         </h3>
@@ -392,7 +330,7 @@ const PreviewStep = ({
           </div>
         </div>
         
-        {totalSelectedContacts > messageLimit && (
+        {isContactLimitExceededFlag && (
           <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
             <p className="text-amber-700 text-sm font-medium flex items-center gap-2">
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -403,7 +341,7 @@ const PreviewStep = ({
           </div>
         )}
         
-        {estimatedCost > availableWCC && (
+        {isInsufficientBalance && (
           <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
             <p className="text-red-700 text-sm font-medium flex items-center gap-2">
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">

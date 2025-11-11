@@ -7,7 +7,7 @@ import vendor from "../../assets/Vector.png";
 import BroadcastDashboard from "./BroadcastDashboard";
 import BroadcastPages from "./BroadcastPages";
 import { useAuth } from "../../context/AuthContext";
-import { getPermissions } from "../../utils/getPermissions";
+import { usePermissions } from "../../hooks/usePermissions";
 
 const Broadcast = () => {
   const broadcastDashboardRef = useRef(null);
@@ -18,7 +18,7 @@ const Broadcast = () => {
 
   const location = useLocation();
   const { user } = useAuth();
-  const permissions = getPermissions(user);
+  const { hasPermission } = usePermissions(); // RBAC system only
 
   useEffect(() => {
     if (location.state?.formData) {
@@ -27,7 +27,7 @@ const Broadcast = () => {
     }
 
     if (location.state?.openForm) {
-      if (!permissions.canAddBroadcast) {
+      if (!hasPermission('broadcasts', 'create')) {
         toast.error("You do not have permission to add Campaign.");
       } else {
         setShowPopup(true);
@@ -37,22 +37,19 @@ const Broadcast = () => {
 
   }, []);
 
-  // When broadcast is created
   const handleBroadcastCreated = () => {
     broadcastDashboardRef.current?.fetchBroadcasts();
-    toast.success("Campaign added successfully!");
+    toast.success("Campaign sent successfully!");
     setShowPopup(false);
   };
 
-  // Update broadcasts & pagination
   const handleBroadcastsUpdate = ({ broadcasts: newBroadcasts, pagination: newPagination }) => {
     setBroadcasts(newBroadcasts || []);
     setPagination(newPagination || null);
   };
 
-  // Add Campaign button
   const handleAddBroadcast = () => {
-    if (!permissions.canAddBroadcast) {
+    if (!hasPermission('broadcasts', 'create')) {
       toast.error("You do not have permission to add Campaigns.");
       return;
     }
@@ -74,13 +71,15 @@ const Broadcast = () => {
       {/* Header */}
       <div className="flex items-center justify-between p-2.5">
         <h2 className="text-xl pt-0 font-semibold">Campaigns</h2>
-        <button
-          className="bg-gradient-to-r from-[#0AA89E] to-cyan-500 text-white flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer"
-          onClick={handleAddBroadcast}
-        >
-          <img src={vendor} alt="plus sign" className="w-5 h-5" />
-          Add Campaigns
-        </button>
+        {hasPermission('broadcasts', 'create') && (
+          <button
+            className="bg-linear-to-r from-[#0AA89E] to-cyan-500 text-white flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer"
+            onClick={handleAddBroadcast}
+          >
+            <img src={vendor} alt="plus sign" className="w-5 h-5" />
+            Add Campaigns
+          </button>
+        )}
       </div>
 
       {/* Stats */}
@@ -93,7 +92,7 @@ const Broadcast = () => {
       />
 
       {/* Modal */}
-      {showPopup && (
+      {showPopup && hasPermission('broadcasts', 'create') && (
         <div
           className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 transition-all duration-300"
           onClick={handleBackdropClick}
@@ -128,8 +127,7 @@ const Broadcast = () => {
                     ? "bg-red-500 text-white hover:bg-red-600"
                     : "bg-gray-200 text-gray-600 hover:bg-gray-300 hover:text-gray-800"
                 }`}
-                aria-label="Close modal"
-              >
+                aria-label="Close modal">
                 <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>

@@ -65,7 +65,7 @@ const TextMessage = ({ msg, sent }) => {
             }}
           />
           <div className="flex justify-end items-center space-x-1 mt-1">
-            <span className="text-[10px] text-gray-500">{msg.sent_at}</span>
+            <span className="text-[10px] text-gray-600">{msg.sent_at}</span>
             {sent && <MessageStatusIcon status={msg.status} />}
           </div>
         </div>

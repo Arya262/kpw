@@ -32,16 +32,26 @@ const GroupForm = ({ group, onSave, onCancel }) => {
     return true;
   };
 
-  // File validation
+  // File validation - make file optional during edit
   const validateFile = () => {
-    if (!file && (!group?.file_name || fileRemoved)) {
+    // If editing and no new file is selected, skip file validation
+    if (group?.id && !file) {
+      setFileError("");
+      return true;
+    }
+    
+    // For new groups or when a file is selected
+    if (file) {
+      if (!(file.name.endsWith(".csv") || file.name.endsWith(".docx"))) {
+        setFileError("Only .csv or .docx files are allowed.");
+        return false;
+      }
+    } else if (!group?.id) {
+      // For new groups, file is required
       setFileError("Please upload a file for new groups.");
       return false;
     }
-    if (file && ![".csv", ".docx"].some(ext => file.name.endsWith(ext))) {
-      setFileError("Only .csv or .docx files are allowed.");
-      return false;
-    }
+    
     setFileError("");
     return true;
   };
@@ -166,7 +176,7 @@ const GroupForm = ({ group, onSave, onCancel }) => {
         customer_id,
         group_name: name.trim(),
         description: description.trim(),
-        contacts: file?.parsedContacts || [],
+        contacts: file?.parsedContacts || (group?.id && !file ? group.contacts || [] : []),
       };
       await onSave(groupData);
     } finally {
@@ -205,9 +215,14 @@ const GroupForm = ({ group, onSave, onCancel }) => {
       </div>
 
       <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Upload File (.csv or .docx)
-        </label>
+        <div className="flex items-center justify-between">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Upload File (.csv or .docx) {!group?.id && <span className="text-red-500">*</span>}
+          </label>
+          {group?.id && (
+            <span className="text-xs text-gray-500">Optional - leave empty to keep existing file</span>
+          )}
+        </div>
         <div
           className={`mb-2 border-2 rounded-md p-4 text-center transition-all duration-200 ${isDragging ? "border-[#0AA89E] bg-blue-50" : "border-dashed border-gray-300"}`}
           onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}

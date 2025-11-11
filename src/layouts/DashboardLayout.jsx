@@ -16,15 +16,15 @@ const DashboardLayout = () => {
   // Helper function to normalize routes for comparison
   const normalizeRoute = (route) => {
     // Remove leading slash if present, then add it back consistently
-    return `/${route.replace(/^\//, '')}`;
+    return `/${route.replace(/^\//, "")}`;
   };
 
   // Check if current path is allowed
   const isRouteAllowed = () => {
     if (!user || !user.allowed_routes) return true;
-    
+
     const normalizedCurrentPath = normalizeRoute(currentPath);
-    return user.allowed_routes.some(allowedRoute => {
+    return user.allowed_routes.some((allowedRoute) => {
       const normalizedAllowedRoute = normalizeRoute(allowedRoute);
       return normalizedCurrentPath === normalizedAllowedRoute;
     });
@@ -43,16 +43,13 @@ const DashboardLayout = () => {
           setIsOpen={setIsMenuOpen}
           className="overflow-y-auto"
         />
-
-  
-
         <main
-  className={`flex-1 px-2.5 pb-2.5 bg-white ${
-    isChatRoute ? "overflow-hidden" : "overflow-y-auto custom-scroll"
-  }`}
->
-  {!isRouteAllowed() ? <NotAuthorized /> : <Outlet />}
-</main>
+          className={`flex-1 px-2.5 pb-2.5 bg-white ${
+            isChatRoute ? "overflow-hidden" : "overflow-y-auto custom-scroll"
+          }`}
+        >
+          {!isRouteAllowed() ? <NotAuthorized /> : <Outlet />}
+        </main>
       </div>
     </div>
   );

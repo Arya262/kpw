@@ -85,6 +85,8 @@ const ChatSidebar = ({
       {/* Contacts List with infinite scroll */}
       <div
         ref={listRef}
+        role="list"
+        aria-label="Chat conversations"
         className="space-y-2 overflow-y-auto flex-1 scrollbar-hide"
       >
         {filteredContacts.length > 0 ? (
@@ -96,7 +98,8 @@ const ChatSidebar = ({
               <div
                 key={contact.contact_id ?? `contact-${index}`}
                 role="listitem"
-                aria-selected={isSelected}
+                aria-label={`Chat with ${contact.name || 'Unnamed'}`}
+                aria-current={isSelected ? "true" : undefined}
                 tabIndex={0}
                 onClick={() => onSelectContact(contact)}
                 onKeyDown={(e) => {
@@ -124,7 +127,7 @@ const ChatSidebar = ({
                       {contact.name || "Unnamed"}
                     </p>
                     <div className="flex flex-col items-end min-w-[50px] text-right">
-                      <p className="text-xs text-gray-500 select-none">
+                      <p className="text-xs text-gray-600 select-none">
                         {formatLastMessageTime(contact.lastMessageTime)}
                       </p>
                       {contact.unreadCount > 0 && (
@@ -135,12 +138,12 @@ const ChatSidebar = ({
                     </div>
                   </div>
 
-                  <p className="text-sm text-gray-500 truncate mt-0.5">
+                  <p className="text-sm text-gray-600 truncate mt-0.5">
                     {getMessagePreview(
                       contact.lastMessage,
                       contact.lastMessageType
                     ) || (
-                      <span className="italic text-gray-400">
+                      <span className="italic text-gray-500">
                         No messages yet
                       </span>
                     )}
