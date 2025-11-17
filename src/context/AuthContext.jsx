@@ -43,8 +43,8 @@ export const AuthProvider = ({ children }) => {
   const fetchWabaInfo = useCallback(async (customerId) => {
     if (!customerId) return;
     try {
-      const response = await axios.get(API_ENDPOINTS.WABA.INFO(customerId));
-      // console.log('WABA Info Response:', response.data);
+      const response = await axios.get(API_ENDPOINTS.WABA.INFO(customerId), { withCredentials: true });
+      console.log('WABA Info Response:', response.data);
       setWabaInfo(response.data.wabaInfo); 
     } catch (err) {
       console.error("Failed to fetch WABA info:", err.response?.data?.error || err.message);

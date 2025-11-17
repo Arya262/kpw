@@ -1,9 +1,7 @@
-import { FaWhatsapp } from "react-icons/fa";
-
 export const API_BASE =
-  // import.meta.env.VITE_API_BASEz || "http://localhost:60000";
+  import.meta.env.VITE_API_BASEz || "http://localhost:60000";
   // import.meta.env.VITE_API_BASE || "https://marketing.foodchow.co.uk";
-  import.meta.env.VITE_API_BASE || "https://whatsappbackend.foodchow.app";
+  // import.meta.env.VITE_API_BASE || "https://whatsappbackend.foodchow.app";
 
 export const API_ENDPOINTS = {
   BROADCASTS: {
@@ -83,5 +81,14 @@ export const API_ENDPOINTS = {
   },
   WABA: {
     INFO: (customerId) => `${API_BASE}/getWabaInfo/${customerId}`,
+  },
+    PROFILE: {
+    GET_DETAILS: (customerId) => `${API_BASE}/${customerId}/details`,
+    GET_ABOUT: (customerId) => `${API_BASE}/${customerId}/about`,
+    GET_PHOTO: (customerId) => `${API_BASE}/${customerId}/photo`,
+    UPDATE_DETAILS: (customerId) => `${API_BASE}/${customerId}/details`,
+    UPDATE_ABOUT: (customerId) => `${API_BASE}/${customerId}/about`,
+    UPDATE_PHOTO: (customerId) => `${API_BASE}/${customerId}/photo`,
+    SYNC_WABA: (customerId) => `${API_BASE}/${customerId}/waba-info/sync`,
   },
 };

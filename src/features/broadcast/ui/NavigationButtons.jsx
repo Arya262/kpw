@@ -1,5 +1,8 @@
 import React from "react";
 import { Send } from "lucide-react";
+import { isContactLimitExceeded, getMessageLimit } from "../utils/messageLimits";
+import { hasSufficientBalance } from "../utils/costCalculation";
+
 const NavigationButtons = ({
   step,
   handlePrevious,
@@ -12,21 +15,10 @@ const NavigationButtons = ({
   totalSelectedContacts,
   wabaInfo
 }) => {
- 
-  const getMessageLimit = (wabaInfo) => {
-    if (!wabaInfo?.messagingLimit) return 250;
-    const tierLimits = {
-      'TIER_1K': 1000,
-      'TIER_10K': 10000,
-      'TIER_100K': 100000,
-    };
-    return tierLimits[wabaInfo.messagingLimit] || 250; 
-  };
-  
   const messageLimit = getMessageLimit(wabaInfo);
-  const isContactLimitExceeded = totalSelectedContacts > messageLimit;
-  const isInsufficientBalance = estimatedCost > availableWCC;
-  const isSendDisabled = isSubmitting || isContactLimitExceeded || isInsufficientBalance;
+  const isContactLimitExceededFlag = isContactLimitExceeded(totalSelectedContacts, wabaInfo);
+  const isInsufficientBalance = !hasSufficientBalance(estimatedCost, availableWCC);
+  const isSendDisabled = isSubmitting || isContactLimitExceededFlag || isInsufficientBalance;
   const sequence = getStepSequence();
   const isLastStep = step === sequence[sequence.length - 1];
   
@@ -63,7 +55,7 @@ const NavigationButtons = ({
                   ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                   : "bg-teal-500 hover:bg-teal-600 text-white"
               }`}
-              title={isContactLimitExceeded 
+              title={isContactLimitExceededFlag 
                 ? `Audience size exceeds ${messageLimit.toLocaleString()} contacts. Please reduce the number of contacts.` 
                 : isInsufficientBalance 
                   ? 'Insufficient balance. Please add more credits to your account.' 
@@ -96,8 +88,15 @@ const NavigationButtons = ({
                 </>
               ) : (
                 <>
-                  <span className="hidden sm:inline"><Send className="w-4 h-4" /> Send Campaign</span>
-                  <span className="sm:hidden"><Send className="w-4 h-4" /> Send</span>
+                  <span className="hidden sm:inline-flex items-center gap-2">
+                    <Send className="w-4 h-4" />
+                    Send Campaign
+                  </span>
+
+                  <span className="sm:hidden inline-flex items-center gap-2">
+                    <Send className="w-4 h-4" />
+                    Send
+                  </span>
                 </>
               )}
             </button>

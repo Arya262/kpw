@@ -12,13 +12,6 @@ const ClickToUpgrade = ({
   const { checkPermission, userPlan, permissions } = usePlanPermissions(usersMatrix);
   const [showPlansModal, setShowPlansModal] = useState(false);
   
-  // Debug logs
-  // console.log('usersMatrix:', usersMatrix);
-  // console.log('userPlan:', userPlan);
-  // console.log('permissions:', permissions);
-  // console.log('hasPermission:', checkPermission(permission));
-  
-  // If user has permission, render children normally
   if (checkPermission(permission)) {
     return children;
   }

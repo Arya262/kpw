@@ -17,7 +17,7 @@ import NavigationButtons from "../ui/NavigationButtons";
 
 const BroadcastForm = ({
   formData, setFormData, handleInputChange, handleRadioChange,handleMediaChange,selectedDate, setSelectedDate,loading, error, 
-  customerLists, onSubmit, isSubmitting, onTemplateSelect, step, setStep, wabaInfo,
+   onSubmit, isSubmitting, onTemplateSelect, step, setStep, wabaInfo,
   }) => {
   const { user } = useAuth();
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
@@ -27,8 +27,9 @@ const BroadcastForm = ({
     templates, templatesLoading, templatesError, estimatedCost, availableWCC, pagination, validationErrors, templateSearchTerm, setTemplateSearchTerm,
     customerSearchTerm, setCustomerSearchTerm, showList, setShowList, filteredCustomerLists, warningMessage, setWarningMessage, selectedGroups,
     totalSelectedContacts, fetchTemplates, loadMoreTemplates, validateStep, validateForm, handleNext, handlePrevious, getStepSequence,
+    customerLists,
   } = useBroadcastForm(
-    formData, setFormData, customerLists, onTemplateSelect, step, setStep, selectedDate, setSelectedDate, wabaInfo
+    formData, setFormData, onTemplateSelect, step, setStep, selectedDate, setSelectedDate, wabaInfo
   );
 
   const handleFormSubmit = (e) => {
@@ -76,7 +77,7 @@ const BroadcastForm = ({
             />
           )}
 
-          {step === 2 && (
+          {step === 2 && !formData.isDirectBroadcast && (
             <GroupSelectionStep
               formData={formData}
               setFormData={setFormData}

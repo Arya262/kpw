@@ -5,6 +5,7 @@ import SingleContactForm from "./SingleContactForm";
 import BulkContactForm from "./BulkContactForm";
 import { API_ENDPOINTS } from "../../config/api";
 import { useAuth } from "../../context/AuthContext";
+import ClickToUpgrade from "../../components/ClickToUpgrade";
 
 const GroupNameErrorDialog = ({ isOpen, message, onClose }) => {
   if (!isOpen) return null;
@@ -28,7 +29,7 @@ const GroupNameErrorDialog = ({ isOpen, message, onClose }) => {
   );
 };
 
-export default function AddContact({ closePopup, onSuccess }) {
+export default function AddContact({ closePopup, onSuccess, onPlanRequired }) {
   const [tab, setTab] = useState("single");
   const [phone, setPhone] = useState("");
   const [optStatus, setOptStatus] = useState("Opted In");
@@ -72,14 +73,22 @@ export default function AddContact({ closePopup, onSuccess }) {
   };
 
   const handleTabChange = (newTab) => {
+    // Only check for plan when switching to bulk tab
+    if (newTab === "bulk") {
+      const canProceed = onPlanRequired ? onPlanRequired("bulkImport") : true;
+      if (!canProceed) return;
+    }
+
+    // Clear bulk data when switching away from bulk tab
     if (newTab === "single" && tab === "bulk") {
       clearBulkData();
     }
+
     setTab(newTab);
   };
 
   const handleDataExtracted = (contacts) => {
-    console.log('Extracted contacts:', contacts);
+    // console.log('Extracted contacts:', contacts);
     setExtractedContacts(contacts);
   };
 
@@ -92,7 +101,9 @@ export default function AddContact({ closePopup, onSuccess }) {
         return;
       }
       if (!extractedContacts || extractedContacts.length === 0) {
-        setErrorMessage("No valid contacts found to import. Please check your CSV file and try again.");
+        setErrorMessage(
+          "No valid contacts found to import. Please check your CSV file and try again."
+        );
         return;
       }
     }
@@ -106,7 +117,7 @@ export default function AddContact({ closePopup, onSuccess }) {
 
     try {
       if (tab === "single") {
-                const digits = phone.replace(/\D/g, "");
+        const digits = phone.replace(/\D/g, "");
         const countryCodeMatch = phone.match(/^\+?\d{1,4}/);
         const countryCode = countryCodeMatch ? countryCodeMatch[0] : "";
         const nationalNumber = digits.replace(countryCode, "");
@@ -139,21 +150,21 @@ export default function AddContact({ closePopup, onSuccess }) {
         if (!extractedContacts || extractedContacts.length === 0) {
           throw new Error("No valid contacts found to import");
         }
-  
+
         // Prepare the request body
         const requestBody = {
           customer_id: user.customer_id,
           contacts: extractedContacts,
-          import_timestamp: new Date().toISOString()
+          import_timestamp: new Date().toISOString(),
         };
-  
+
         // Log the request data
-        console.log('Sending to backend:', {
-          endpoint: API_ENDPOINTS.CONTACTS.BULK_IMPORT,
-          requestBody: requestBody,
-          timestamp: new Date().toISOString()
-        });
-  
+        // console.log('Sending to backend:', {
+        //   endpoint: API_ENDPOINTS.CONTACTS.BULK_IMPORT,
+        //   requestBody: requestBody,
+        //   timestamp: new Date().toISOString()
+        // });
+
         // Call the new bulk import endpoint
         const response = await fetch(API_ENDPOINTS.CONTACTS.BULK_IMPORT, {
           method: "POST",
@@ -163,20 +174,22 @@ export default function AddContact({ closePopup, onSuccess }) {
           credentials: "include",
           body: JSON.stringify(requestBody),
         });
-  
+
         const result = await response.json();
-        
+
         if (!result.success) {
           throw new Error(result.message || "Failed to import contacts");
         }
-  
+
         setSuccessMessage(result.message || "Contacts imported successfully!");
         setErrorMessage("");
         if (onSuccess) onSuccess(result.message);
       }
     } catch (error) {
       console.error("API error:", error);
-      setErrorMessage(error.message || "An error occurred while importing contacts");
+      setErrorMessage(
+        error.message || "An error occurred while importing contacts"
+      );
       setSuccessMessage("");
     } finally {
       setIsSubmitting(false);
@@ -185,67 +198,66 @@ export default function AddContact({ closePopup, onSuccess }) {
 
   return (
     <>
-<div className="max-w-4xl mx-auto bg-white shadow-lg rounded-xl text-gray-500 p-6">
-  <h2 className="text-xl font-semibold mb-2 text-black">Add Contact</h2>
+      <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-xl text-gray-500 p-6">
+        <h2 className="text-xl font-semibold mb-2 text-black">Add Contact</h2>
 
-  <SuccessErrorMessage
-    successMessage={successMessage}
-    errorMessage={errorMessage}
-  />
+        <SuccessErrorMessage
+          successMessage={successMessage}
+          errorMessage={errorMessage}
+        />
 
-  <p className="text-sm text-gray-600 mb-4">
-    {tab === "single" ? "Add one contact manually" : "Upload contacts in bulk"}
-  </p>
+        <p className="text-sm text-gray-600 mb-4">
+          {tab === "single"
+            ? "Add one contact manually"
+            : "Upload contacts in bulk"}
+        </p>
 
-  <ContactTabs tab={tab} setTab={handleTabChange} />
+        <ContactTabs tab={tab} setTab={handleTabChange} />
 
-  {tab === "single" ? (
-    <SingleContactForm
-      phone={phone}
-      setPhone={setPhone}
-      phoneError={phoneError}
-      setPhoneError={setPhoneError}
-      isTouched={isTouched}
-      setIsTouched={setIsTouched}
-      optStatus={optStatus}
-      setOptStatus={setOptStatus}
-      name={name}
-      setName={setName}
-    />
-  ) : (
-    <BulkContactForm
-      file={file}
-      setFile={setFile}
-      fieldMapping={fieldMapping}
-      setFieldMapping={setFieldMapping}
-      onDataExtracted={handleDataExtracted}
-    />
-  )}
+        {tab === "single" ? (
+          <SingleContactForm
+            phone={phone}
+            setPhone={setPhone}
+            phoneError={phoneError}
+            setPhoneError={setPhoneError}
+            isTouched={isTouched}
+            setIsTouched={setIsTouched}
+            optStatus={optStatus}
+            setOptStatus={setOptStatus}
+            name={name}
+            setName={setName}
+          />
+        ) : (
+          <BulkContactForm
+            file={file}
+            setFile={setFile}
+            fieldMapping={fieldMapping}
+            setFieldMapping={setFieldMapping}
+            onDataExtracted={handleDataExtracted}
+          />
+        )}
 
-  <button
-    onClick={handleSubmit}
-    disabled={isSubmitting}
-    className={`mt-4 px-4 py-2 rounded mx-auto block  cursor-pointer ${
-      isSubmitting
-        ? "bg-gray-400 cursor-not-allowed text-white"
-        : "bg-teal-600 hover:bg-teal-700 text-white"
-    }`}
-  >
-    {isSubmitting
-      ? "Submitting..."
-      : tab === "single"
-      ? "Add Contact"
-      : "Bulk Contact"}
-  </button>
-</div>
-
+        <button
+          onClick={handleSubmit}
+          disabled={isSubmitting}
+          className={`mt-4 px-4 py-2 rounded mx-auto block  cursor-pointer ${
+            isSubmitting
+              ? "bg-gray-400 cursor-not-allowed text-white"
+              : "bg-teal-600 hover:bg-teal-700 text-white"
+          }`}
+        >
+          {isSubmitting
+            ? "Submitting..."
+            : tab === "single"
+            ? "Add Contact"
+            : "Bulk Contact"}
+        </button>
+      </div>
 
       <GroupNameErrorDialog
         isOpen={groupNameErrorDialog.isOpen}
         message={groupNameErrorDialog.message}
-        onClose={() =>
-          setGroupNameErrorDialog({ isOpen: false, message: "" })
-        }
+        onClose={() => setGroupNameErrorDialog({ isOpen: false, message: "" })}
       />
     </>
   );

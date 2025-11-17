@@ -150,14 +150,12 @@ const filteredCounts = useMemo(() => {
   };
 
   const handleDeleteClick = (template) => {
-    if (!canDelete) {
-      toast.error("You do not have permission to delete templates.", {
-        position: "top-right",
-        autoClose: 3000,
-      });
-      return;
-    }
-    setSelectedTemplate(template);
+    if (!canDelete) return;
+    setSelectedTemplate({
+      ...template,
+      _selectedIds: [template.id],
+      element_name: template.element_name || template.elementName
+    });
     setShowDeleteDialog(true);
     setMenuOpen(null);
   };
@@ -175,33 +173,64 @@ const filteredCounts = useMemo(() => {
   };
 
   const handleDeleteConfirm = async () => {
-    if (!selectedTemplate) return;
+  if (!selectedTemplate) return;
+  
+  try {
+    setIsDeleting(true);
     
-    try {
-      setIsDeleting(true);
-      const payload = await getDeletePayload();
+    // Get the latest payload with all selected templates
+    const payload = await getDeletePayload();
+    
+    if (payload.length === 0) {
+      setShowDeleteDialog(false);
+      return;
+    }
+
+    // Delete all selected templates in parallel
+    const deletePromises = payload.map(template => 
+      onDelete(template)
+    );
+    
+    const results = await Promise.all(deletePromises);
+    const allSucceeded = results.every(Boolean);
+    
+    if (allSucceeded) {
+      setSelectedRows({});
+      setSelectAll(false);
+      setSelectAllAcrossPages(false);
       
-      if (payload.length > 0) {
-        const success = await onDelete(payload);
-        if (success) {
-          setSelectedRows({});
-          setSelectAll(false);
-          setSelectAllAcrossPages(false);
-        
-          if (pagination?.onPageChange) {
-            pagination.onPageChange(1); 
-          }
+     
+      // const message = payload.length === 1 
+      //   ? "Template deleted successfully" 
+      //   : `${payload.length} templates deleted successfully`;
+      
+      // toast.success(message, {
+      //   position: "top-right",
+      //   autoClose: 3000,
+      // });
+      
+      // Refresh the table
+      if (pagination?.onPageChange) {
+        const currentItemsCount = templates.length;
+        if (currentItemsCount <= payload.length && pagination.currentPage > 1) {
+          pagination.onPageChange(pagination.currentPage - 1);
+        } else {
+          pagination.onPageChange(pagination.currentPage);
         }
       }
-    } catch (error) {
-      console.error("Error in handleDeleteConfirm:", error);
-      toast.error("An error occurred while deleting templates.", { autoClose: 3000 });
-    } finally {
-      setIsDeleting(false);
-      setShowDeleteDialog(false);
-      setSelectedTemplate(null);
     }
-  };
+  } catch (error) {
+    console.error("Error in handleDeleteConfirm:", error);
+    toast.error("Failed to delete templates", {
+      position: "top-right",
+      autoClose: 3000,
+    });
+  } finally {
+    setIsDeleting(false);
+    setShowDeleteDialog(false);
+    setSelectedTemplate(null);
+  }
+};
 
   const handleDeleteCancel = () => {
     setShowDeleteDialog(false);

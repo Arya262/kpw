@@ -14,9 +14,8 @@ const TemplateSelectionStep = ({
   templateSearchTerm, setTemplateSearchTerm, setIsTemplateModalOpen, formData, setFormData,
   }) => {
   const approvedTemplates = useMemo(() => {
-    const searchTerm = templateSearchTerm.toLowerCase();
-    // console.log("Templates from API:", templates);
-    return templates.filter(
+    const searchTerm = (templateSearchTerm || "").toLowerCase();
+    return (templates || []).filter(
       ({
         status,
         template_type,
@@ -33,19 +32,13 @@ const TemplateSelectionStep = ({
           container_meta?.sampleText?.toLowerCase().includes(searchTerm);
   
         const upperCategory = category?.trim().toUpperCase();
-        const upperSubcategory = sub_category?.trim().toUpperCase(); // updated
-  
-        // console.log(`Template: ${element_name}`, { upperCategory, upperSubcategory });
+        const upperSubcategory = sub_category?.trim().toUpperCase();
   
         const isValidCategory =
           upperCategory !== "AUTHENTICATION" && 
           upperSubcategory === "PROMOTION";
   
-        const includeTemplate = isApproved && isSupportedType && matchesSearch && isValidCategory;
-  
-        // console.log(`Include template? ${element_name}:`, includeTemplate);
-  
-        return includeTemplate;
+        return isApproved && isSupportedType && matchesSearch && isValidCategory;
       }
     );
   }, [templates, templateSearchTerm]);
@@ -97,26 +90,13 @@ const TemplateSelectionStep = ({
   const getTemplatePlaceholders = (template) => {
     if (!template) return [];
     
-    // console.log('Checking for placeholders in template:', template.element_name);
-    
-    // First check the template's data field which contains the actual template with placeholders
     const templateData = template.data || '';
-    // console.log('Template data with placeholders:', templateData);
-  
     const sampleText = template.container_meta?.sampleText || template.container_meta?.sample_text || '';
-    // console.log('Sample text:', sampleText);
     
-    // Match patterns like {{1}}, {{2}}, etc. in template data
     const dataMatches = templateData.match(/\{\{\d+\}\}/g) || [];
-    // console.log('Found placeholders in template data:', dataMatches);
-    
-    // Also check for other common placeholder formats in template data
     const alternativeDataMatches = templateData.match(/\{\{[^{}]+\}\}/g) || [];
-    // console.log('Alternative format placeholders in template data:', alternativeDataMatches);
     
-    // Combine all matches and remove duplicates
     const allMatches = [...new Set([...dataMatches, ...alternativeDataMatches])];
-    // console.log('All placeholders found:', allMatches);
     
     return allMatches;
   };
@@ -212,14 +192,7 @@ const TemplateSelectionStep = ({
     formData.append('is_template', 'true');
     formData.append('is_media', 'true');
 
-    // console.log('Uploading file:', file.name, 'type:', type);
-    // console.log('FormData entries:');
-    for (let pair of formData.entries()) {
-      // console.log(pair[0] + ': ', pair[1]);
-    }
-
     try {
-      // console.log('Sending request to:', API_ENDPOINTS.CHAT.SEND_MEDIA);
       const response = await axios.post(
         API_ENDPOINTS.CHAT.SEND_MEDIA,
         formData,
@@ -230,9 +203,6 @@ const TemplateSelectionStep = ({
           withCredentials: true,
         }
       );
-
-      // console.log('Upload response:', response);
-      // console.log('Response data:', response.data);
 
       // Handle the server's response format
       if (response.data && response.data.success && response.data.mediaId) {
@@ -274,18 +244,14 @@ const TemplateSelectionStep = ({
       setUploading(true);
       setSelectedFile(file);
   
-      // ✅ Create preview URL
       const preview = URL.createObjectURL(file);
       setPreviewUrl(preview);
   
-      // ✅ Upload file to server
       const { mediaId, fileName } = await handleMediaUpload(file, 'image');
   
-      // ✅ Update formData.templateParameters properly
       setFormData(prev => {
         const newParams = [...(prev.templateParameters || [])];
   
-        // Ensure object exists
         if (!newParams[index]) {
           newParams[index] = { type: "image", image: {} };
         }
@@ -314,19 +280,6 @@ const TemplateSelectionStep = ({
     }
   };
 
-  if (templatesLoading) {
-    return (
-      <div className="flex justify-center items-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-500"></div>
-        <span className="ml-2 text-gray-600">Loading templates...</span>
-      </div>
-    );
-  }
-
-  if (templatesError) {
-    return <p className="text-red-500 text-center py-8">{templatesError}</p>;
-  }
-
   return (
     <div className="space-y-4">
       {/* Search Bar */}
@@ -354,8 +307,13 @@ const TemplateSelectionStep = ({
         </div>
       </div>
 
-      {/* No templates available */}
-      {!templatesLoading && approvedTemplates.length === 0 ? (
+      {/* Loading and Empty States */}
+      {templatesLoading ? (
+        <div className="flex justify-center items-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-500"></div>
+          <span className="ml-2 text-gray-600">Loading templates...</span>
+        </div>
+      ) : approvedTemplates.length === 0 ? (
         <div className="text-center py-12">
           <FolderOffIcon className="mx-auto h-12 w-12 text-gray-400" />
           <h3 className="mt-2 text-sm font-medium text-gray-900">
@@ -363,7 +321,7 @@ const TemplateSelectionStep = ({
           </h3>
           <p className="mt-1 text-sm text-gray-500">
             {templateSearchTerm
-              ? `No templates found matching "${templateSearchTerm}". Try a different search term.`
+              ? `No templates found matching "${templateSearchTerm}". Try a different search term or create a new template.`
               : "There are no approved templates available at the moment."}
           </p>
           <div className="mt-6">
@@ -379,32 +337,32 @@ const TemplateSelectionStep = ({
         </div>
       ) : (
         <div className="space-y-4">
-          {/* Template Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-  {approvedTemplates.map((template) => {
-    const isSelected =
-      formData.selectedTemplate?.id === template.id ||
-      formData.selectedTemplate?.element_name === template.element_name;
+              {approvedTemplates.map((template) => {
+                const isSelected =
+                  formData.selectedTemplate?.id === template.id ||
+                  formData.selectedTemplate?.element_name === template.element_name;
 
-    const isText = template.template_type?.toUpperCase() === "TEXT";
+                const isText = template.template_type?.toUpperCase() === "TEXT";
 
-    return (
-     <div
-                  key={template.id || template.element_name}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      handleTemplateSelect(template);
-                    }
+                return (
+                  <div
+                    key={template.id || template.element_name}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleTemplateSelect(template);
+                      }
                   }}
                   onClick={() => handleTemplateSelect(template)}
                   className={`relative bg-white rounded-2xl shadow-sm overflow-hidden cursor-pointer border transition-all duration-300 transform 
                     ${isSelected
                       ? "border-teal-500 ring-offset-1 shadow-md"
                       : "border-gray-200 hover:border-teal-300 hover:shadow-lg hover:-translate-y-1"
-                    }`}>
+                    }`}
+                  >
                   {!isText && (
                     <div className="relative w-full h-40 flex items-center justify-center bg-gray-50 overflow-hidden">
                       {renderMedia({
@@ -505,17 +463,16 @@ const TemplateSelectionStep = ({
                         <div className="space-y-2">
                           <div className="flex space-x-2">
                           <label className={`flex-1 cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
-  {uploading ? 'Uploading...' : 'Upload Image'}
-  <input
-    type="file"
-    accept="image/*"
-    className="absolute w-0 h-0 opacity-0"
-    disabled={uploading}
-    onChange={(e) => handleImageUpload(e, index)}
-  />
-</label>
+                            {uploading ? 'Uploading...' : 'Upload Image'}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="absolute w-0 h-0 opacity-0"
+                              disabled={uploading}
+                              onChange={(e) => handleImageUpload(e, index)}
+                            />
+                          </label>
                           </div>
-                          
                           {/* Image Preview */}
                           {(previewUrl || param.image?.url) && (
                             <div className="mt-2">
@@ -581,8 +538,7 @@ const TemplateSelectionStep = ({
                       className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
                       xmlns="http://www.w3.org/2000/svg"
                       fill="none"
-                      viewBox="0 0 24 24"
-                    >
+                      viewBox="0 0 24 24">
                       <circle
                         className="opacity-25"
                         cx="12"

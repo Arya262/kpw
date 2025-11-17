@@ -1,52 +1,37 @@
-import React, { useState } from "react";
+import React from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import CustomDateInput from "./CustomDateInput";
-import PlansModal from "../../dashboard/PlansModal";
 
 const ScheduleSelector = ({
   formData,
   handleRadioChange,
   selectedDate,
   setSelectedDate,
-  userPlan = '',
+  disabled = false
 }) => {
-  const [showPlansModal, setShowPlansModal] = useState(false);
-  
-  // Check if user is on Pro plan
-  const isProUser = userPlan === 'Pro' || userPlan === 'pro';
-  // Get the minimum allowed time for today
   const getMinTime = () => {
     const now = new Date();
     if (selectedDate && selectedDate.toDateString() === now.toDateString()) {
-      return now; // allow changing freely after selection
+      return now; 
     }
     const min = new Date();
     min.setHours(0, 0, 0, 0);
     return min;
   };
 
-  // Only block past times
+ 
   const filterPassedTime = (time) => {
     const now = new Date();
     return time.getTime() > now.getTime();
   };
 
-  // Handle Yes/No change
+
   const handleScheduleChange = (e) => {
-    const value = e.target.value;
-    
-    if (value === "Yes" && !isProUser) {
-      e.preventDefault();
-      setShowPlansModal(true);
-      return;
-    }
-    
     handleRadioChange(e);
-    if (value === "No") setSelectedDate(null);
+    if (e.target.value === "No") setSelectedDate(null);
   };
 
-  // Handle date change
   const handleDateChange = (date) => {
     const now = new Date();
   
@@ -118,14 +103,10 @@ const ScheduleSelector = ({
             className="w-full border border-gray-300 rounded-md p-2 text-gray-700 focus:outline-none"
             popperClassName="custom-datepicker-popper"
             popperPlacement="bottom-start"
+            customInput={<CustomDateInput />}
           />
         </div>
       )}
-      <PlansModal
-        isOpen={showPlansModal}
-        onClose={() => setShowPlansModal(false)}
-        userPlan={userPlan}
-      />
     </div>
   );
 };

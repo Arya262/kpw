@@ -58,12 +58,12 @@ const DashboardHome = () => {
         { credentials: "include" }
       );
       const data = await res.json();
-setSummary({
-  total_credit: data.total_credit ?? 0,
-  total_credit_remaining: data.total_credit_remaining ?? 0,
-  total_credit_consumed: data.total_credit_consumed ?? 0,
-  plan_type: data.plan_type || "Premium",
-});
+      setSummary({
+        total_credit: data.total_credit ?? 0,
+        total_credit_remaining: data.total_credit_remaining ?? 0,
+        total_credit_consumed: data.total_credit_consumed ?? 0,
+        plan_type: data.plan_type || "N/A",
+      });
       setUsageHistory(data.usage_history || []);
     } catch (err) {
       console.error("Failed to load summary:", err);

@@ -5,7 +5,9 @@ import { User, Shield, Star, Crown, Pencil, Trash2 } from "lucide-react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import ReactDOM from "react-dom";
-
+import PlansModal from "../dashboard/PlansModal";
+import ClickToUpgrade from "../../components/ClickToUpgrade";
+import { usePlanPermissions } from "../../hooks/usePlanPermissions";
 // Import new components and hooks
 import DeleteConfirmationDialog from "../shared/DeleteConfirmationDialog";
 import UserFormModal from "./components/UserFormModal";
@@ -71,7 +73,7 @@ const UserSetting = () => {
 
   // Use custom hooks
   const {
-    usersMatrix,
+    usersMatrix = [],
     isLoading,
     createUser,
     updateUser,
@@ -79,6 +81,7 @@ const UserSetting = () => {
     updateUserRole,
   } = useUserManagement(user);
 
+  const { checkPermission, requireUpgrade } = usePlanPermissions(usersMatrix);
   const addUserForm = useFormState();
   const editUserForm = useFormState();
 
@@ -120,6 +123,26 @@ const roleOptions = [
   const popoverRefs = useRef({});
   const [popoverPosition, setPopoverPosition] = useState("bottom");
   const [popoverAnchorRect, setPopoverAnchorRect] = useState(null);
+  const [showPlansModal, setShowPlansModal] = useState(false);
+  const [actionRequiringPlan, setActionRequiringPlan] = useState(null);
+  const checkPlanBeforeAction = (action) => {
+    // Check if plan is null, undefined, or the string 'null'
+    if (!user?.plan || user?.plan === 'null') {
+      setActionRequiringPlan(action);
+      setShowPlansModal(true);
+      return false;
+    }
+    return true;
+  };
+
+  const handleActionRequiringPlan = (action) => {
+    if (!user?.plan) {
+      setShowPlansModal(true);
+      setActionRequiringPlan(action);
+      return false;
+    }
+    return true;
+  };
 
   // Handle add user
   const handleAddUser = async () => {
@@ -236,10 +259,14 @@ const roleOptions = [
             {/* You can add filter buttons here if needed */}
           </div>
           <div >
+             <ClickToUpgrade 
+              permission="canAddSubUser"
+              usersMatrix={usersMatrix}
+            >
             <button
                 className="bg-gradient-to-r from-[#0AA89E] to-cyan-500 text-white flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl shadow-lg hover:shadow-xl  transition-all cursor-pointer"
                   onClick={() => {
-                    if (permissions.canManageUsers) {
+                    if (checkPermission('canAddSubUser') && permissions.canManageUsers) {
                       setShowAddUser(true);
                     } else {
                       toast.error("You do not have permission to add users.");
@@ -249,6 +276,7 @@ const roleOptions = [
               <img src={vendor} alt="plus sign" className="w-5 h-5" />
               Add User
             </button>
+            </ClickToUpgrade>
           </div>
         </div>
         {/* Add User Modal */}
@@ -508,6 +536,15 @@ const roleOptions = [
         title="Delete User"
         message="Are you sure you want to delete this user? This action cannot be undone."
       />
+                  {showPlansModal && (
+        <PlansModal
+          isOpen={showPlansModal}
+          onClose={() => {
+            setShowPlansModal(false);
+            setActionRequiringPlan(null);
+          }}
+        />
+      )}
     </>
   );
 };

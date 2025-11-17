@@ -1,6 +1,7 @@
 import React, { useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import OptionsDropdown from "../shared/OptionsDropdown";
+import OptionsDropdown from "../../components/OptionsDropdown";
+import TagList from "../tags/components/TagList";
 
 export default function ContactRow({
   contact,
@@ -54,7 +55,7 @@ export default function ContactRow({
       ref={rowRef}
       className="border-t border-b border-b-[#C3C3C3] hover:bg-gray-50 text-md"
     >
-      <td className="px-2 py-4 sm:px-4">
+      <td className="px-2 py-4 sm:px-6 sm:py-4">
         <div className="flex items-center justify-center h-full">
           <input
             type="checkbox"
@@ -64,33 +65,43 @@ export default function ContactRow({
           />
         </div>
       </td>
-      <td className="px-2 py-4 sm:px-4 sm:py-4 whitespace-nowrap text-[12px] sm:text-[16px] text-gray-700 font-medium">
+      <td className="px-2 py-4 sm:px-6 sm:py-4 whitespace-nowrap text-[12px] sm:text-[16px] text-gray-700 font-medium">
         {contact.date}
       </td>
-      <td className="px-2 py-4 text-[12px] sm:text-[16px] text-green-600 font-medium">
+      <td className="px-2 py-4 sm:px-6 sm:py-4 text-[12px] sm:text-[16px] text-green-600 font-medium">
         {contact.status}
       </td>
       <td
         onClick={handleChat}
-        className="px-2 py-4 text-[12px] sm:text-[16px] text-gray-700 cursor-pointer hover:text-[#0AA89E] font-medium max-w-[180px] truncate"
+        className="px-2 py-4 sm:px-6 sm:py-4 text-[12px] sm:text-[16px] text-gray-700 cursor-pointer hover:text-[#0AA89E] font-medium truncate"
         title={contact.fullName}
       >
         {contact.fullName}
       </td>
-      <td className="px-2 py-4 text-[12px] sm:text-[16px] text-gray-700 font-medium">
+      <td className="px-2 py-4 sm:px-6 sm:py-4 text-[12px] sm:text-[16px]">
+        <TagList 
+          tags={contact.tags || []} 
+          size="xs" 
+          maxDisplay={3}
+          emptyMessage="No tags"
+        />
+      </td>
+      <td className="px-2 py-4 sm:px-6 sm:py-4 text-[12px] sm:text-[16px] text-gray-700 font-medium whitespace-nowrap">
         {contact.user_country_code}
         {contact.number}
       </td>
-      <td className="px-2 py-4 text-[12px] sm:text-[16px]">
-        <span
-          className={`inline-block px-3 py-1 rounded-full text-white text-sm  min-w-[80px] text-center font-medium
-            ${contact.is_active === 1 ? "bg-green-500" : "bg-red-400"}`}
-        >
-          {contact.is_active === 1 ? "Active" : "Inactive"}
-        </span>
-      </td>
-      <td className="relative py-4">
+      <td className="px-2 py-4 sm:px-6 sm:py-4 text-[12px] sm:text-[16px]">
         <div className="flex justify-center">
+          <span
+            className={`inline-block px-3 py-1 rounded-full text-white text-sm min-w-[80px] text-center font-medium
+              ${contact.is_active === 1 ? "bg-green-500" : "bg-red-400"}`}
+          >
+            {contact.is_active === 1 ? "Active" : "Inactive"}
+          </span>
+        </div>
+      </td>
+      <td className="px-2 py-4 sm:px-6 sm:py-4 relative">
+        <div className="flex justify-center items-center">
           <button
             onClick={handleChat}
             className="flex items-center gap-2 bg-[#0AA89E] hover:bg-[#0AA89E] text-white px-3 py-2 rounded-full whitespace-nowrap mr-2 cursor-pointer font-medium"
@@ -108,7 +119,6 @@ export default function ContactRow({
             </svg>
             <span className="text-sm font-medium">Send Message</span>
           </button>
-
           <OptionsDropdown onEdit={handleEditClick} onDelete={handleDeleteClick} />
         </div>
       </td>

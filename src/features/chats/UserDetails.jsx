@@ -14,12 +14,9 @@ const UserDetails = ({ isExpanded, setIsExpanded, selectedContact, updateBlockSt
     setIsBlocked(selectedContact?.block || false);
   }, [selectedContact]);
   if (!selectedContact) return null;
-  if (!selectedContact) return null;
+  
 
-  const isActive =
-    selectedContact.updated_at &&
-    Date.now() - new Date(selectedContact.updated_at).getTime() <
-      24 * 60 * 60 * 1000;
+  const isActive = selectedContact?.is_active === 1;
 
   return (
     <div className="w-full md:w-auto md:min-w-[300px] bg-white border-l border-gray-300 p-0">
@@ -109,22 +106,32 @@ const UserDetails = ({ isExpanded, setIsExpanded, selectedContact, updateBlockSt
         <div className="flex justify-between items-center p-2">
           <p className="text-sm font-bold text-black">Last Message</p>
           <p className="text-sm text-black">
-            {selectedContact.updated_at
-              ? formatTime(selectedContact.updated_at)
-              : "No activity"}
+            {selectedContact?.lastMessageTime 
+              ? formatTime(selectedContact.lastMessageTime)
+              : "No messages"}
           </p>
         </div>
 
         {/* 24 Hours Status */}
         <div className="flex justify-between items-center px-2 mb-3">
           <p className="text-sm font-bold text-black">24 Hours Status</p>
-          <span
-            className={`px-3 py-1 text-sm rounded-full ${
-              isActive ? "bg-green-600 text-white" : "bg-red-600 text-white"
-            }`}
-          >
-            {isActive ? "Active" : "Inactive"}
-          </span>
+          {selectedContact?.updated_at ? (
+            <span
+              className={`px-3 py-1 text-sm rounded-full ${
+                Date.now() - new Date(selectedContact.updated_at).getTime() < 24 * 60 * 60 * 1000
+                  ? "bg-green-600 text-white"
+                  : "bg-red-600 text-white"
+              }`}
+            >
+              {Date.now() - new Date(selectedContact.updated_at).getTime() < 24 * 60 * 60 * 1000
+                ? "Active"
+                : "Inactive"}
+            </span>
+          ) : (
+            <span className="px-3 py-1 text-sm rounded-full bg-gray-300 text-gray-700">
+              Unknown
+            </span>
+          )}
         </div>
 
         {/* Toggle for General Details */}
@@ -174,16 +181,29 @@ const UserDetails = ({ isExpanded, setIsExpanded, selectedContact, updateBlockSt
             </div>
 
             {/* Tags Dropdown */}
-            <div>
+           <div>
               <label className="block text-sm font-medium text-black mb-1">
                 Tags
               </label>
-              <Dropdown
-                options={[{ value: "add-tags", label: "+ Add Tags" }]}
-                value={tag}
-                onChange={setTag}
-                placeholder="Tags"
-              />
+
+              {selectedContact?.tags?.length > 0 ? (
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {selectedContact.tags.map((tag) => (
+                    <span
+                      key={tag.tag_id || tag.id}
+                      className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+                      style={{
+                        backgroundColor: `${tag.tag_color || "#0AA89E"}20`,
+                        color: tag.tag_color || "#0AA89E",
+                      }}
+                    >
+                      {tag.tag_name || tag.name}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500 mt-1">No tags assigned</p>
+              )}
             </div>
 
             {/* Incoming Status Dropdown */}

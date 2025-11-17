@@ -14,8 +14,8 @@ const FloatingSubmenu = ({
     if (!position) return;
 
     const padding = 10; 
-    const maxLeft = window.innerWidth - 224 - padding; // fixed width for desktop
-    const maxTop = window.innerHeight - 300 - padding; // adjust if submenu taller
+    const maxLeft = window.innerWidth - 224 - padding;
+    const maxTop = window.innerHeight - 300 - padding;
 
     setSafePosition({
       top: Math.min(position.top, maxTop),
