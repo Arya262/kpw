@@ -21,7 +21,7 @@ const FilterDialog = ({
     });
   };
 
-  // Close on outside click + ESC key
+
   useEffect(() => {
     function handleClickOutside(e) {
       if (dialogRef.current && !dialogRef.current.contains(e.target)) {

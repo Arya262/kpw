@@ -19,6 +19,7 @@ export const API_ENDPOINTS = {
     DELETE: `${API_BASE}/deletecontact`,
     UPDATE: `${API_BASE}/updatecontact`,
     BULK_IMPORT: `${API_BASE}/addBulkContact`,
+    SYNC: (customerId) => `${API_BASE}/sync-contacts?customer_id=${customerId}`,
   },
   CHAT: {
     CONVERSATIONS: `${API_BASE}/conversations`,

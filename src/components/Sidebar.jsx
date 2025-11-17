@@ -14,6 +14,7 @@ import {
   Contact,
   FolderKanban,
   Workflow,
+  Zap,
 } from "lucide-react";
 import { useNotifications } from "../context/NotificationContext";
 
@@ -28,6 +29,7 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
   const menuItems = [
     { name: "Dashboard", icon: <LayoutDashboard size={22} />, path: "/dashboard" },
     { name: "Campaign", icon: <Megaphone size={22} />, path: "/broadcast" },
+     { name: "Autocampaign", icon: <Zap size={22} />, path: "/autocampaign" },
     { name: "LiveChat", icon: <MessageCircle size={22} />, path: "/chats" },
     {
       name: "My Contact",

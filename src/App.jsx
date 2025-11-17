@@ -25,6 +25,7 @@ const GroupManagement = lazy(() => import("./features/contacts/GroupManagement")
 const UserSetting = lazy(() => import("./features/flow/UserSetting"));
 const OnboardingGuide = lazy(() => import("./features/onboard/OnboardingGuide"));
 const PricingPlans = lazy(() => import("./PricingPlans"));
+const Autocampaign = lazy(() => import("./features/sequences/Autocampaign"));
 function App() {
   return (
     <>
@@ -168,6 +169,14 @@ function App() {
                 element={
                   <ErrorBoundary>
                     <Broadcast />
+                  </ErrorBoundary>
+                }
+              />
+                            <Route
+                path="/autocampaign"
+                element={
+                  <ErrorBoundary>
+                    <Autocampaign />
                   </ErrorBoundary>
                 }
               />

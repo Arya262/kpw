@@ -2,6 +2,7 @@ import React from "react";
 import vendor from "../../../assets/Vector.png";
 import { getPermissions } from "../../../utils/getPermissions";
 import TagFilter from "../../tags/components/TagFilter";
+import Tooltip from "../../../components/Tooltip";
 
 const ContactListHeader = ({
   user,
@@ -13,12 +14,16 @@ const ContactListHeader = ({
   filterCounts,
   onAddContact,
   onOpenFilterDialog,
+  onSyncContacts,
+  isSyncing,
   permissions,
 }) => {
   return (
     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-wrap">
-        <h2 className="text-lg sm:text-xl font-bold">Contacts</h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-lg sm:text-xl font-bold">Contacts</h2>
+        </div>
         {permissions.canSeeFilters && (
           <div className="flex gap-2 flex-wrap">
             {filterButtons.map((btn) => (
@@ -60,37 +65,67 @@ const ContactListHeader = ({
             </svg>
           </div>
         )}
-        {permissions.canSeeFilters && onOpenFilterDialog && (
-          <button
-            onClick={onOpenFilterDialog}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 rounded-xl hover:bg-gray-50 transition-all cursor-pointer text-gray-700 font-medium"
-            title="Advanced Filters"
-            aria-label="Open advanced filters"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
+        {onSyncContacts && (
+          <Tooltip text="Sync from Foodchow POS" position="bottom">
+            <button
+              type="button"
+              onClick={onSyncContacts}
+              disabled={isSyncing}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 rounded-xl hover:bg-gradient-to-r hover:from-[#0AA89E] hover:to-cyan-500 hover:text-white hover:border-transparent transition-all cursor-pointer text-gray-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Sync contacts from Foodchow POS"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-              />
-            </svg>
-            <span className="hidden sm:inline">Filters</span>
-          </button>
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+              <span className="hidden sm:inline">{isSyncing ? "Syncing..." : "Sync"}</span>
+            </button>
+          </Tooltip>
         )}
-        <button
-          className="bg-gradient-to-r from-[#0AA89E] to-cyan-500 text-white flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer"
-          onClick={onAddContact}
-        >
-          <img src={vendor} alt="plus sign" className="w-5 h-5" />
-          Add Contact
-        </button>
+        {permissions.canSeeFilters && onOpenFilterDialog && (
+          <Tooltip text="Advanced Filters" position="bottom">
+            <button
+              onClick={onOpenFilterDialog}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 rounded-xl hover:bg-gray-50 transition-all cursor-pointer text-gray-700 font-medium"
+              aria-label="Open advanced filters"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+                />
+              </svg>
+              <span className="hidden sm:inline">Filters</span>
+            </button>
+          </Tooltip>
+        )}
+        <Tooltip text="Add a new contact" position="bottom">
+          <button
+            className="bg-gradient-to-r from-[#0AA89E] to-cyan-500 text-white flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer"
+            onClick={onAddContact}
+          >
+            <img src={vendor} alt="plus sign" className="w-5 h-5" />
+            Add Contact
+          </button>
+        </Tooltip>
       </div>
     </div>
   );

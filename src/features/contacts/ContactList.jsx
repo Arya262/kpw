@@ -436,6 +436,33 @@ export default function ContactListRefactored() {
       showToast("You do not have permission to delete contacts.", "error");
     }
   }, [permissions, user]);
+  const handleSyncContacts = useCallback(async () => {
+    if (!user?.customer_id) {
+      showToast("Customer ID not found.", "error");
+      return;
+    }
+
+    try {
+      setLoading((prev) => ({ ...prev, sync: true }));
+      
+      const response = await fetch(API_ENDPOINTS.CONTACTS.SYNC(user.customer_id), {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to sync contacts");
+      }
+
+      await fetchContacts(pagination.currentPage, pagination.itemsPerPage, searchTerm);
+      showToast("Contacts synced successfully!");
+    } catch (error) {
+      showToast(error.message || "Failed to sync contacts.", "error");
+    } finally {
+      setLoading((prev) => ({ ...prev, sync: false }));
+    }
+  }, [user?.customer_id, fetchContacts, pagination.currentPage, pagination.itemsPerPage, searchTerm, setLoading]);
 
   return (
     <>
@@ -462,6 +489,8 @@ export default function ContactListRefactored() {
           filterCounts={filterCounts}
           onAddContact={openPopup}
           onOpenFilterDialog={() => setFilterDialogOpen(true)}
+          onSyncContacts={handleSyncContacts}
+          isSyncing={loading.sync}
           permissions={permissions}
         />
       </div>
