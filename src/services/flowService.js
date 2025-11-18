@@ -10,131 +10,349 @@ class FlowService {
     const startNode = nodes.find(node => node.id === 'start');
     const triggerConfig = startNode ? {
       keywords: startNode.data.keywords || [],
-      substrings: startNode.data.substrings || [],
       regex: startNode.data.regex || '',
       caseSensitive: startNode.data.caseSensitive || false
     } : {};
 
-    // Process nodes to extract message configurations
-    const processedNodes = nodes.map(node => ({
-      id: node.id,
-      type: node.type,
-      position: node.position,
-      data: {
-        // Common node data
-        label: node.data.label,
-        
-        // Message-specific configurations
-        ...(node.type === 'text-button' && {
-          messageType: 'text-button',
-          text: node.data.text || '',
-          buttons: node.data.buttons || []
-        }),
-        
-        ...(node.type === 'media-button' && {
-          messageType: 'media-button',
-          mediaUrl: node.data.mediaUrl || '',
-          mediaType: node.data.mediaType || 'image',
-          caption: node.data.caption || '',
-          buttons: node.data.buttons || []
-        }),
-        
-        ...(node.type === 'list' && {
-          messageType: 'list',
-          headerText: node.data.headerText || '',
-          bodyText: node.data.bodyText || '',
-          footerText: node.data.footerText || '',
-          buttonText: node.data.buttonText || '',
-          sections: node.data.sections || []
-        }),
-        
-        ...(node.type === 'template' && {
-          messageType: 'template',
-          templateName: node.data.templateName || '',
-          templateParams: node.data.templateParams || []
-        }),
-        
-        ...(node.type === 'single-product' && {
-          messageType: 'single-product',
-          product: node.data.product || {}
-        }),
-        
-        ...(node.type === 'multi-product' && {
-          messageType: 'multi-product',
-          products: node.data.products || [],
-          headerText: node.data.headerText || '',
-          bodyText: node.data.bodyText || ''
-        }),
-        
-        ...(node.type === 'catalog' && {
-          messageType: 'catalog',
-          catalogId: node.data.catalogId || '',
-          bodyText: node.data.bodyText || '',
-          footerText: node.data.footerText || ''
-        })
+    // Transform nodes to backend format
+    const flowNodes = nodes.map(node => {
+      // Start node
+      if (node.type === 'flowStartNode' || node.id === 'start') {
+        return {
+          id: node.id,
+          flowNodeType: 'flowStartNode',
+          flowNodePosition: {
+            posX: node.position.x.toString(),
+            posY: node.position.y.toString()
+          },
+          data: {
+            label: node.data.label || ''
+          }
+        };
       }
-    }));
 
-    // Process edges to
-    const flowSequence = this.buildFlowSequence(processedNodes, edges);
+      // Text Button Node
+      if (node.type === 'text-button') {
+        const buttons = node.data.interactiveButtonsItems || node.data.buttons || [];
+        return {
+          interactiveButtonsHeader: node.data.interactiveButtonsHeader || { type: 'Text', text: '', media: null },
+          interactiveButtonsBody: node.data.text || node.data.interactiveButtonsBody || '',
+          interactiveButtonsFooter: node.data.interactiveButtonsFooter || '',
+          interactiveButtonsItems: buttons.map(btn => ({
+            id: btn.id,
+            buttonText: btn.text || btn.buttonText,
+            nodeResultId: btn.targetNodeId || btn.nodeResultId
+          })),
+          interactiveButtonsUserInputVariable: node.data.interactiveButtonsUserInputVariable || '',
+          interactiveButtonsDefaultNodeResultId: node.data.interactiveButtonsDefaultNodeResultId || '',
+          id: node.id,
+          type: 'text-button',
+          flowNodeType: 'InteractiveButtons',
+          flowNodePosition: {
+            posX: node.position.x.toString(),
+            posY: node.position.y.toString()
+          },
+          flowNodesContent: [],
+          isStartNode: false
+        };
+      }
+
+      // Media Button Node
+      if (node.type === 'media-button') {
+        const buttons = node.data.interactiveButtonsItems || node.data.buttons || [];
+        return {
+          flowReplies: [{
+            flowReplyType: node.data.mediaType === 'video' ? 'Video' : node.data.mediaType === 'document' ? 'Document' : 'Image',
+            data: node.data.mediaUrl || '',
+            caption: node.data.caption || '',
+            mimeType: node.data.mediaType || 'image',
+            interactiveButtonsItems: buttons.map(btn => ({
+              buttonId: btn.id,
+              buttonText: btn.text || btn.buttonText,
+              nodeResultId: btn.targetNodeId || btn.nodeResultId
+            }))
+          }],
+          id: node.id,
+          flowNodeType: 'media-button',
+          flowNodePosition: {
+            posX: node.position.x.toString(),
+            posY: node.position.y.toString()
+          },
+          isStartNode: false
+        };
+      }
+
+      // List Node
+      if (node.type === 'list') {
+        return {
+          flowReplies: [{
+            flowReplyType: 'List',
+            data: '',
+            caption: '',
+            mimeType: '',
+            listHeader: node.data.listHeader || '',
+            listBody: node.data.listBody || '',
+            listFooter: node.data.listFooter || '',
+            listSections: node.data.listSections || [],
+            interactiveButtonsItems: []
+          }],
+          id: node.id,
+          flowNodeType: 'list',
+          flowNodePosition: {
+            posX: node.position.x.toString(),
+            posY: node.position.y.toString()
+          },
+          isStartNode: false
+        };
+      }
+
+      // Question Node
+      if (node.type === 'ask-question') {
+        return {
+          flowReplies: [{
+            flowReplyType: 'Text',
+            data: node.data.questionText || '',
+            caption: '',
+            mimeType: 'text'
+          }],
+          id: node.id,
+          flowNodeType: 'ask-question',
+          flowNodePosition: {
+            posX: node.position.x.toString(),
+            posY: node.position.y.toString()
+          },
+          customField: node.data.customField || '',
+          validationType: node.data.validationType || 'None',
+          isMediaAccepted: node.data.isMediaAccepted || false,
+          expectedAnswers: node.data.expectedAnswers || [],
+          isStartNode: false
+        };
+      }
+
+      // Address Node
+      if (node.type === 'ask-address') {
+        return {
+          flowReplies: [{
+            flowReplyType: 'Text',
+            data: node.data.questionText || '',
+            caption: '',
+            mimeType: 'text'
+          }],
+          id: node.id,
+          flowNodeType: 'ask-address',
+          flowNodePosition: {
+            posX: node.position.x.toString(),
+            posY: node.position.y.toString()
+          },
+          customField: node.data.customField || '',
+          isStartNode: false
+        };
+      }
+
+      // Location Node
+      if (node.type === 'ask-location') {
+        return {
+          flowReplies: [{
+            flowReplyType: 'Text',
+            data: node.data.questionText || '',
+            caption: '',
+            mimeType: 'text'
+          }],
+          id: node.id,
+          flowNodeType: 'ask-location',
+          flowNodePosition: {
+            posX: node.position.x.toString(),
+            posY: node.position.y.toString()
+          },
+          longitudeField: node.data.longitudeField || '',
+          latitudeField: node.data.latitudeField || '',
+          isStartNode: false
+        };
+      }
+
+      // Single Product Node
+      if (node.type === 'single-product') {
+        return {
+          flowReplies: [{
+            flowReplyType: 'Product',
+            data: '',
+            caption: node.data.body || '',
+            mimeType: 'product',
+            product: node.data.product || {}
+          }],
+          id: node.id,
+          flowNodeType: 'single-product',
+          flowNodePosition: {
+            posX: node.position.x.toString(),
+            posY: node.position.y.toString()
+          },
+          footer: node.data.footer || '',
+          isStartNode: false
+        };
+      }
+
+      // Multi Product Node
+      if (node.type === 'multi-product') {
+        return {
+          flowReplies: [{
+            flowReplyType: 'MultiProduct',
+            data: '',
+            caption: node.data.body || '',
+            mimeType: 'multi-product',
+            header: node.data.header || '',
+            products: node.data.products || []
+          }],
+          id: node.id,
+          flowNodeType: 'multi-product',
+          flowNodePosition: {
+            posX: node.position.x.toString(),
+            posY: node.position.y.toString()
+          },
+          footer: node.data.footer || '',
+          isStartNode: false
+        };
+      }
+
+      // Catalog Node
+      if (node.type === 'catalog') {
+        return {
+          flowReplies: [{
+            flowReplyType: 'Catalog',
+            data: node.data.body || '',
+            caption: '',
+            mimeType: 'catalog'
+          }],
+          id: node.id,
+          flowNodeType: 'catalog',
+          flowNodePosition: {
+            posX: node.position.x.toString(),
+            posY: node.position.y.toString()
+          },
+          footer: node.data.footer || '',
+          isStartNode: false
+        };
+      }
+
+      // Summary Node
+      if (node.type === 'summary') {
+        return {
+          flowReplies: [{
+            flowReplyType: 'Text',
+            data: node.data.messageText || '',
+            caption: '',
+            mimeType: 'text'
+          }],
+          id: node.id,
+          flowNodeType: 'summary',
+          flowNodePosition: {
+            posX: node.position.x.toString(),
+            posY: node.position.y.toString()
+          },
+          title: node.data.title || 'Summary',
+          includeTimestamp: node.data.includeTimestamp || false,
+          isStartNode: false
+        };
+      }
+
+      // Set Variable Node
+      if (node.type === 'set-variable') {
+        return {
+          flowReplies: [{
+            flowReplyType: 'Text',
+            data: '',
+            caption: '',
+            mimeType: 'text'
+          }],
+          id: node.id,
+          flowNodeType: 'set-variable',
+          flowNodePosition: {
+            posX: node.position.x.toString(),
+            posY: node.position.y.toString()
+          },
+          variableName: node.data.variableName || '',
+          value: node.data.value || '',
+          isStartNode: false
+        };
+      }
+
+      // Set Custom Field Node
+      if (node.type === 'set-custom-field') {
+        return {
+          flowReplies: [{
+            flowReplyType: 'Text',
+            data: '',
+            caption: '',
+            mimeType: 'text'
+          }],
+          id: node.id,
+          flowNodeType: 'set-custom-field',
+          flowNodePosition: {
+            posX: node.position.x.toString(),
+            posY: node.position.y.toString()
+          },
+          customField: node.data.customField || '',
+          value: node.data.value || '',
+          isStartNode: false
+        };
+      }
+
+      // Template Node
+      if (node.type === 'template') {
+        return {
+          flowReplies: [{
+            flowReplyType: 'Template',
+            data: '',
+            caption: '',
+            mimeType: 'template',
+            templateId: node.data.templateId || '',
+            templateName: node.data.templateName || ''
+          }],
+          id: node.id,
+          flowNodeType: 'template',
+          flowNodePosition: {
+            posX: node.position.x.toString(),
+            posY: node.position.y.toString()
+          },
+          selectedTemplate: node.data.selectedTemplate || null,
+          isStartNode: false
+        };
+      }
+
+      // Default fallback for unknown node types
+      console.warn(`Unknown node type: ${node.type}`, node);
+      return {
+        flowReplies: [{
+          flowReplyType: 'Text',
+          data: node.data.text || node.data.questionText || '',
+          caption: '',
+          mimeType: 'text'
+        }],
+        id: node.id,
+        flowNodeType: node.type,
+        flowNodePosition: {
+          posX: node.position.x.toString(),
+          posY: node.position.y.toString()
+        },
+        isStartNode: false
+      };
+    });
+
+    // Transform edges to backend format
+    const flowEdges = edges.map(edge => ({
+      id: edge.id,
+      sourceNodeId: edge.sourceHandle ? `${edge.source}${edge.sourceHandle}` : edge.source,
+      targetNodeId: edge.targetHandle ? `${edge.target}${edge.targetHandle}` : edge.target
+    }));
 
     return {
       name: flowMetadata.name,
       description: flowMetadata.description || '',
-      customerId: flowMetadata.customerId,
+      flowNodes,
+      flowEdges,
       triggerConfig,
-      nodes: processedNodes,
-      edges,
-      flowSequence,
-      isActive: flowMetadata.isActive || false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      lastUpdated: new Date().toLocaleString(),
+      isPro: false
     };
-  }
-
-  /**
-   * Build execution sequence from nodes and edges
-   */
-  static buildFlowSequence(nodes, edges) {
-    const sequence = [];
-    const visited = new Set();
-    
-    // Find start node
-    const startNode = nodes.find(node => node.id === 'start');
-    if (!startNode) return sequence;
-
-    // Build sequence using DFS
-    const buildSequence = (nodeId, step = 1) => {
-      if (visited.has(nodeId)) return;
-      visited.add(nodeId);
-
-      const node = nodes.find(n => n.id === nodeId);
-      if (!node || node.type === 'flowStartNode') {
-        // Find connected nodes from start
-        const connectedEdges = edges.filter(edge => edge.source === nodeId);
-        connectedEdges.forEach(edge => {
-          buildSequence(edge.target, step);
-        });
-        return;
-      }
-
-      sequence.push({
-        step,
-        nodeId: node.id,
-        nodeType: node.type,
-        messageConfig: node.data,
-        delay: node.data.delay || 0 
-      });
-
-      // Find next nodes
-      const nextEdges = edges.filter(edge => edge.source === nodeId);
-      nextEdges.forEach((edge, index) => {
-        buildSequence(edge.target, step + index + 1);
-      });
-    };
-
-    buildSequence('start');
-    return sequence.sort((a, b) => a.step - b.step);
   }
 
   /**

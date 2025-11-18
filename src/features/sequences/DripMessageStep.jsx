@@ -135,14 +135,7 @@ const DripMessageStep = ({ seqData, setSeqData }) => {
       newSteps[selectedStepIndex].templatePlaceholders
     );
   };
-  const contactFields = [
-    { value: "contact.name", label: "Contact Name", icon: User },
-    { value: "contact.email", label: "Contact Email", icon: Mail },
-    { value: "contact.phone", label: "Contact Phone", icon: Phone },
-    { value: "contact.company", label: "Company Name", icon: Building },
-    { value: "contact.location", label: "Location", icon: MapPin },
-    { value: "contact.owner", label: "Contact Owner", icon: User },
-  ];
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -210,15 +203,6 @@ const DripMessageStep = ({ seqData, setSeqData }) => {
               Add messages and configure when they should be sent
             </p>
           </div>
-          {seqData.steps.length < 10 && (
-            <button
-              onClick={handleAddStep}
-              className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
-            >
-              <Plus className="w-4 h-4" />
-              Add Step
-            </button>
-          )}
         </div>
 
         {/* Step Cards */}
@@ -302,10 +286,7 @@ const DripMessageStep = ({ seqData, setSeqData }) => {
                   <div className="flex-1">
                     {step.template ? (
                       <div className="flex items-center justify-between p-3 border border-teal-200 bg-teal-50 rounded-lg">
-                        <div
-                          className="flex items-center gap-3"
-                          onClick={() => openTemplatePicker(index)}
-                        >
+                        <div className="flex items-center gap-3">
                           <div>
                             <p className="text-sm font-medium text-gray-900">
                               {step.template.element_name}
@@ -315,14 +296,23 @@ const DripMessageStep = ({ seqData, setSeqData }) => {
                             </p>
                           </div>
                         </div>
-
-                        <button
-                          onClick={() => openParaModal(index)}
-                          className="w-full sm:w-auto border-2 border-dashed border-gray-300 hover:border-teal-500 text-gray-500 hover:text-teal-600 px-4 py-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
-                        >
-                          <Plus className="w-4 h-4" />
-                          Map Variables
-                        </button>
+                        <div className="flex flex-col gap-1">
+                          {" "}
+                          <button
+                            onClick={() => openTemplatePicker(index)}
+                            className="w-full sm:w-auto border-2 border-dashed border-gray-300 hover:border-teal-500 text-gray-500 hover:text-teal-600 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                          >
+                            <Plus className="w-4 h-4" />
+                            Change Template
+                          </button>
+                          <button
+                            onClick={() => openParaModal(index)}
+                            className="w-full sm:w-auto border-2 border-dashed border-gray-300 hover:border-teal-500 text-gray-500 hover:text-teal-600 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                          >
+                            <Plus className="w-4 h-4" />
+                            Map Variables
+                          </button>
+                        </div>
                       </div>
                     ) : (
                       <div className="flex gap-2">
@@ -420,7 +410,7 @@ const DripMessageStep = ({ seqData, setSeqData }) => {
 
                       {/* Days Selector */}
                       <div className="flex flex-col sm:flex-row items-start gap-4">
-                        <label className="text-sm text-gray-600 sm:w-32 flex-shrink-0">
+                        <label className="text-sm text-gray-600 sm:w-32">
                           Days:
                         </label>
                         <div className="flex flex-wrap gap-2">
@@ -467,10 +457,10 @@ const DripMessageStep = ({ seqData, setSeqData }) => {
                                   newSteps[index].custom_days = updatedDays;
                                   setSeqData({ ...seqData, steps: newSteps });
                                 }}
-                                className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                                className={`px-3 py-2 rounded-lg text-xs font-medium ${
                                   isSelected
-                                    ? "bg-teal-500 text-white shadow-sm"
-                                    : "bg-white border border-gray-300 text-gray-700 hover:border-teal-400"
+                                    ? "bg-teal-500 text-white"
+                                    : "bg-gray-200 not-first: text-gray-800"
                                 }`}
                               >
                                 {day}
@@ -495,6 +485,15 @@ const DripMessageStep = ({ seqData, setSeqData }) => {
               Add your first step to start building your sequence
             </p>
           </div>
+        )}
+        {seqData.steps.length < 10 && (
+          <button
+            onClick={handleAddStep}
+            className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm mt-4"
+          >
+            <Plus className="w-4 h-4" />
+            Add Step
+          </button>
         )}
       </div>
 
