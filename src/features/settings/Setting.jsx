@@ -41,12 +41,39 @@ const FlowEditor = () => {
   const [previewNodeType, setPreviewNodeType] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
 
-  // Get live preview data from the actual node
+  // Get live preview data from the actual node with button connections
   const previewData = useMemo(() => {
     if (!previewNodeId) return null;
     const node = nodes.find(n => n.id === previewNodeId);
-    return node?.data || null;
-  }, [previewNodeId, nodes]);
+    if (!node) return null;
+
+    const nodeData = { ...node.data };
+
+    // Enrich button data with connections from edges
+    if (nodeData.interactiveButtonsItems || nodeData.buttons) {
+      const buttons = nodeData.interactiveButtonsItems || nodeData.buttons || [];
+      
+      // Map button IDs to their target nodes from edges
+      const enrichedButtons = buttons.map(btn => {
+        const buttonHandle = `btn-${btn.id}`;
+        const connectedEdge = edges.find(e => 
+          e.source === previewNodeId && e.sourceHandle === buttonHandle
+        );
+        
+        return {
+          ...btn,
+          nodeResultId: connectedEdge?.target || btn.nodeResultId || '',
+        };
+      });
+
+      nodeData.interactiveButtonsItems = enrichedButtons;
+      if (nodeData.buttons) {
+        nodeData.buttons = enrichedButtons;
+      }
+    }
+
+    return nodeData;
+  }, [previewNodeId, nodes, edges]);
 
   // Debug: Log preview state changes
   useEffect(() => {

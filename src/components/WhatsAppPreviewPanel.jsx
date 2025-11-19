@@ -1,5 +1,6 @@
 import React from "react";
 import { X } from "lucide-react";
+import { whatsAppMarkdownToHtml } from "../features/settings/utils/whatsappFormatting";
 
 const ChatHeader = ({ onClose }) => (
   <div className="bg-teal-500 px-4 py-3 flex items-center justify-between">
@@ -57,6 +58,20 @@ const SectionContainer = ({ children }) => (
   </div>
 );
 
+// Component to render WhatsApp formatted text
+const WhatsAppText = ({ children, className = "" }) => {
+  if (!children) return null;
+  
+  const htmlContent = whatsAppMarkdownToHtml(children);
+  
+  return (
+    <div 
+      className={className}
+      dangerouslySetInnerHTML={{ __html: htmlContent }}
+    />
+  );
+};
+
 /* -------------------------------------------------------------------
    MAIN COMPONENT
 ------------------------------------------------------------------- */
@@ -91,18 +106,18 @@ const WhatsAppPreviewPanel = ({ nodeData, nodeType, isVisible, onClose }) => {
 
 const renderTextButton = () => (
   <IncomingBubble>
-    {/* Message Text */}
-    <div className="text-gray-800 text-sm whitespace-pre-wrap leading-relaxed">
+    {/* Message Text with WhatsApp formatting */}
+    <WhatsAppText className="text-gray-800 text-sm whitespace-pre-wrap leading-relaxed">
       {nodeData?.interactiveButtonsBody ||
         nodeData?.text ||
         "Enter your message here..."}
-    </div>
+    </WhatsAppText>
 
     {/* Footer (optional) */}
     {nodeData?.footer && (
-      <div className="text-[11px] text-gray-500 mt-2">
+      <WhatsAppText className="text-[11px] text-gray-500 mt-2">
         {nodeData.footer}
-      </div>
+      </WhatsAppText>
     )}
 
     {/* Buttons - NOW INSIDE SAME BUBBLE */}
@@ -150,11 +165,11 @@ const renderMediaButton = () => (
       </>
     )}
 
-    {/* CAPTION */}
+    {/* CAPTION with WhatsApp formatting */}
     {nodeData?.caption && (
-      <div className="text-gray-800 text-sm whitespace-pre-wrap mb-3">
+      <WhatsAppText className="text-gray-800 text-sm whitespace-pre-wrap mb-3">
         {nodeData.caption}
-      </div>
+      </WhatsAppText>
     )}
 
     {/* BUTTONS */}
@@ -180,9 +195,9 @@ const renderMediaButton = () => (
   const renderAskQuestion = () => (
     <>
       <IncomingBubble>
-        <div className="text-gray-800 text-sm whitespace-pre-wrap">
+        <WhatsAppText className="text-gray-800 text-sm whitespace-pre-wrap">
           {nodeData?.questionText || "Enter your question here..."}
-        </div>
+        </WhatsAppText>
       </IncomingBubble>
 
       <OutgoingBubble>User will type their response here...</OutgoingBubble>
@@ -199,63 +214,85 @@ const renderMediaButton = () => (
   const renderAddress = () => (
     <>
       <IncomingBubble>
-        {nodeData?.questionText || "Please provide your address..."}
+        <WhatsAppText className="text-gray-800 text-sm whitespace-pre-wrap">
+          {nodeData?.questionText || "Please provide your address..."}
+        </WhatsAppText>
       </IncomingBubble>
 
       <OutgoingBubble>User will type their address here...</OutgoingBubble>
     </>
   );
 
-  const renderList = () => (
-    <IncomingBubble>
-      {nodeData?.header && (
-        <h3 className="font-semibold text-sm text-gray-800 mb-2">
-          {nodeData.header}
-        </h3>
-      )}
+  const renderList = () => {
+    const header = nodeData?.listHeader || nodeData?.header;
+    const body = nodeData?.listBody || nodeData?.body;
+    const footer = nodeData?.listFooter || nodeData?.footer;
+    const sections = nodeData?.listSections || nodeData?.sections || [];
 
-      {nodeData?.body && (
-        <p className="text-sm text-gray-800 mb-3">{nodeData.body}</p>
-      )}
+    console.log('📋 List Preview Data:', { 
+      nodeData, 
+      header, 
+      body, 
+      footer, 
+      sections,
+      sectionsLength: sections.length 
+    });
 
-      {nodeData?.sections?.map((section, sIdx) => (
-        <div key={section.id || sIdx} className="mb-3">
-          {section.title && (
-            <h4 className="font-medium text-sm text-gray-700 mb-2">
-              {section.title}
-            </h4>
-          )}
+    return (
+      <IncomingBubble>
+        {header && (
+          <h3 className="font-semibold text-sm text-gray-800 mb-2">
+            {header}
+          </h3>
+        )}
 
-          {section.items?.map((item, iIdx) => (
-            <div
-              key={item.id || iIdx}
-              className="mb-2 p-2 bg-gray-50 rounded border-l-2 border-blue-500"
-            >
-              <div className="font-medium text-sm">{item.title}</div>
-              {item.description && (
-                <div className="text-xs text-gray-600 mt-1">
-                  {item.description}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      ))}
+        {body && (
+          <WhatsAppText className="text-sm text-gray-800 mb-3">
+            {body}
+          </WhatsAppText>
+        )}
 
-      {nodeData?.footer && (
-        <p className="text-xs text-gray-500 mt-2">{nodeData.footer}</p>
-      )}
-    </IncomingBubble>
-  );
+        {sections.map((section, sIdx) => (
+          <div key={section.id || sIdx} className="mb-3">
+            {section.title && (
+              <h4 className="font-medium text-sm text-gray-700 mb-2">
+                {section.title}
+              </h4>
+            )}
+
+            {section.items?.map((item, iIdx) => (
+              <div
+                key={item.id || iIdx}
+                className="mb-2 p-2 bg-gray-50 rounded border-l-2 border-blue-500"
+              >
+                <div className="font-medium text-sm">{item.title}</div>
+                {item.description && (
+                  <WhatsAppText className="text-xs text-gray-600 mt-1">
+                    {item.description}
+                  </WhatsAppText>
+                )}
+              </div>
+            ))}
+          </div>
+        ))}
+
+        {footer && (
+          <WhatsAppText className="text-xs text-gray-500 mt-2">
+            {footer}
+          </WhatsAppText>
+        )}
+      </IncomingBubble>
+    );
+  };
 
   const renderSummary = () => (
     <IncomingBubble>
       <div className="text-gray-800 text-sm">
         <div className="font-semibold mb-2">{nodeData?.title || "Summary"}</div>
 
-        <div className="whitespace-pre-wrap">
+        <WhatsAppText className="whitespace-pre-wrap">
           {nodeData?.messageText || "Summary details..."}
-        </div>
+        </WhatsAppText>
 
         {nodeData?.showVariables?.length > 0 && (
           <div className="mt-3 space-y-1">
@@ -268,9 +305,9 @@ const renderMediaButton = () => (
         )}
 
         {nodeData?.customMessage && (
-          <div className="mt-3 text-xs text-gray-600">
+          <WhatsAppText className="mt-3 text-xs text-gray-600">
             {nodeData.customMessage}
-          </div>
+          </WhatsAppText>
         )}
 
         {nodeData?.includeTimestamp && (
@@ -285,7 +322,9 @@ const renderMediaButton = () => (
   const renderSingleProduct = () => (
     <IncomingBubble>
       {nodeData?.body && (
-        <p className="text-sm text-gray-800 mb-3">{nodeData.body}</p>
+        <WhatsAppText className="text-sm text-gray-800 mb-3">
+          {nodeData.body}
+        </WhatsAppText>
       )}
 
       {nodeData?.product && (
@@ -300,9 +339,9 @@ const renderMediaButton = () => (
           <h4 className="font-semibold text-sm text-gray-800 mb-1">
             {nodeData.product.name || "Product Name"}
           </h4>
-          <p className="text-xs text-gray-600 mb-2">
+          <WhatsAppText className="text-xs text-gray-600 mb-2">
             {nodeData.product.description || "Product Description"}
-          </p>
+          </WhatsAppText>
           <p className="font-bold text-sm text-green-600">
             {nodeData.product.price || "Price"}
           </p>
@@ -310,7 +349,9 @@ const renderMediaButton = () => (
       )}
 
       {nodeData?.footer && (
-        <p className="text-xs text-gray-500 mt-2">{nodeData.footer}</p>
+        <WhatsAppText className="text-xs text-gray-500 mt-2">
+          {nodeData.footer}
+        </WhatsAppText>
       )}
     </IncomingBubble>
   );
@@ -318,10 +359,14 @@ const renderMediaButton = () => (
   const renderCatalog = () => (
     <IncomingBubble>
       {nodeData?.body && (
-        <p className="text-sm text-gray-800 mb-3">{nodeData.body}</p>
+        <WhatsAppText className="text-sm text-gray-800 mb-3">
+          {nodeData.body}
+        </WhatsAppText>
       )}
       {nodeData?.footer && (
-        <p className="text-xs text-gray-500 mt-2">{nodeData.footer}</p>
+        <WhatsAppText className="text-xs text-gray-500 mt-2">
+          {nodeData.footer}
+        </WhatsAppText>
       )}
     </IncomingBubble>
   );
@@ -329,7 +374,9 @@ const renderMediaButton = () => (
   const renderSetVariable = () => (
     <>
       <IncomingBubble>
-        {nodeData?.messageText || "Please provide your information..."}
+        <WhatsAppText className="text-gray-800 text-sm whitespace-pre-wrap">
+          {nodeData?.messageText || "Please provide your information..."}
+        </WhatsAppText>
       </IncomingBubble>
 
       {nodeData?.isUserInput && (

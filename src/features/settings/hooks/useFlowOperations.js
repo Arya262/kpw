@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'react-toastify';
-import FlowService from '../../../services/flowService';
+import { flowAPI } from '../../../services/flowService';
 
 export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
   const [savedFlows, setSavedFlows] = useState(() => {
@@ -26,7 +26,7 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
       try {
         console.log('Fetching flows for customer:', user.customer_id);
         setLoadingFlow(true);
-        const flows = await FlowService.getFlows(user.customer_id);
+        const flows = await flowAPI.getAll(user.customer_id);
         console.log('Raw flows from API:', flows);
 
         if (Array.isArray(flows)) {
@@ -167,7 +167,7 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
         isActive: enabled
       };
 
-      const result = await FlowService.saveFlow(cleanedNodes, cleanedEdges, flowMetadata);
+      const result = await flowAPI.save(cleanedNodes, cleanedEdges, flowMetadata);
 
       if (result) {
         const savedFlow = {
@@ -739,7 +739,7 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
         isActive: enabled
       };
 
-      const result = await FlowService.updateFlow(flowId, cleanedNodes, cleanedEdges, flowMetadata);
+      const result = await flowAPI.update(flowId, cleanedNodes, cleanedEdges, flowMetadata);
 
       if (result) {
         // Update the flow in the saved flows list with cleaned data
@@ -776,7 +776,7 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
   const handleDeleteFlow = useCallback(async (id) => {
     try {
       setLoadingFlow(true);
-      await FlowService.deleteFlow(id);
+      await flowAPI.delete(id);
 
       setSavedFlows(prev => {
         const updated = prev.filter(f => f.id !== id);
