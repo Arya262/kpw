@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import { addEdge } from "reactflow";
 import { toast } from "react-toastify";
+import { DEFAULT_EDGE_OPTIONS } from "../config/flowConfig";
 
 export const useEdgeHandlers = (nodes, edges, setEdges) => {
   /* -------------------------------------------------------------------------- */
@@ -8,7 +9,7 @@ export const useEdgeHandlers = (nodes, edges, setEdges) => {
   /* -------------------------------------------------------------------------- */
 
   const checkValidConnection = useCallback(
-    (source, target) => {
+    (source, target, sourceHandle) => {
       if (source === target) {
         toast.error("Cannot connect a node to itself", { icon: "🔗" });
         return false;
@@ -38,6 +39,19 @@ export const useEdgeHandlers = (nodes, edges, setEdges) => {
         }
       }
 
+      // Check if this button handle already has a connection
+      if (sourceHandle && sourceHandle.startsWith("btn-")) {
+        const buttonAlreadyConnected = edges.some(
+          (e) => e.source === source && e.sourceHandle === sourceHandle
+        );
+        if (buttonAlreadyConnected) {
+          toast.error("This button is already connected to another node", {
+            icon: "🔗",
+          });
+          return false;
+        }
+      }
+
       return true;
     },
     [nodes, edges]
@@ -45,9 +59,9 @@ export const useEdgeHandlers = (nodes, edges, setEdges) => {
 
   const onConnect = useCallback(
     (params) => {
-      const { source, target } = params;
+      const { source, target, sourceHandle } = params;
 
-      if (!checkValidConnection(source, target)) return;
+      if (!checkValidConnection(source, target, sourceHandle)) return;
 
       const edgeId = `edge-${source}-${target}-${Date.now()}`;
 
@@ -56,10 +70,7 @@ export const useEdgeHandlers = (nodes, edges, setEdges) => {
           {
             id: edgeId,
             ...params,
-            type: "default",
-            animated: true,
-            style: { stroke: "#0ea5e9", strokeWidth: 2 },
-            markerEnd: { type: "arrowclosed", color: "#0ea5e9" },
+            ...DEFAULT_EDGE_OPTIONS,
           },
           eds
         )

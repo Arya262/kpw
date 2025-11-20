@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { toast } from "react-toastify";
-import { NORMALIZED_NODE_TYPES } from "../config/flowConfig";
+import { NORMALIZED_NODE_TYPES, DEFAULT_EDGE_OPTIONS } from "../config/flowConfig";
 
 export const useFlowImport = (
   setNodes,
@@ -340,10 +340,13 @@ function processEdges(flowEdges, nodeMap) {
         sourceHandle,
         targetHandle,
 
-        // FIX: restore imported style
-        animated: edge.animated ?? true,
-        style: edge.style ?? {},
-        markerEnd: edge.markerEnd ?? { type: "arrowclosed" },
+        // Use consistent edge styling - merge imported style with defaults
+        animated: edge.animated ?? DEFAULT_EDGE_OPTIONS.animated,
+        style: edge.style && Object.keys(edge.style).length > 0 
+          ? edge.style 
+          : DEFAULT_EDGE_OPTIONS.style,
+        markerEnd: edge.markerEnd ?? DEFAULT_EDGE_OPTIONS.markerEnd,
+        type: edge.type || DEFAULT_EDGE_OPTIONS.type,
 
         data: { ...edge },
       };

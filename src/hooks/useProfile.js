@@ -4,13 +4,12 @@ import { useAuth } from "../context/AuthContext";
 import { showSuccessToast, showErrorToast } from "../utils/toastConfig";
 import { API_ENDPOINTS } from "../config/api";
 
-// ✅ Axios instance
 const apiClient = axios.create({
   withCredentials: true,
   headers: { "Content-Type": "application/json" },
 });
 
-// ✅ Centralized error handler
+
 const handleApiError = (error, defaultMessage = "Something went wrong") => {
   console.error(error);
   const message =
@@ -28,8 +27,7 @@ export const useProfile = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
-  // 🔹 API functions inside the hook
+  
   const getProfileDetails = async (customerId) => {
     const res = await apiClient.get(API_ENDPOINTS.PROFILE.GET_DETAILS(customerId));
     return res.data;
@@ -74,7 +72,7 @@ export const useProfile = () => {
     return res.data;
   };
 
-  // 🔹 Load full profile data
+
   const loadProfileData = useCallback(async () => {
     if (!user?.customer_id) return;
     setLoading(true);
@@ -96,7 +94,7 @@ export const useProfile = () => {
     }
   }, [user?.customer_id]);
 
-  // 🔹 Update profile details
+
   const updateProfileDetails = useCallback(
     async (details) => {
       if (!user?.customer_id) return;
@@ -118,7 +116,7 @@ export const useProfile = () => {
     [user?.customer_id, fetchWabaInfo]
   );
 
-  // 🔹 Update profile about
+
   const updateProfileAbout = useCallback(
     async (about) => {
       if (!user?.customer_id) return;
@@ -140,7 +138,6 @@ export const useProfile = () => {
     [user?.customer_id, fetchWabaInfo]
   );
 
-  // 🔹 Update profile photo
   const updateProfilePhoto = useCallback(
     async (imageFile) => {
       if (!user?.customer_id || !imageFile) return;
@@ -162,7 +159,7 @@ export const useProfile = () => {
     [user?.customer_id, fetchWabaInfo]
   );
 
-  // 🔹 Sync WABA info
+ 
   const syncWabaInfo = useCallback(
     async () => {
       if (!user?.customer_id) return;
@@ -184,7 +181,7 @@ export const useProfile = () => {
     [user?.customer_id, fetchWabaInfo, loadProfileData]
   );
 
-  // 🔹 Auto-load on mount
+
   useEffect(() => {
     loadProfileData();
   }, [loadProfileData]);

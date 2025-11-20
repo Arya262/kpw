@@ -9,14 +9,14 @@ export const FLOW_CONSTANTS = {
 
 export const DEFAULT_EDGE_OPTIONS = {
   animated: true,
-  style: { stroke: "#0ea5e9", strokeWidth: 2 },
-  markerEnd: { type: "arrowclosed", color: "#0ea5e9" },
+  style: { stroke: "#0AA89E", strokeWidth: 2.5 },
+  markerEnd: { type: "arrowclosed", color: "#0AA89E" },
   type: 'smoothstep',
 };
 
 export const CONNECTION_LINE_STYLE = { 
-  stroke: "#0ea5e9", 
-  strokeWidth: 2 
+  stroke: "#0AA89E", 
+  strokeWidth: 2.5 
 };
 
 export const MINIMAP_NODE_COLORS = {

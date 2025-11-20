@@ -1,11 +1,8 @@
-import React, { useRef, useCallback } from 'react';
+import { useRef, useCallback } from 'react';
 import { handleWhatsAppPaste, addWhatsAppFormatting } from '../../utils/whatsappFormatting';
 import { useAutoResizeTextarea } from '../../hooks/useAutoResizeTextarea';
 
-/**
- * Textarea component that preserves WhatsApp formatting
- * Supports: *bold*, _italic_, ~strikethrough~, ```monospace```
- */
+
 const WhatsAppTextarea = ({
   value,
   onChange,

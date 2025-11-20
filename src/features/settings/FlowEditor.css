@@ -43,7 +43,7 @@
   }
 
   .react-flow__node.selected {
-    box-shadow: 0 0 0 2px #0ea5e9;
+    box-shadow: 0 0 0 2px #0AA89E;
   }
 
   .react-flow__edge {
@@ -52,15 +52,15 @@
   }
 
   .react-flow__edge:hover {
-    stroke-width: 3px !important;
-    stroke: #ef4444 !important;
-    filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.5));
+    stroke-width: 3.5px !important;
+    stroke: #0AA89E !important;
+    filter: drop-shadow(0 0 4px rgba(10, 168, 158, 0.5));
   }
 
   .react-flow__edge.selected {
-    stroke: #ef4444 !important;
-    stroke-width: 3px !important;
-    filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.6));
+    stroke: #0AA89E !important;
+    stroke-width: 3.5px !important;
+    filter: drop-shadow(0 0 6px rgba(10, 168, 158, 0.6));
   }
 
   .react-flow__edge-path {
@@ -78,35 +78,49 @@
     opacity: 0.8;
   }
 
-  /* Custom edge delete button */
-  .edge-delete-button {
-    width: 20px;
-    height: 20px;
-    background: white;
-    border: 1.5px solid #ef4444;
-    border-radius: 50%;
-    cursor: pointer;
+  /* Custom edge delete tooltip */
+  .edge-delete-tooltip {
     display: flex;
     align-items: center;
-    justify-content: center;
-    color: #ef4444;
+    gap: 8px;
+    padding: 8px 16px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    cursor: pointer;
+    color: #6b7280;
+    font-size: 14px;
+    font-weight: 500;
     transition: all 0.2s ease;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-    font-size: 12px;
-    line-height: 1;
-    padding: 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    animation: fadeIn 0.2s ease;
   }
 
-  .edge-delete-button:hover {
-    background: #ef4444;
-    color: white;
-    transform: scale(1.15);
-    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
-    border-color: #dc2626;
-  }
-
-  .edge-delete-button:active {
+  .edge-delete-tooltip:hover {
+    background: #fee2e2;
+    color: #dc2626;
+    border-color: #fca5a5;
     transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(220, 38, 38, 0.2);
+  }
+
+  .edge-delete-tooltip:active {
+    transform: scale(0.98);
+  }
+
+  .edge-delete-tooltip svg {
+    flex-shrink: 0;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
   }
 
   /* Ensure button is always visible and clickable */
@@ -120,20 +134,20 @@
 
   .react-flow__handle:hover {
     transform: scale(1.3);
-    box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.2);
+    box-shadow: 0 0 0 4px rgba(10, 168, 158, 0.2);
   }
 
   .react-flow__handle-connecting {
-    background: #0ea5e9 !important;
+    background: #0AA89E !important;
     animation: pulse 1s infinite;
   }
 
   @keyframes pulse {
     0%, 100% {
-      box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.7);
+      box-shadow: 0 0 0 0 rgba(10, 168, 158, 0.7);
     }
     50% {
-      box-shadow: 0 0 0 8px rgba(14, 165, 233, 0);
+      box-shadow: 0 0 0 8px rgba(10, 168, 158, 0);
     }
   }
 
@@ -177,8 +191,8 @@
   }
 
   .react-flow__connectionline {
-    stroke: #0ea5e9;
-    stroke-width: 2;
+    stroke: #0AA89E;
+    stroke-width: 2.5;
     stroke-dasharray: 5;
     animation: dash 0.5s linear infinite;
   }
@@ -200,15 +214,15 @@
   }
 
   .react-flow__minimap-mask {
-    fill: rgba(14, 165, 233, 0.1);
-    stroke: #0ea5e9;
-    stroke-width: 2;
+    fill: rgba(10, 168, 158, 0.1);
+    stroke: #0AA89E;
+    stroke-width: 2.5;
   }
 
   /* Selection box */
   .react-flow__selection {
-    background: rgba(14, 165, 233, 0.1);
-    border: 1px solid #0ea5e9;
+    background: rgba(10, 168, 158, 0.1);
+    border: 1px solid #0AA89E;
   }
 
   /* Smooth transitions for zoom */

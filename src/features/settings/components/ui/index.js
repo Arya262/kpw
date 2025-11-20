@@ -12,6 +12,7 @@ export { default as CharacterCounter } from '../forms/CharacterCounter';
 
 // Layout Components
 export { default as NodeHeader } from './NodeHeader';
+export { default as FlowNameModal } from './FlowNameModal';
 
 // Feedback Components
 export { default as Tooltip, QuickTooltip, InfoTooltip, WarningTooltip } from './Tooltip';

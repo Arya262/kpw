@@ -16,6 +16,7 @@ import Header from "./Header";
 import FlowTable from "./FlowTable";
 import WhatsAppPreviewPanel from "../../components/WhatsAppPreviewPanel";
 import FlowCanvas from "./components/flow/FlowCanvas";
+import FlowNameModal from "./components/ui/FlowNameModal";
 
 import { useFlowOperations } from "./hooks/useFlowOperations";
 import { useEdgeHandlers } from "./hooks/useEdgeHandlers";
@@ -40,6 +41,7 @@ const FlowEditor = () => {
   const [previewNodeId, setPreviewNodeId] = useState(null);
   const [previewNodeType, setPreviewNodeType] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [showFlowNameModal, setShowFlowNameModal] = useState(false);
 
   // Get live preview data from the actual node with button connections
   const previewData = useMemo(() => {
@@ -169,6 +171,12 @@ const FlowEditor = () => {
 
   // ---------- Flow management ----------
   const handleAddFlow = useCallback(() => {
+    // Show modal to get flow name
+    setShowFlowNameModal(true);
+  }, []);
+
+  const handleFlowNameConfirm = useCallback((flowName) => {
+    setShowFlowNameModal(false);
     setMode("edit");
     setEditingFlowId(null);
     setNodes((prevNodes) => {
@@ -177,7 +185,7 @@ const FlowEditor = () => {
       return [createStartNode(), ...prevNodes];
     });
     setEdges([]);
-    setFlowTitle("Untitled");
+    setFlowTitle(flowName);
     setFlowEnabled(true);
   }, [createStartNode, setNodes, setEdges, setFlowTitle, setFlowEnabled]);
 
@@ -251,6 +259,15 @@ const FlowEditor = () => {
   return (
     <div className="flow-editor-container">
       <ToastContainer position="top-right" autoClose={3000} />
+      
+      {/* Flow Name Modal */}
+      <FlowNameModal
+        isOpen={showFlowNameModal}
+        onClose={() => setShowFlowNameModal(false)}
+        onConfirm={handleFlowNameConfirm}
+        initialName=""
+      />
+      
       {mode === "edit" && <FlowSidebar onAddNode={handleAddNodeClickWrapper} />}
 
       <div className="flow-editor-main" ref={reactFlowWrapperRef}>
@@ -276,6 +293,14 @@ const FlowEditor = () => {
                 isSaving={loadingFlow}
                 onImport={handleImportFlow}
                 isEditingFlow={!!editingFlowId}
+                onBack={() => {
+                  setMode("table");
+                  setNodes([]);
+                  setEdges([]);
+                  setFlowTitle("Untitled");
+                  setFlowEnabled(true);
+                  setEditingFlowId(null);
+                }}
               />
 
               <div className="flow-editor-canvas">

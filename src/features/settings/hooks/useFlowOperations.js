@@ -17,6 +17,8 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
       console.log('useFlowOperations - User object:', user);
       console.log('useFlowOperations - Customer ID:', user?.customer_id);
       
+      // 🔴 COMMENTED OUT API FETCH - LOADING FROM LOCAL STORAGE ONLY
+      /*
       if (!user?.customer_id) {
         console.log('No customer_id, skipping flow fetch');
         console.log('User object keys:', user ? Object.keys(user) : 'No user object');
@@ -62,6 +64,24 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
         setSavedFlows([]); // Set empty array on error
       } finally {
         setLoadingFlow(false);
+      }
+      */
+      
+      // ✅ LOAD FROM LOCAL STORAGE ONLY
+      console.log('Loading flows from localStorage only (API fetch disabled)');
+      const localFlows = localStorage.getItem("savedFlows");
+      if (localFlows) {
+        try {
+          const parsedFlows = JSON.parse(localFlows);
+          console.log('Loaded flows from localStorage:', parsedFlows);
+          setSavedFlows(parsedFlows);
+        } catch (error) {
+          console.error('Error parsing localStorage flows:', error);
+          setSavedFlows([]);
+        }
+      } else {
+        console.log('No flows in localStorage');
+        setSavedFlows([]);
       }
     };
 
@@ -167,35 +187,37 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
         isActive: enabled
       };
 
-      const result = await flowAPI.save(cleanedNodes, cleanedEdges, flowMetadata);
+      // 🔴 COMMENTED OUT API CALL - SAVING LOCALLY ONLY
+      // const result = await flowAPI.save(cleanedNodes, cleanedEdges, flowMetadata);
 
-      if (result) {
-        const savedFlow = {
-          id: result.id || Date.now(),
-          name: result.name,
-          description: result.description,
-          nodes: result.nodes,
-          edges: result.edges,
-          isActive: result.isActive,
-          date: result.createdAt || new Date().toISOString()
-        };
+      // ✅ SAVE LOCALLY - Create flow object directly
+      const savedFlow = {
+        id: Date.now(), // Generate unique ID
+        name: title.trim(),
+        description: "",
+        nodes: cleanedNodes,
+        edges: cleanedEdges,
+        isActive: enabled,
+        date: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
 
-        // ✅ Update State + LocalStorage together (prevents mismatch)
-        setSavedFlows(prev => {
-          const updated = [savedFlow, ...prev];
-          localStorage.setItem("savedFlows", JSON.stringify(updated));
-          return updated;
-        });
+      // ✅ Update State + LocalStorage together (prevents mismatch)
+      setSavedFlows(prev => {
+        const updated = [savedFlow, ...prev];
+        localStorage.setItem("savedFlows", JSON.stringify(updated));
+        return updated;
+      });
 
-        // Reset UI
-        setMode("table");
-        setNodes([]);
-        setEdges([]);
-        setFlowTitle("Untitled");
-        setFlowEnabled(true);
+      // Reset UI
+      setMode("table");
+      setNodes([]);
+      setEdges([]);
+      setFlowTitle("Untitled");
+      setFlowEnabled(true);
 
-        toast.success(`Flow "${title}" saved successfully!`);
-      }
+      toast.success(`Flow "${title}" saved locally!`);
     } catch (error) {
       console.error('Error saving flow:', error);
       toast.error("Failed to save flow");
@@ -739,30 +761,29 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
         isActive: enabled
       };
 
-      const result = await flowAPI.update(flowId, cleanedNodes, cleanedEdges, flowMetadata);
+      // 🔴 COMMENTED OUT API CALL - UPDATING LOCALLY ONLY
+      // const result = await flowAPI.update(flowId, cleanedNodes, cleanedEdges, flowMetadata);
 
-      if (result) {
-        // Update the flow in the saved flows list with cleaned data
-        setSavedFlows(prev => {
-          const updated = prev.map(f => 
-            f.id === flowId 
-              ? { 
-                  ...f, 
-                  name: title.trim(), 
-                  isActive: enabled,
-                  nodes: cleanedNodes,
-                  edges: cleanedEdges,
-                  updatedAt: new Date().toISOString()
-                }
-              : f
-          );
-          localStorage.setItem("savedFlows", JSON.stringify(updated));
-          return updated;
-        });
+      // ✅ UPDATE LOCALLY - Update the flow in the saved flows list with cleaned data
+      setSavedFlows(prev => {
+        const updated = prev.map(f => 
+          f.id === flowId 
+            ? { 
+                ...f, 
+                name: title.trim(), 
+                isActive: enabled,
+                nodes: cleanedNodes,
+                edges: cleanedEdges,
+                updated_at: new Date().toISOString()
+              }
+            : f
+        );
+        localStorage.setItem("savedFlows", JSON.stringify(updated));
+        return updated;
+      });
 
-        toast.success(`Flow "${title}" updated successfully!`);
-        return true;
-      }
+      toast.success(`Flow "${title}" updated locally!`);
+      return true;
     } catch (error) {
       console.error('Error updating flow:', error);
       toast.error("Failed to update flow");
@@ -776,15 +797,18 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
   const handleDeleteFlow = useCallback(async (id) => {
     try {
       setLoadingFlow(true);
-      await flowAPI.delete(id);
+      
+      // 🔴 COMMENTED OUT API CALL - DELETING LOCALLY ONLY
+      // await flowAPI.delete(id);
 
+      // ✅ DELETE LOCALLY
       setSavedFlows(prev => {
         const updated = prev.filter(f => f.id !== id);
         localStorage.setItem("savedFlows", JSON.stringify(updated));
         return updated;
       });
 
-      toast.success("Flow deleted successfully!");
+      toast.success("Flow deleted locally!");
     } catch (error) {
       toast.error(`Failed to delete flow: ${error.message}`);
     } finally {

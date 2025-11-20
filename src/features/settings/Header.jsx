@@ -1,5 +1,5 @@
-import { useState, useRef, useCallback } from "react";
-import { Pencil, Upload } from "lucide-react";
+import { useState, useCallback } from "react";
+import { Pencil, Upload, ArrowLeft, X } from "lucide-react";
 import { Switch, Tooltip } from "@mui/material";
 
 const Header = ({
@@ -10,11 +10,12 @@ const Header = ({
   onEnabledChange,
   isSaving = false,
   onImport,
-  isEditingFlow = false
+  isEditingFlow = false,
+  onBack
 }) => {
   const [localTitle, setLocalTitle] = useState(title);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const fileInputRef = useRef(null);
+  const [showDiscardDialog, setShowDiscardDialog] = useState(false);
 
   const handleFileUpload = useCallback((event) => {
     const file = event.target.files[0];
@@ -61,7 +62,7 @@ const Header = ({
     }
   };
 
-  const handleTitleKeyPress = (e) => {
+  const handleTitleKeyDown = (e) => {
     if (e.key === "Enter") {
       handleTitleBlur();
     }
@@ -73,28 +74,66 @@ const Header = ({
     }
   };
 
+  const handleBackClick = () => {
+    setShowDiscardDialog(true);
+  };
+
+  const handleDiscardFlow = () => {
+    setShowDiscardDialog(false);
+    if (onBack) {
+      onBack();
+    }
+  };
+
+  const handleSaveAndBack = () => {
+    handleSave();
+    setShowDiscardDialog(false);
+    setTimeout(() => {
+      if (onBack) {
+        onBack();
+      }
+    }, 500);
+  };
+
   return (
-    <div className="flex justify-between items-center px-6 py-4 bg-white">
-      <div className="flex items-center gap-2">
-        {isEditingTitle ? (
-          <input
-            value={localTitle}
-            onChange={(e) => setLocalTitle(e.target.value)}
-            onBlur={handleTitleBlur}
-            onKeyPress={handleTitleKeyPress}
-            autoFocus
-            className="text-lg font-semibold text-gray-800 border-b border-gray-300 outline-none"
-          />
-        ) : (
-          <h2
-            className="text-lg font-semibold text-gray-800 cursor-pointer flex items-center gap-2"
-            onClick={() => setIsEditingTitle(true)}
-          >
-            {localTitle}
-            <Pencil size={16} className="text-gray-500" />
-          </h2>
-        )}
-      </div>
+    <>
+      <div className="flex justify-between items-center px-6 py-4 bg-white border-b border-gray-200">
+        <div className="flex items-center gap-4">
+          {/* Back Button */}
+          {onBack && (
+            <Tooltip title="Back to flows">
+              <button
+                onClick={handleBackClick}
+                className="text-gray-600 hover:text-[#0AA89E] p-2 rounded-full hover:bg-gray-100 transition-colors"
+                disabled={isSaving}
+              >
+                <ArrowLeft size={20} />
+              </button>
+            </Tooltip>
+          )}
+
+          {/* Title */}
+          <div className="flex items-center gap-2">
+            {isEditingTitle ? (
+              <input
+                value={localTitle}
+                onChange={(e) => setLocalTitle(e.target.value)}
+                onBlur={handleTitleBlur}
+                onKeyDown={handleTitleKeyDown}
+                autoFocus
+                className="text-lg font-semibold text-gray-800 border-b border-gray-300 outline-none"
+              />
+            ) : (
+              <h2
+                className="text-lg font-semibold text-gray-800 cursor-pointer flex items-center gap-2"
+                onClick={() => setIsEditingTitle(true)}
+              >
+                {localTitle}
+                <Pencil size={16} className="text-gray-500" />
+              </h2>
+            )}
+          </div>
+        </div>
 
       <div className="flex items-center gap-4">
         {onImport && (
@@ -123,7 +162,7 @@ const Header = ({
         </Tooltip>
 
         <button
-          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+          className="bg-[#0AA89E] hover:bg-[#089086] text-white px-4 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           onClick={handleSave}
           disabled={isSaving}
         >
@@ -134,6 +173,56 @@ const Header = ({
         </button>
       </div>
     </div>
+
+      {/* Discard Flow Dialog */}
+      {showDiscardDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            {/* Header */}
+            <div className="px-6 py-4 flex items-center justify-between border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900">Discard Flow</h2>
+              <button
+                onClick={() => setShowDiscardDialog(false)}
+                className="text-gray-400 hover:text-gray-600 rounded-full p-1 transition-colors"
+                aria-label="Close dialog"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6">
+              <p className="text-gray-600">
+                If you discard this flow then all changes made by you will be lost. You can also save this flow.
+              </p>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 bg-gray-50 flex gap-3 justify-end">
+              <button
+                onClick={() => setShowDiscardDialog(false)}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDiscardFlow}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors font-medium"
+              >
+                Discard flow
+              </button>
+              <button
+                onClick={handleSaveAndBack}
+                className="px-4 py-2 bg-[#0AA89E] text-white rounded-lg hover:bg-[#089086] transition-colors font-medium"
+                disabled={isSaving}
+              >
+                Save flow
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 
