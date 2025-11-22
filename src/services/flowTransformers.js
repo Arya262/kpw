@@ -28,7 +28,7 @@ export function transformNodesToBackendFormat(nodes, edges = []) {
         const edge = edges.find(e => e.source === node.id && e.sourceHandle === buttonHandle);
         return {
           id: btn.id,
-          buttonText: btn.text || btn.buttonText || '',
+          title: btn.text || btn.buttonText || '',
           nodeResultId: edge ? edge.target : (btn.targetNodeId || btn.nodeResultId || ''),
         };
       });
@@ -57,7 +57,7 @@ export function transformNodesToBackendFormat(nodes, edges = []) {
         const edge = edges.find(e => e.source === node.id && e.sourceHandle === buttonHandle);
         return {
           id: btn.id,
-          buttonText: btn.text || btn.buttonText || '',
+          title: btn.text || btn.buttonText || '',
           nodeResultId: edge ? edge.target : (btn.targetNodeId || btn.nodeResultId || ''),
         };
       });

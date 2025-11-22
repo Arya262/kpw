@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { IoSearch } from "react-icons/io5";
+import { Search } from "lucide-react";
 import { Edit2, Trash2, CheckCircle, XCircle } from "lucide-react";
 import vendor from "../../assets/Vector.png";
+import Tooltip from "../../components/Tooltip";
 import OptionsDropdown from "../shared/OptionsDropdown";
 const FlowTable = ({
   savedFlows,
@@ -10,22 +11,12 @@ const FlowTable = ({
   onDeleteFlow,
   onAddFlow,
 }) => {
-  // Debug props
-  console.log('FlowTable - Props received:', {
-    savedFlows: savedFlows?.length || 0,
-    loadingFlow,
-    hasOnLoadFlow: !!onLoadFlow,
-    hasOnDeleteFlow: !!onDeleteFlow,
-    hasOnAddFlow: !!onAddFlow
-  });
-  console.log('FlowTable - savedFlows data:', savedFlows);
   const [activeFilter, setActiveFilter] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectAll, setSelectAll] = useState(false);
   const [selectedFlows, setSelectedFlows] = useState({});
-  // Handle edit flow
+  
   const handleEditFlow = (flow) => {
-    console.log('Edit button clicked for flow:', flow);
     onLoadFlow(flow);
   };
 
@@ -42,28 +33,21 @@ const FlowTable = ({
       onToggleActiveStatus(flow.id, !flow.isActive);
     }
   };
-  // Transform savedFlows to include status based on isActive
-const transformedFlows = useMemo(() => {
-  console.log('FlowTable - Transforming flows:', savedFlows);
-  
-  if (!savedFlows || !Array.isArray(savedFlows)) {
-    console.log('FlowTable - No savedFlows or not an array:', savedFlows);
-    return [];
-  }
-  
-  const transformed = savedFlows.map((flow) => ({
-    ...flow,
-    // Don't override name - it's already correct from useFlowOperations
-    status: flow.isActive
-      ? "active"
-      : flow.isActive === false
-      ? "inactive"
-      : "active",
-    id: flow.flow_id || flow.id,
-  }));
-  console.log('FlowTable - Transformed flows:', transformed);
-  return transformed;
-}, [savedFlows]);
+  const transformedFlows = useMemo(() => {
+    if (!savedFlows || !Array.isArray(savedFlows)) {
+      return [];
+    }
+    
+    return savedFlows.map((flow) => ({
+      ...flow,
+      status: flow.isActive
+        ? "active"
+        : flow.isActive === false
+        ? "inactive"
+        : "active",
+      id: flow.flow_id || flow.id,
+    }));
+  }, [savedFlows]);
 
   // Computed filter counts
   const filteredCounts = useMemo(() => {
@@ -86,43 +70,21 @@ const transformedFlows = useMemo(() => {
     { label: "Inactive", count: filteredCounts.inactive },
   ];
 
-  // Filter flows by status
   const statusFilteredFlows = useMemo(() => {
-    console.log('FlowTable - Status filtering:', {
-      activeFilter,
-      transformedFlows: transformedFlows.length,
-      transformedFlowsData: transformedFlows
-    });
-    
     if (activeFilter === "All") {
-      console.log('FlowTable - Returning all flows:', transformedFlows.length);
       return transformedFlows;
     }
     
-    const filtered = transformedFlows.filter(
+    return transformedFlows.filter(
       (f) => f.status?.toLowerCase().trim() === activeFilter.toLowerCase()
     );
-    console.log('FlowTable - Status filtered flows:', filtered.length, filtered);
-    return filtered;
   }, [transformedFlows, activeFilter]);
 
-  // Filter flows by search term
   const displayedFlows = useMemo(() => {
     const term = searchTerm.toLowerCase();
-    console.log('FlowTable - Filtering flows:', {
-      statusFilteredFlows: statusFilteredFlows.length,
-      searchTerm: term,
-      statusFilteredFlowsData: statusFilteredFlows
-    });
-    
-    const filtered = statusFilteredFlows.filter((f) => {
-      const nameMatch = f.name?.toLowerCase().includes(term);
-      console.log(`FlowTable - Checking flow "${f.name}": ${nameMatch}`);
-      return nameMatch;
-    });
-    
-    console.log('FlowTable - Displayed flows:', filtered.length, filtered);
-    return filtered;
+    return statusFilteredFlows.filter((f) => 
+      f.name?.toLowerCase().includes(term)
+    );
   }, [statusFilteredFlows, searchTerm]);
 
   // Update selectAll based on current selection
@@ -222,7 +184,7 @@ const transformedFlows = useMemo(() => {
               ))}
             </div>
             <div className="flex-grow max-w-[400px] relative ml-auto">
-              <IoSearch className="absolute right-2 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Search className="absolute right-2 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
                 value={searchTerm}
@@ -231,14 +193,15 @@ const transformedFlows = useMemo(() => {
                 className="pl-3 pr-7 py-1.5 sm:py-2 border border-gray-300 text-sm sm:text-base rounded-md w-full focus:outline-none focus:ring-1 focus:ring-[#0AA89E] focus:border-[#0AA89E] placeholder:text-sm sm:placeholder:text-base"
               />
             </div>
-            <button
-              className="ml-2 flex items-center gap-2 px-4 py-2 rounded cursor-pointer bg-[#0AA89E] text-white hover:bg-[#099990]"
-              onClick={onAddFlow}
-              title="Add a new flow"
-            >
-              <img src={vendor} alt="plus sign" className="w-5 h-5" />
-              Add New Flow
-            </button>
+            <Tooltip text="Add a new flow" position="bottom">
+              <button
+                className="ml-2 flex items-center gap-2 px-4 py-2 rounded cursor-pointer bg-[#0AA89E] text-white hover:bg-[#099990]"
+                onClick={onAddFlow}
+              >
+                <img src={vendor} alt="plus sign" className="w-5 h-5" />
+                Add New Flow
+              </button>
+            </Tooltip>
           </div>
         </div>
         <div className="overflow-x-auto">
@@ -272,25 +235,13 @@ const transformedFlows = useMemo(() => {
               </thead>
               <tbody className="max-h-[calc(100vh-300px)] overflow-y-auto scrollbar-hide">
                 {(() => {
-                  console.log('FlowTable - Rendering check:', {
-                    displayedFlowsLength: displayedFlows.length,
-                    displayedFlows: displayedFlows,
-                    savedFlowsLength: savedFlows?.length,
-                    transformedFlowsLength: transformedFlows.length,
-                    statusFilteredFlowsLength: statusFilteredFlows.length
-                  });
-                  return null;
-                })()}
-                {(() => {
-                  // Temporary fix: if displayedFlows is empty but we have savedFlows, use savedFlows
                   const flowsToShow = displayedFlows.length > 0 ? displayedFlows : (savedFlows || []);
-                  console.log('FlowTable - Using flows:', flowsToShow.length, flowsToShow);
                   
                   if (flowsToShow.length === 0) {
                     return (
                       <tr>
                         <td colSpan="5" className="text-center py-4 text-gray-500">
-                          No flows found. (Debug: savedFlows={savedFlows?.length}, transformed={transformedFlows.length}, statusFiltered={statusFilteredFlows.length}, displayed={displayedFlows.length})
+                          No flows found.
                         </td>
                       </tr>
                     );

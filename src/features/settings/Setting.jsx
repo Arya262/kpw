@@ -77,10 +77,7 @@ const FlowEditor = () => {
     return nodeData;
   }, [previewNodeId, nodes, edges]);
 
-  // Debug: Log preview state changes
-  useEffect(() => {
-    console.log('📊 Preview State Changed:', { showPreview, previewData, previewNodeType, previewNodeId });
-  }, [showPreview, previewData, previewNodeType, previewNodeId]);
+
 
   const {
     savedFlows,
@@ -121,11 +118,9 @@ const FlowEditor = () => {
   }, []);
 
   const handlePreviewRequest = useCallback((nodeId, nodeType) => {
-    console.log('🔍 Preview Request Received:', { nodeId, nodeType });
     setPreviewNodeId(nodeId);
     setPreviewNodeType(nodeType);
     setShowPreview(true);
-    console.log('✅ Preview State Updated - showPreview should be true');
   }, []);
 
   const closePreview = useCallback(() => {

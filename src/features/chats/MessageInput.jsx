@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { Send, X } from "lucide-react";
-import SendTemplate from "./chatfeautures/SendTemplate";
+import SendTemplate from "./chatFeatures/SendTemplate";
 import EmojiPicker from "emoji-picker-react";
 import DOMPurify from "dompurify";
 import { toast, ToastContainer } from "react-toastify";

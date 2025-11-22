@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'react-toastify';
-import { flowAPI } from '../../../services/flowService';
+import { flowAPI } from "../../../services/flowService";
 
 export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
   const [savedFlows, setSavedFlows] = useState(() => {
@@ -14,74 +14,42 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
   // Fetch flows when component mounts
   useEffect(() => {
     const fetchFlows = async () => {
-      console.log('useFlowOperations - User object:', user);
-      console.log('useFlowOperations - Customer ID:', user?.customer_id);
-      
-      // 🔴 COMMENTED OUT API FETCH - LOADING FROM LOCAL STORAGE ONLY
-      /*
       if (!user?.customer_id) {
-        console.log('No customer_id, skipping flow fetch');
-        console.log('User object keys:', user ? Object.keys(user) : 'No user object');
         return;
       }
       
       try {
-        console.log('Fetching flows for customer:', user.customer_id);
         setLoadingFlow(true);
         const flows = await flowAPI.getAll(user.customer_id);
-        console.log('Raw flows from API:', flows);
 
         if (Array.isArray(flows)) {
           // Transform flows to match frontend expected structure
-          const transformedFlows = flows.map(flow => ({
-            id: flow.id,
-            name: flow.flow_name,
-            description: flow.description || '',
-            isActive: flow.status === 'ACTIVE',
-            created_at: flow.created_at,
-            updated_at: flow.updated_at,
-            // Keep original flow_data for loading
-            flow_data: flow.flow_data,
-            // Also keep nodes/edges if they exist for backward compatibility
-            nodes: flow.nodes,
-            edges: flow.edges
-          }));
+          const transformedFlows = flows.map(flow => {
+            return {
+              id: flow.id,
+              name: flow.flow_name,
+              description: flow.description || '',
+              isActive: flow.status === 'ACTIVE',
+              created_at: flow.created_at,
+              updated_at: flow.updated_at,
+              // Keep original flow_data for loading
+              flow_data: flow.flow_data || flow.flow_json,
+              // Also keep nodes/edges if they exist for backward compatibility
+              nodes: flow.nodes,
+              edges: flow.edges
+            };
+          });
 
-          console.log('Transformed flows:', transformedFlows);
           setSavedFlows(transformedFlows);
           localStorage.setItem("savedFlows", JSON.stringify(transformedFlows));
-          
-          if (transformedFlows.length === 0) {
-            console.log('No flows found for customer');
-          }
         } else {
-          console.log('Invalid flows data received:', flows);
           setSavedFlows([]);
         }
       } catch (error) {
         console.error('Error fetching flows:', error);
-        toast.error('Failed to load flows');
-        setSavedFlows([]); // Set empty array on error
+        setSavedFlows([]);
       } finally {
         setLoadingFlow(false);
-      }
-      */
-      
-      // ✅ LOAD FROM LOCAL STORAGE ONLY
-      console.log('Loading flows from localStorage only (API fetch disabled)');
-      const localFlows = localStorage.getItem("savedFlows");
-      if (localFlows) {
-        try {
-          const parsedFlows = JSON.parse(localFlows);
-          console.log('Loaded flows from localStorage:', parsedFlows);
-          setSavedFlows(parsedFlows);
-        } catch (error) {
-          console.error('Error parsing localStorage flows:', error);
-          setSavedFlows([]);
-        }
-      } else {
-        console.log('No flows in localStorage');
-        setSavedFlows([]);
       }
     };
 
@@ -181,43 +149,62 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
 
     try {
       const flowMetadata = {
+        customer_id: user?.customer_id,
         name: title.trim(),
         description: "",
-        customerId: user?.customer_id,
-        isActive: enabled
+        triggers: ['hi', 'hello'],
+        priority: 1,
+        type: 'inbound',
+        isPro: false
       };
 
-      // 🔴 COMMENTED OUT API CALL - SAVING LOCALLY ONLY
-      // const result = await flowAPI.save(cleanedNodes, cleanedEdges, flowMetadata);
+      const result = await flowAPI.save(cleanedNodes, cleanedEdges, flowMetadata);
 
-      // ✅ SAVE LOCALLY - Create flow object directly
-      const savedFlow = {
-        id: Date.now(), // Generate unique ID
-        name: title.trim(),
-        description: "",
-        nodes: cleanedNodes,
-        edges: cleanedEdges,
-        isActive: enabled,
-        date: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
+      console.log('💾 Save result from API:', result);
 
-      // ✅ Update State + LocalStorage together (prevents mismatch)
-      setSavedFlows(prev => {
-        const updated = [savedFlow, ...prev];
-        localStorage.setItem("savedFlows", JSON.stringify(updated));
-        return updated;
-      });
+      if (result) {
+        // Transform the saved flow to match the expected format
+        // Store the flow_json structure that contains nodes and edges
+        const flowJsonData = {
+          name: title.trim(),
+          description: "",
+          flowNodes: cleanedNodes,
+          flowEdges: cleanedEdges,
+          triggerConfig: extractTriggerConfig(cleanedNodes),
+          lastUpdated: new Date().toISOString(),
+          isPro: false
+        };
 
-      // Reset UI
-      setMode("table");
-      setNodes([]);
-      setEdges([]);
-      setFlowTitle("Untitled");
-      setFlowEnabled(true);
+        const savedFlow = {
+          id: result.id || result.flow_id || Date.now(),
+          name: result.flow_name || result.name || title.trim(),
+          description: result.description || "",
+          isActive: result.status === 'ACTIVE' || result.isActive || false,
+          created_at: result.created_at || new Date().toISOString(),
+          updated_at: result.updated_at || new Date().toISOString(),
+          flow_data: result.flow_data || result.flow_json || flowJsonData,
+          nodes: cleanedNodes,
+          edges: cleanedEdges
+        };
 
-      toast.success(`Flow "${title}" saved locally!`);
+        console.log('💾 Saved flow object:', savedFlow);
+
+        // ✅ Update State + LocalStorage together (prevents mismatch)
+        setSavedFlows(prev => {
+          const updated = [savedFlow, ...prev];
+          localStorage.setItem("savedFlows", JSON.stringify(updated));
+          return updated;
+        });
+
+        // Reset UI
+        setMode("table");
+        setNodes([]);
+        setEdges([]);
+        setFlowTitle("Untitled");
+        setFlowEnabled(true);
+
+        toast.success(`Flow "${title}" saved successfully!`);
+      }
     } catch (error) {
       console.error('Error saving flow:', error);
       toast.error("Failed to save flow");
@@ -231,54 +218,29 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
     setLoadingFlow(true);
 
     try {
-      console.log('Raw flow data received:', flow);
-      
-      // Parse the flow_data JSON if it exists
+      // Parse the flow_data or flow_json if it exists
       let flowData = {};
-      if (flow.flow_data) {
+      const flowDataSource = flow.flow_data || flow.flow_json;
+      
+      if (flowDataSource) {
         try {
-          flowData = typeof flow.flow_data === 'string' 
-            ? JSON.parse(flow.flow_data) 
-            : flow.flow_data;
-          console.log('Parsed flow_data:', flowData);
+          flowData = typeof flowDataSource === 'string' 
+            ? JSON.parse(flowDataSource) 
+            : flowDataSource;
         } catch (error) {
-          console.error('Error parsing flow_data:', error);
+          console.error('Error parsing flow data:', error);
           flowData = {};
         }
       }
 
-      // Extract nodes and edges from the parsed data
-      const rawNodes = flowData.nodes || flowData.flowNodes || flow.nodes || [];
-      const rawEdges = flowData.edges || flowData.flowEdges || flow.edges || [];
+      // Extract nodes and edges from the parsed data or directly from flow object
+      const rawNodes = flowData.flowNodes || flowData.nodes || flow.nodes || [];
+      const rawEdges = flowData.flowEdges || flowData.edges || flow.edges || [];
       
-      // Debug: Check if we have the right data structure
-      console.log('Flow data structure check:', {
-        hasFlowData: !!flowData,
-        flowDataKeys: Object.keys(flowData),
-        hasNodes: !!flowData.nodes,
-        hasFlowNodes: !!flowData.flowNodes,
-        hasEdges: !!flowData.edges,
-        hasFlowEdges: !!flowData.flowEdges,
-        extractedNodes: rawNodes.length,
-        extractedEdges: rawEdges.length
-      });
-      
-      console.log('Extracted data:', {
-        flowId: flow.id,
-        flowName: flow.flow_name || flow.name,
-        nodesCount: rawNodes.length,
-        edgesCount: rawEdges.length,
-        rawNodes: rawNodes,
-        rawEdges: rawEdges,
-        flowData: flowData
-      });
-
       if (rawNodes.length === 0) {
-        console.warn('No nodes found in flow data');
-        console.warn('Flow data structure:', flowData);
-        console.warn('Original flow:', flow);
-        toast.warn('No flow data found to load');
-        return; // Don't proceed if no nodes
+        toast.error('No flow data found to load');
+        setLoadingFlow(false);
+        return;
       }
 
       // Transform nodes to React Flow format
@@ -353,13 +315,6 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
 
         // Transform node data to match what the components expect
         let transformedData = { ...node.data };
-        
-        console.log(`Transforming node ${node.id}:`, {
-          nodeType,
-          flowNodeType: node.flowNodeType,
-          flowReplies: node.flowReplies,
-          expectedAnswers: node.expectedAnswers
-        });
         
         // Handle different node types and their expected data structure
         if (nodeType === 'flowStartNode') {
@@ -508,25 +463,35 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
 
           // Handle expectedAnswers as buttons
           if (node.expectedAnswers && node.expectedAnswers.length > 0) {
-            buttons = node.expectedAnswers.map(btn => ({
-              id: btn.id || `btn-${Date.now()}`,
-              text: btn.expectedInput || btn.text || '',
-              nodeResultId: btn.nodeResultId || ''
-            }));
+            buttons = node.expectedAnswers.map(btn => {
+              console.log('🔘 Loading expectedAnswer button:', btn);
+              return {
+                id: btn.id || `btn-${Date.now()}`,
+                text: btn.expectedInput || btn.text || btn.title || '',
+                nodeResultId: btn.nodeResultId || ''
+              };
+            });
           }
 
           // Map database format to component format
+          const rawButtons = node.interactiveButtonsItems || node.data?.interactiveButtonsItems || node.data?.buttons || [];
+          console.log('🔘 Loading interactiveButtonsItems:', rawButtons);
+          
           transformedData = {
             ...transformedData,
             text: text || node.interactiveButtonsBody || node.data?.interactiveButtonsBody || node.data?.text || '',
             mediaUrl: mediaUrl || node.mediaUrl || node.data?.mediaUrl || '',
             mediaType: mediaType || node.mediaType || node.data?.mediaType || '',
             caption: caption || node.caption || node.data?.caption || '',
-            buttons: buttons.length > 0 ? buttons : (node.interactiveButtonsItems || node.data?.interactiveButtonsItems || node.data?.buttons || []).map(btn => ({
-              id: btn.id || `btn-${Date.now()}`,
-              text: btn.buttonText || btn.text || '',
-              nodeResultId: btn.nodeResultId || ''
-            })),
+            buttons: buttons.length > 0 ? buttons : rawButtons.map(btn => {
+              const mappedButton = {
+                id: btn.id || `btn-${Date.now()}`,
+                text: btn.title || btn.buttonText || btn.text || '',
+                nodeResultId: btn.nodeResultId || btn.targetNodeId || ''
+              };
+              console.log('🔘 Mapped button:', { original: btn, mapped: mappedButton });
+              return mappedButton;
+            }),
             interactiveButtonsBody: text || node.interactiveButtonsBody || node.data?.interactiveButtonsBody || node.data?.text || '',
             interactiveButtonsItems: buttons.length > 0 ? buttons : (node.interactiveButtonsItems || node.data?.interactiveButtonsItems || node.data?.buttons || []),
             interactiveButtonsHeader: node.interactiveButtonsHeader || node.data?.interactiveButtonsHeader || { type: "Text", text: text, media: null },
@@ -627,33 +592,28 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
         let sourceHandle = edge.sourceHandle;
         let targetHandle = edge.targetHandle;
         
-        console.log('Processing edge:', { originalSource: source, originalTarget: target, edge });
-        
         // Parse complex source IDs that include button information
+        // Format: "node-welcomebtn-btn-cat1" should become source="node-welcome", sourceHandle="btn-btn-cat1"
         if (source && source.includes('btn-')) {
-          // Extract node ID and button ID from source like "node-1760174399591btn-btn-1760174418461"
-          const parts = source.split('btn-');
-          if (parts.length >= 2) {
-            const nodeId = parts[0].replace(/btn$/, ''); // Remove trailing 'btn'
-            const buttonId = parts[1];
-            if (nodeId && buttonId && buttonId !== '') {
-              source = nodeId;
-              sourceHandle = `btn-${buttonId}`;
-            } else {
-              // If parsing fails, try to extract just the node ID
-              const nodeIdMatch = source.match(/^(node-\d+)/);
-              if (nodeIdMatch) {
-                source = nodeIdMatch[1];
-                sourceHandle = undefined;
-              }
+          // Try to match pattern: (node-id)(btn-btn-buttonid)
+          const match = source.match(/^(.+?)(btn-btn-.+)$/);
+          if (match) {
+            source = match[1];
+            sourceHandle = match[2];
+          } else {
+            // Fallback: split by 'btn-' and reconstruct
+            const btnIndex = source.indexOf('btn-');
+            if (btnIndex > 0) {
+              sourceHandle = source.substring(btnIndex);
+              source = source.substring(0, btnIndex);
             }
           }
         }
         
         // Parse complex target IDs that include handle information
+        // Format: "node-category-electronicsleft-handle" should become target="node-category-electronics", targetHandle="left-handle"
         if (target && target.includes('left-handle')) {
-          // Extract node ID from target like "node-1760174399591left-handle"
-          const nodeId = target.replace('-left-handle', '');
+          const nodeId = target.replace('left-handle', '');
           target = nodeId;
           targetHandle = 'left-handle';
         }
@@ -680,36 +640,30 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
           return null;
         }
 
-        const transformedEdge = {
+        return {
           id: edge.id || `edge-${Math.random().toString(36).substr(2, 9)}`,
           source,
           target,
           sourceHandle: sourceHandle || undefined,
           targetHandle: targetHandle || undefined,
-          type: edge.type || 'custom',
+          type: 'default',
           animated: edge.animated !== false,
           style: edge.style || { stroke: '#0ea5e9', strokeWidth: 2 },
           markerEnd: edge.markerEnd || { type: 'arrowclosed', color: '#0ea5e9' }
         };
-        
-        console.log('Transformed edge:', transformedEdge);
-        return transformedEdge;
-      }).filter(edge => edge !== null); // Filter out invalid edges
+      }).filter(edge => edge !== null);
 
-      console.log('Transformed data:', {
-        transformedNodes: transformedNodes,
-        transformedEdges: transformedEdges
-      });
-
-      console.log('Setting nodes and edges in ReactFlow...');
-      setNodes(transformedNodes);
-      setEdges(transformedEdges);
-      console.log('Nodes and edges set successfully');
-      setFlowTitle(flow.flow_name || flow.name || 'Untitled');
-      setFlowEnabled(flow.status === 'ACTIVE' || flow.isActive === true);
-      setMode("edit");
-
-      toast.info(`Loaded flow: ${flow.flow_name || flow.name}`);
+      // Only switch to edit mode if we have valid data
+      if (transformedNodes.length > 0) {
+        setNodes(transformedNodes);
+        setEdges(transformedEdges);
+        setFlowTitle(flow.flow_name || flow.name || 'Untitled');
+        setFlowEnabled(flow.status === 'ACTIVE' || flow.isActive === true);
+        setMode("edit");
+        toast.info(`Loaded flow: ${flow.flow_name || flow.name}`);
+      } else {
+        toast.error('Cannot load flow: No nodes found');
+      }
     } catch (error) {
       console.error('Error loading flow:', error);
       toast.error('Failed to load flow data');
@@ -757,33 +711,36 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
       const flowMetadata = {
         name: title.trim(),
         description: "",
-        customerId: user?.customer_id,
-        isActive: enabled
+        triggers: ['hi', 'hello'],
+        priority: 1,
+        type: 'inbound',
+        isPro: false
       };
 
-      // 🔴 COMMENTED OUT API CALL - UPDATING LOCALLY ONLY
-      // const result = await flowAPI.update(flowId, cleanedNodes, cleanedEdges, flowMetadata);
+      const result = await flowAPI.update(flowId, cleanedNodes, cleanedEdges, flowMetadata);
 
-      // ✅ UPDATE LOCALLY - Update the flow in the saved flows list with cleaned data
-      setSavedFlows(prev => {
-        const updated = prev.map(f => 
-          f.id === flowId 
-            ? { 
-                ...f, 
-                name: title.trim(), 
-                isActive: enabled,
-                nodes: cleanedNodes,
-                edges: cleanedEdges,
-                updated_at: new Date().toISOString()
-              }
-            : f
-        );
-        localStorage.setItem("savedFlows", JSON.stringify(updated));
-        return updated;
-      });
+      if (result) {
+        // Update the flow in the saved flows list with cleaned data
+        setSavedFlows(prev => {
+          const updated = prev.map(f => 
+            f.id === flowId 
+              ? { 
+                  ...f, 
+                  name: title.trim(), 
+                  isActive: enabled,
+                  nodes: cleanedNodes,
+                  edges: cleanedEdges,
+                  updatedAt: new Date().toISOString()
+                }
+              : f
+          );
+          localStorage.setItem("savedFlows", JSON.stringify(updated));
+          return updated;
+        });
 
-      toast.success(`Flow "${title}" updated locally!`);
-      return true;
+        toast.success(`Flow "${title}" updated successfully!`);
+        return true;
+      }
     } catch (error) {
       console.error('Error updating flow:', error);
       toast.error("Failed to update flow");
@@ -797,18 +754,15 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
   const handleDeleteFlow = useCallback(async (id) => {
     try {
       setLoadingFlow(true);
-      
-      // 🔴 COMMENTED OUT API CALL - DELETING LOCALLY ONLY
-      // await flowAPI.delete(id);
+      await flowAPI.delete(id);
 
-      // ✅ DELETE LOCALLY
       setSavedFlows(prev => {
         const updated = prev.filter(f => f.id !== id);
         localStorage.setItem("savedFlows", JSON.stringify(updated));
         return updated;
       });
 
-      toast.success("Flow deleted locally!");
+      toast.success("Flow deleted successfully!");
     } catch (error) {
       toast.error(`Failed to delete flow: ${error.message}`);
     } finally {
@@ -829,3 +783,17 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
     handleDeleteFlow
   };
 };
+
+// Helper: Extract trigger config from start node
+function extractTriggerConfig(nodes) {
+  const startNode = nodes.find(node => node.id === 'start');
+  return startNode ? {
+    keywords: startNode.data?.keywords || [],
+    regex: startNode.data?.regex || '',
+    caseSensitive: startNode.data?.caseSensitive || false,
+  } : {
+    keywords: [],
+    regex: '',
+    caseSensitive: false
+  };
+}

@@ -6,15 +6,16 @@ import React, {
   useCallback,
   useState,
 } from "react";
-import TextMessage from "./chatfeautures/TextMessage";
-import ImageMessage from "./chatfeautures/ImageMessage";
-import VideoMessage from "./chatfeautures/VideoMessage";
-import TemplateMessage from "./chatfeautures/TemplateMessage";
-import TypingIndicator from "./chatfeautures/TypingIndicator";
-import AudioMessage from "./chatfeautures/AudioMessage";
-import LocationMessage from "./chatfeautures/LocationMessage";
-import ContactMessage from "./chatfeautures/ContactMessage";
-import DocumentMessage from "./chatfeautures/DocumentMessage";
+import TextMessage from "./chatFeatures/TextMessage";
+import ImageMessage from "./chatFeatures/ImageMessage";
+import VideoMessage from "./chatFeatures/VideoMessage";
+import TemplateMessage from "./chatFeatures/TemplateMessage";
+import TypingIndicator from "./chatFeatures/TypingIndicator";
+import AudioMessage from "./chatFeatures/AudioMessage";
+import LocationMessage from "./chatFeatures/LocationMessage";
+import ContactMessage from "./chatFeatures/ContactMessage";
+import DocumentMessage from "./chatFeatures/DocumentMessage";
+import InteractiveMessage from "./chatFeatures/InteractiveMessage";
 import { format, isToday, isYesterday } from "date-fns";
 import { ArrowDown } from "lucide-react";
 const ChatMessages = ({
@@ -190,19 +191,25 @@ const ChatMessages = ({
     [messages]
   );
 
-  const renderMessage = (msg, index) => {
-    const sent = msg.status !== "received";
-    const time = msg.sent_at
-      ? new Date(msg.sent_at)
-          .toLocaleTimeString("en-US", {
-            hour: "numeric",
-            minute: "2-digit",
-            hour12: true,
-          })
-          .toLowerCase()
-      : "";
+  const formatMessageTime = useCallback((sentAt) => {
+    if (!sentAt) return "";
+    
+    const date = sentAt instanceof Date ? sentAt : new Date(sentAt);
+    if (isNaN(date.getTime())) return "";
+    return date
+      .toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      })
+      .toLowerCase();
+  }, []);
 
-    const message = { ...msg, sent_at: time };
+  const renderMessage = useCallback((msg, index) => {
+    const sent = msg.status !== "received";
+    const time = formatMessageTime(msg.sent_at);
+
+    const message = { ...msg, sent_at: time, originalSentAt: msg.sent_at };
 
     switch (msg.message_type) {
       case "text":
@@ -222,6 +229,8 @@ const ChatMessages = ({
         return <ContactMessage msg={message} sent={sent} />;
       case "document":
         return <DocumentMessage msg={message} sent={sent} />;
+      case "interactive":
+        return <InteractiveMessage msg={message} sent={sent} />;
       default:
         return (
           <div className="text-red-500 text-sm italic">
@@ -229,7 +238,8 @@ const ChatMessages = ({
           </div>
         );
     }
-  };
+  }, [formatMessageTime]);
+
 
   return (
     <div className="relative h-full min-h-0">
