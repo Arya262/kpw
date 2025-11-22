@@ -22,8 +22,6 @@ export const flowAPI = {
         }
       };
 
-      console.log('🚀 ACTUAL PAYLOAD SENT TO BACKEND:', JSON.stringify(flowData, null, 2));
-
       const response = await axios.post(API_ENDPOINTS.FLOWS.CREATE, flowData, {
         withCredentials: true,
       });

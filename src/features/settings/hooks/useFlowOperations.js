@@ -125,26 +125,6 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
     const cleanedNodes = cleanNodesForSave(nodes);
     const cleanedEdges = cleanEdgesForSave(edges);
 
-    // 🔍 LOG ALL NODE JSON DATA
-    console.log('=== SAVING FLOW - ALL NODE DATA ===');
-    console.log('Flow Title:', title);
-    console.log('Flow Enabled:', enabled);
-    console.log('Total Nodes:', cleanedNodes.length);
-    console.log('Total Edges:', cleanedEdges.length);
-    console.log('\n--- CLEANED NODES JSON ---');
-    console.log(JSON.stringify(cleanedNodes, null, 2));
-    console.log('\n--- CLEANED EDGES JSON ---');
-    console.log(JSON.stringify(cleanedEdges, null, 2));
-    console.log('\n--- COMPLETE FLOW DATA ---');
-    console.log(JSON.stringify({ 
-      title, 
-      enabled, 
-      flowNodes: cleanedNodes, 
-      flowEdges: cleanedEdges,
-      timestamp: new Date().toISOString()
-    }, null, 2));
-    console.log('=== END FLOW DATA ===\n');
-
     setLoadingFlow(true);
 
     try {
@@ -159,8 +139,6 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
       };
 
       const result = await flowAPI.save(cleanedNodes, cleanedEdges, flowMetadata);
-
-      console.log('💾 Save result from API:', result);
 
       if (result) {
         // Transform the saved flow to match the expected format
@@ -186,8 +164,6 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
           nodes: cleanedNodes,
           edges: cleanedEdges
         };
-
-        console.log('💾 Saved flow object:', savedFlow);
 
         // ✅ Update State + LocalStorage together (prevents mismatch)
         setSavedFlows(prev => {
@@ -463,19 +439,15 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
 
           // Handle expectedAnswers as buttons
           if (node.expectedAnswers && node.expectedAnswers.length > 0) {
-            buttons = node.expectedAnswers.map(btn => {
-              console.log('🔘 Loading expectedAnswer button:', btn);
-              return {
-                id: btn.id || `btn-${Date.now()}`,
-                text: btn.expectedInput || btn.text || btn.title || '',
-                nodeResultId: btn.nodeResultId || ''
-              };
-            });
+            buttons = node.expectedAnswers.map(btn => ({
+              id: btn.id || `btn-${Date.now()}`,
+              text: btn.expectedInput || btn.text || btn.title || '',
+              nodeResultId: btn.nodeResultId || ''
+            }));
           }
 
           // Map database format to component format
           const rawButtons = node.interactiveButtonsItems || node.data?.interactiveButtonsItems || node.data?.buttons || [];
-          console.log('🔘 Loading interactiveButtonsItems:', rawButtons);
           
           transformedData = {
             ...transformedData,
@@ -483,15 +455,11 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
             mediaUrl: mediaUrl || node.mediaUrl || node.data?.mediaUrl || '',
             mediaType: mediaType || node.mediaType || node.data?.mediaType || '',
             caption: caption || node.caption || node.data?.caption || '',
-            buttons: buttons.length > 0 ? buttons : rawButtons.map(btn => {
-              const mappedButton = {
-                id: btn.id || `btn-${Date.now()}`,
-                text: btn.title || btn.buttonText || btn.text || '',
-                nodeResultId: btn.nodeResultId || btn.targetNodeId || ''
-              };
-              console.log('🔘 Mapped button:', { original: btn, mapped: mappedButton });
-              return mappedButton;
-            }),
+            buttons: buttons.length > 0 ? buttons : rawButtons.map(btn => ({
+              id: btn.id || `btn-${Date.now()}`,
+              text: btn.title || btn.buttonText || btn.text || '',
+              nodeResultId: btn.nodeResultId || btn.targetNodeId || ''
+            })),
             interactiveButtonsBody: text || node.interactiveButtonsBody || node.data?.interactiveButtonsBody || node.data?.text || '',
             interactiveButtonsItems: buttons.length > 0 ? buttons : (node.interactiveButtonsItems || node.data?.interactiveButtonsItems || node.data?.buttons || []),
             interactiveButtonsHeader: node.interactiveButtonsHeader || node.data?.interactiveButtonsHeader || { type: "Text", text: text, media: null },
@@ -683,28 +651,6 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
     const cleanedNodes = cleanNodesForSave(nodes);
     const cleanedEdges = cleanEdgesForSave(edges);
 
-    // 🔍 LOG ALL NODE JSON DATA FOR UPDATE
-    console.log('=== UPDATING FLOW - ALL NODE DATA ===');
-    console.log('Flow ID:', flowId);
-    console.log('Flow Title:', title);
-    console.log('Flow Enabled:', enabled);
-    console.log('Total Nodes:', cleanedNodes.length);
-    console.log('Total Edges:', cleanedEdges.length);
-    console.log('\n--- CLEANED NODES JSON ---');
-    console.log(JSON.stringify(cleanedNodes, null, 2));
-    console.log('\n--- CLEANED EDGES JSON ---');
-    console.log(JSON.stringify(cleanedEdges, null, 2));
-    console.log('\n--- COMPLETE FLOW DATA ---');
-    console.log(JSON.stringify({ 
-      flowId,
-      title, 
-      enabled, 
-      flowNodes: cleanedNodes, 
-      flowEdges: cleanedEdges,
-      timestamp: new Date().toISOString()
-    }, null, 2));
-    console.log('=== END FLOW UPDATE DATA ===\n');
-
     setLoadingFlow(true);
 
     try {
@@ -721,6 +667,16 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
 
       if (result) {
         // Update the flow in the saved flows list with cleaned data
+        const flowJsonData = {
+          name: title.trim(),
+          description: "",
+          flowNodes: cleanedNodes,
+          flowEdges: cleanedEdges,
+          triggerConfig: extractTriggerConfig(cleanedNodes),
+          lastUpdated: new Date().toISOString(),
+          isPro: false
+        };
+
         setSavedFlows(prev => {
           const updated = prev.map(f => 
             f.id === flowId 
@@ -728,9 +684,10 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
                   ...f, 
                   name: title.trim(), 
                   isActive: enabled,
+                  flow_data: flowJsonData,
                   nodes: cleanedNodes,
                   edges: cleanedEdges,
-                  updatedAt: new Date().toISOString()
+                  updated_at: new Date().toISOString()
                 }
               : f
           );

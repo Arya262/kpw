@@ -20,6 +20,7 @@ const FlowCanvas = ({
   onDragOver,
   nodeTypes,
   isImporting,
+  shouldFitView = true,
 }) => {
 
   /** Stable Edge Types */
@@ -59,7 +60,7 @@ const FlowCanvas = ({
       onDragOver={onDragOver}
       nodeTypes={memoNodeTypes}
       edgeTypes={edgeTypes}
-      fitView={!isImporting}
+      fitView={!isImporting && shouldFitView}
       proOptions={{ hideAttribution: true }}
       defaultEdgeOptions={DEFAULT_EDGE_OPTIONS}
       connectionLineStyle={CONNECTION_LINE_STYLE}
