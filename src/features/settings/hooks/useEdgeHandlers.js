@@ -21,8 +21,12 @@ export const useEdgeHandlers = (nodes, edges, setEdges) => {
         return false;
       }
 
+      // Check for duplicate connection (same source, target, AND handle)
       const isDuplicate = edges.some(
-        (e) => e.source === source && e.target === target
+        (e) => 
+          e.source === source && 
+          e.target === target && 
+          e.sourceHandle === sourceHandle
       );
       if (isDuplicate) {
         toast.error("This connection already exists", { icon: "⚠️" });

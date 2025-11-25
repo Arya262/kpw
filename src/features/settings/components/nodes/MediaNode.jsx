@@ -1,50 +1,39 @@
-import { useEffect, useState } from "react";
-import { Trash2, Plus, Upload, Loader2 } from "lucide-react";
+import { memo, useCallback, useState, useEffect } from "react";
 import { Handle, Position } from "reactflow";
+import { Upload, Loader2 } from "lucide-react";
 import NodeHeader from "../ui/NodeHeader";
 import FormInput from "../forms/FormInput";
 import FormTextarea from "../forms/FormTextarea";
 import FormSection from "../forms/FormSection";
-import ButtonInput from "../forms/ButtonInput";
-import { nodeContainerStyle, targetHandleStyle, getSourceHandleStyle } from "./nodeStyles";
+import { nodeContainerStyle, targetHandleStyle, sourceHandleStyle } from "./nodeStyles";
 import { CHAR_LIMITS } from "../../constants/nodeConstants";
-import { generateButtonId } from "../../utils/nodeUtils";
 import { uploadToCloudinary, validateFile } from "../../../../utils/cloudinaryUpload";
 
-const MediaButtonNode = ({ data, isConnectable, id, onPreviewRequest, onDelete, onDuplicate }) => {
+const MediaNode = memo(({ data, isConnectable, id, onPreviewRequest, onDelete, onDuplicate }) => {
   const [formData, setFormData] = useState({
     mediaType: "",
     mediaUrl: "",
     caption: "",
-    buttons: [],
+    delay: "",
   });
   const [isDragging, setIsDragging] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadedFile, setUploadedFile] = useState(null);
   const [initialized, setInitialized] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   // Initialize from props
   useEffect(() => {
     if (data && !initialized) {
-      const existingButtons = data.buttons || data.interactiveButtonsItems || [];
-      console.log(`🎨 MediaButtonNode ${id} initializing with buttons:`, existingButtons);
-      
       setFormData({
         mediaType: data.mediaType || "",
         mediaUrl: data.mediaUrl || "",
         caption: data.caption || "",
-        buttons: existingButtons.map((btn) => ({
-          id: btn.id || generateButtonId(),  // Use existing ID if available
-          text: btn.text || btn.buttonText || "",
-          charCount: (btn.text || btn.buttonText || "").length,
-          isError: (btn.text || btn.buttonText || "").length > CHAR_LIMITS.BUTTON_TEXT,
-          nodeResultId: btn.nodeResultId || "",
-        })),
+        delay: typeof data?.delay === "number" ? data.delay : "",
       });
       setInitialized(true);
     }
-  }, [data, initialized, id]);
+  }, [data, initialized]);
 
   // Update parent when data changes
   useEffect(() => {
@@ -55,17 +44,7 @@ const MediaButtonNode = ({ data, isConnectable, id, onPreviewRequest, onDelete, 
         mediaUrl: formData.mediaUrl,
         caption: formData.caption,
         text: formData.caption,
-        buttons: formData.buttons,
-        interactiveButtonsItems: formData.buttons.map((btn) => ({
-          id: btn.id,
-          buttonText: btn.text,
-          nodeResultId: btn.nodeResultId || "",
-        })),
-        interactiveButtonsHeader: {
-          type: "Media",
-          text: formData.mediaUrl,
-          media: formData.mediaType,
-        },
+        delay: Number(formData.delay),
       });
     }
   }, [formData, id, initialized, data]);
@@ -77,47 +56,12 @@ const MediaButtonNode = ({ data, isConnectable, id, onPreviewRequest, onDelete, 
     }));
   };
 
-  const addButton = () => {
-    if (formData.buttons.length >= CHAR_LIMITS.MAX_BUTTONS) return;
-
-    setFormData((prev) => ({
-      ...prev,
-      buttons: [
-        ...prev.buttons,
-        {
-          id: generateButtonId(),
-          text: "",
-          charCount: 0,
-          isError: false,
-          nodeResultId: "",
-        },
-      ],
-    }));
-  };
-
-  const removeButton = (id) => {
-    setFormData((prev) => ({
-      ...prev,
-      buttons: prev.buttons.filter((btn) => btn.id !== id),
-    }));
-  };
-
-  const handleButtonTextChange = (id, text) => {
-    const charCount = text.length;
-    setFormData((prev) => ({
-      ...prev,
-      buttons: prev.buttons.map((btn) =>
-        btn.id === id
-          ? {
-              ...btn,
-              text,
-              charCount,
-              isError: charCount > CHAR_LIMITS.BUTTON_TEXT,
-            }
-          : btn
-      ),
-    }));
-  };
+  const handleDelayChange = useCallback((e) => {
+    let value = Number(e.target.value);
+    if (isNaN(value)) value = 0;
+    value = Math.max(0, value);
+    setFormData(prev => ({ ...prev, delay: value }));
+  }, []);
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
@@ -261,24 +205,18 @@ const MediaButtonNode = ({ data, isConnectable, id, onPreviewRequest, onDelete, 
     document.getElementById(`file-upload-${id}`).click();
   };
 
-  const getPreviewData = () => ({
-    mediaUrl: formData.mediaUrl,
-    mediaType: formData.mediaType,
-    caption: formData.caption,
-    interactiveButtonsItems: formData.buttons.map((btn) => ({
-      id: btn.id,
-      text: btn.text,
-      buttonText: btn.text,
-    })),
-  });
+  const handlePreview = useCallback(() => {
+    if (onPreviewRequest) {
+      onPreviewRequest(id, 'media');
+    }
+  }, [onPreviewRequest, id]);
 
   return (
     <div style={nodeContainerStyle}>
       <NodeHeader
-        title="Media Button"
-        icon="🖼️"
-        subtitle="Send media with interactive buttons"
-        onPreview={() => onPreviewRequest?.(id, "media-button")}
+        title="Media Message"
+        subtitle="Send media without buttons"
+        onPreview={handlePreview}
         onDuplicate={() => onDuplicate?.(id)}
         onDelete={() => onDelete?.(id)}
       />
@@ -406,50 +344,16 @@ const MediaButtonNode = ({ data, isConnectable, id, onPreviewRequest, onDelete, 
           />
         </FormSection>
 
-        {/* Buttons Section */}
-        <FormSection 
-          title="Interactive Buttons" 
-          icon="🔘" 
-          badge={formData.buttons.length > 0 ? formData.buttons.length : null}
-          defaultOpen={true}
-        >
-          {formData.buttons.length === 0 ? (
-            <div className="text-center py-4 bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg">
-              <p className="text-sm text-gray-500 mb-1">No buttons added yet</p>
-              <p className="text-xs text-gray-400">Add up to {CHAR_LIMITS.MAX_BUTTONS} interactive buttons</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {formData.buttons.map((button, index) => (
-                <div key={button.id} className="relative">
-                  <ButtonInput
-                    button={button}
-                    index={index}
-                    totalButtons={formData.buttons.length}
-                    onTextChange={handleButtonTextChange}
-                    onRemove={removeButton}
-                    isConnectable={isConnectable}
-                    placeholder={`Button ${index + 1} (e.g., "View Details", "Buy Now")`}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-
-          {formData.buttons.length < CHAR_LIMITS.MAX_BUTTONS && (
-            <button
-              type="button"
-              onClick={addButton}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 
-                text-blue-600 bg-blue-50 border-2 border-blue-200 border-dashed
-                rounded-lg hover:bg-blue-100 hover:border-blue-300 
-                transition-all text-sm font-medium"
-            >
-              <Plus size={16} />
-              Add Button ({formData.buttons.length}/{CHAR_LIMITS.MAX_BUTTONS})
-            </button>
-          )}
-        </FormSection>
+        {/* Delay Input */}
+        <FormInput
+          label="Delay (Optional)"
+          type="number"
+          value={formData.delay}
+          onChange={handleDelayChange}
+          placeholder="0"
+          min="0"
+          helpText="Wait time in seconds before sending this message"
+        />
       </div>
 
       {/* Handles */}
@@ -459,9 +363,20 @@ const MediaButtonNode = ({ data, isConnectable, id, onPreviewRequest, onDelete, 
         id="left-handle"
         isConnectable={isConnectable}
         style={targetHandleStyle}
+        className="hover:scale-125 transition-transform"
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="right-handle"
+        isConnectable={isConnectable}
+        style={sourceHandleStyle}
+        className="hover:scale-125 transition-transform"
       />
     </div>
   );
-};
+});
 
-export default MediaButtonNode;
+MediaNode.displayName = 'MediaNode';
+
+export default MediaNode;

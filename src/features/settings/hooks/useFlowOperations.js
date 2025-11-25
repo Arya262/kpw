@@ -3,11 +3,9 @@ import { toast } from 'react-toastify';
 import { flowAPI } from "../../../services/flowService";
 
 export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
-  const [savedFlows, setSavedFlows] = useState(() => {
-    const data = localStorage.getItem("savedFlows");
-    return data ? JSON.parse(data) : [];
-  });
+  const [savedFlows, setSavedFlows] = useState([]);
   const [loadingFlow, setLoadingFlow] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [flowTitle, setFlowTitle] = useState("Untitled");
   const [flowEnabled, setFlowEnabled] = useState(true);
 
@@ -15,11 +13,12 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
   useEffect(() => {
     const fetchFlows = async () => {
       if (!user?.customer_id) {
+        setInitialLoading(false);
         return;
       }
       
       try {
-        setLoadingFlow(true);
+        setInitialLoading(true);
         const flows = await flowAPI.getAll(user.customer_id);
 
         if (Array.isArray(flows)) {
@@ -32,16 +31,13 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
               isActive: flow.status === 'ACTIVE',
               created_at: flow.created_at,
               updated_at: flow.updated_at,
-              // Keep original flow_data for loading
               flow_data: flow.flow_data || flow.flow_json,
-              // Also keep nodes/edges if they exist for backward compatibility
               nodes: flow.nodes,
               edges: flow.edges
             };
           });
 
           setSavedFlows(transformedFlows);
-          localStorage.setItem("savedFlows", JSON.stringify(transformedFlows));
         } else {
           setSavedFlows([]);
         }
@@ -49,32 +45,29 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
         console.error('Error fetching flows:', error);
         setSavedFlows([]);
       } finally {
-        setLoadingFlow(false);
+        setInitialLoading(false);
       }
     };
 
     fetchFlows();
   }, [user?.customer_id]);
 
-  // Clean nodes before saving - remove React Flow auto-added fields
   const cleanNodesForSave = (nodes) => {
     return nodes.map(node => {
       const { width, height, selected, dragging, ...cleanNode } = node;
       
-      // Clean node data - remove empty/duplicate fields
+
       const cleanData = { ...cleanNode.data };
       
-      // Remove empty buttons array if interactiveButtonsItems exists
       if (cleanData.interactiveButtonsItems && cleanData.interactiveButtonsItems.length > 0) {
         delete cleanData.buttons;
       }
       
-      // Remove empty delay field
+
       if (cleanData.delay === "") {
         delete cleanData.delay;
       }
       
-      // Remove updateNodeData function
       delete cleanData.updateNodeData;
       
       return {
@@ -84,7 +77,7 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
     });
   };
 
-  // Clean edges before saving - ensure sourceHandle is at root level
+  
   const cleanEdgesForSave = (edges) => {
     return edges.map(edge => {
       const { selected, ...cleanEdge } = edge;
@@ -115,30 +108,37 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
   };
 
   // Save current flow using header data
-  const handleSaveFlowFromHeader = useCallback(async (title, enabled, nodes, edges) => {
+  const handleSaveFlowFromHeader = useCallback(async (title, enabled, nodes, edges, viewport) => {
     if (!title.trim()) {
       toast.error("Please enter a flow name");
       return;
     }
 
+    console.log('💾 PREPARING TO SAVE FLOW');
+    console.log('📝 Title:', title);
+    console.log('✅ Enabled:', enabled);
+    console.log('🎨 Raw Nodes:', nodes);
+    console.log('🔗 Raw Edges:', edges);
+    console.log('📐 Viewport:', viewport);
+
     // Clean nodes and edges before saving
     const cleanedNodes = cleanNodesForSave(nodes);
     const cleanedEdges = cleanEdgesForSave(edges);
+
+    console.log('🧹 Cleaned Nodes:', cleanedNodes);
+    console.log('🧹 Cleaned Edges:', cleanedEdges);
 
     setLoadingFlow(true);
 
     try {
       const flowMetadata = {
         customer_id: user?.customer_id,
-        name: title.trim(),
-        description: "",
-        triggers: ['hi', 'hello'],
-        priority: 1,
-        type: 'inbound',
-        isPro: false
+        name: title.trim()
       };
 
-      const result = await flowAPI.save(cleanedNodes, cleanedEdges, flowMetadata);
+      console.log('📋 Flow Metadata:', flowMetadata);
+
+      const result = await flowAPI.save(cleanedNodes, cleanedEdges, flowMetadata, viewport);
 
       if (result) {
         // Transform the saved flow to match the expected format
@@ -149,6 +149,11 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
           flowNodes: cleanedNodes,
           flowEdges: cleanedEdges,
           triggerConfig: extractTriggerConfig(cleanedNodes),
+          transform: viewport ? {
+            posX: viewport.x.toString(),
+            posY: viewport.y.toString(),
+            zoom: viewport.zoom.toString()
+          } : { posX: "0", posY: "0", zoom: "1" },
           lastUpdated: new Date().toISOString(),
           isPro: false
         };
@@ -165,12 +170,8 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
           edges: cleanedEdges
         };
 
-        // ✅ Update State + LocalStorage together (prevents mismatch)
-        setSavedFlows(prev => {
-          const updated = [savedFlow, ...prev];
-          localStorage.setItem("savedFlows", JSON.stringify(updated));
-          return updated;
-        });
+        // Update state with new flow
+        setSavedFlows(prev => [savedFlow, ...prev]);
 
         // Reset UI
         setMode("table");
@@ -210,13 +211,117 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
       }
 
       // Extract nodes and edges from the parsed data or directly from flow object
-      const rawNodes = flowData.flowNodes || flowData.nodes || flow.nodes || [];
-      const rawEdges = flowData.flowEdges || flowData.edges || flow.edges || [];
+      let rawNodes = flowData.flowNodes || flowData.nodes || flow.nodes || [];
+      let rawEdges = flowData.flowEdges || flowData.edges || flow.edges || [];
       
       if (rawNodes.length === 0) {
         toast.error('No flow data found to load');
         setLoadingFlow(false);
         return;
+      }
+
+      // EXTRACT FIRST NODE FROM START NODE'S FLOWREPLIES
+      // When saving, we merge the first node into start node's flowReplies
+      // When loading, we need to extract it back out
+      console.log('📥 LOADING FLOW - Raw Nodes:', rawNodes.length);
+      console.log('📥 LOADING FLOW - Raw Edges:', rawEdges.length);
+      
+      const startNode = rawNodes.find(n => n.id === 'start');
+      if (startNode && startNode.flowReplies) {
+        console.log('🔍 Found start node with flowReplies:', startNode.flowReplies);
+        const flowReplies = startNode.flowReplies;
+        
+        // Generate a unique ID for the extracted first node
+        const firstNodeId = `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        
+        let extractedNode = null;
+        
+        // Extract based on flowReplies type
+        if (flowReplies.type === 'text') {
+          extractedNode = {
+            id: firstNodeId,
+            flowNodeType: 'text',
+            flowReplies: flowReplies,
+            flowNodePosition: {
+              posX: (parseFloat(startNode.flowNodePosition.posX) + 500).toString(),
+              posY: startNode.flowNodePosition.posY
+            }
+          };
+        } else if (flowReplies.type === 'image' || flowReplies.type === 'video' || flowReplies.type === 'document') {
+          extractedNode = {
+            id: firstNodeId,
+            flowNodeType: flowReplies.type,
+            flowReplies: flowReplies,
+            flowNodePosition: {
+              posX: (parseFloat(startNode.flowNodePosition.posX) + 500).toString(),
+              posY: startNode.flowNodePosition.posY
+            }
+          };
+        } else if (flowReplies.type === 'interactive') {
+          const interactive = flowReplies.interactive;
+          
+          // Check if it has a media header (media-button) or just text (text-button)
+          // Media types are: image, video, document
+          const headerType = interactive.header?.type;
+          const hasMediaHeader = headerType === 'image' || headerType === 'video' || headerType === 'document';
+          
+          extractedNode = {
+            id: firstNodeId,
+            flowNodeType: hasMediaHeader ? 'mediabutton' : 'textbutton',
+            flowReplies: flowReplies,
+            flowNodePosition: {
+              posX: (parseFloat(startNode.flowNodePosition.posX) + 500).toString(),
+              posY: startNode.flowNodePosition.posY
+            }
+          };
+        }
+        
+        if (extractedNode) {
+          // Add the extracted node to rawNodes
+          rawNodes = [...rawNodes, extractedNode];
+          
+          // Create an edge from start to the extracted first node
+          const startToFirstEdge = {
+            id: `edge-start-${firstNodeId}-${Date.now()}`,
+            sourceNodeId: 'start',
+            targetNodeId: firstNodeId
+          };
+          rawEdges = [startToFirstEdge, ...rawEdges];
+          
+          // If the extracted node has buttons, recreate edges from it to target nodes
+          if (flowReplies.type === 'interactive' && flowReplies.interactive?.action?.buttons) {
+            const buttons = flowReplies.interactive.action.buttons;
+            console.log('🔘 Found buttons in first node:', buttons.length);
+            buttons.forEach((btn, index) => {
+              const targetNodeId = btn.reply?.id;
+              console.log(`  Button ${index}: "${btn.reply?.title}" → ${targetNodeId}`);
+              if (targetNodeId) {
+                const buttonEdge = {
+                  id: `edge-${firstNodeId}-${targetNodeId}-${Date.now()}-${index}`,
+                  sourceNodeId: firstNodeId,
+                  targetNodeId: targetNodeId
+                };
+                rawEdges.push(buttonEdge);
+                console.log(`  ✅ Created edge: ${firstNodeId} → ${targetNodeId}`);
+              }
+            });
+          }
+          
+          // Remove flowReplies from start node (it's now in the extracted node)
+          const startNodeIndex = rawNodes.findIndex(n => n.id === 'start');
+          if (startNodeIndex !== -1) {
+            rawNodes[startNodeIndex] = {
+              ...rawNodes[startNodeIndex],
+              flowReplies: null
+            };
+            delete rawNodes[startNodeIndex].flowReplies;
+          }
+          
+          console.log('✅ Extracted first node from start node:', extractedNode);
+          console.log('✅ Total edges after extraction:', rawEdges.length);
+        }
+      } else {
+        console.log('⚠️ No start node with flowReplies found');
       }
 
       // Transform nodes to React Flow format
@@ -272,6 +377,13 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
           } else {
             // Map database flowNodeType to React Flow node type
             const typeMapping = {
+              'start': 'flowStartNode',
+              'text': 'text',
+              'image': 'media',
+              'video': 'media',
+              'document': 'media',
+              'textbutton': 'text-button',
+              'mediabutton': 'media-button',
               'Message': 'text-button',
               'Question': 'ask-question',
               'InteractiveButtons': 'text-button',
@@ -418,6 +530,38 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
               console.log("Flow triggered:", triggerData);
             }
           };
+        } else if (nodeType === 'text') {
+          // Simple text node (no buttons)
+          let text = '';
+          
+          if (node.flowReplies && node.flowReplies.text) {
+            text = node.flowReplies.text.body || '';
+          }
+          
+          transformedData = {
+            ...transformedData,
+            text: text || node.data?.text || '',
+            delay: node.data?.delay || node.delay || 0
+          };
+        } else if (nodeType === 'media') {
+          // Simple media node (no buttons)
+          let mediaUrl = '';
+          let mediaType = node.flowNodeType || 'image';
+          let caption = '';
+          
+          if (node.flowReplies && node.flowReplies[mediaType]) {
+            mediaUrl = node.flowReplies[mediaType].url || node.flowReplies[mediaType].link || node.flowReplies[mediaType].id || '';
+            caption = node.flowReplies[mediaType].caption || '';
+          }
+          
+          transformedData = {
+            ...transformedData,
+            mediaUrl: mediaUrl || node.data?.mediaUrl || '',
+            mediaType: mediaType,
+            caption: caption || node.data?.caption || '',
+            filename: node.flowReplies?.[mediaType]?.filename || node.data?.filename || '',
+            delay: node.data?.delay || node.delay || 0
+          };
         } else if (nodeType === 'text-button' || nodeType === 'media-button') {
           // Handle new flowReplies structure
           let text = '';
@@ -425,6 +569,36 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
           let mediaType = '';
           let caption = '';
           let buttons = [];
+          
+          // Extract data from flowReplies.interactive structure
+          if (node.flowReplies && node.flowReplies.interactive) {
+            const interactive = node.flowReplies.interactive;
+            
+            // Get body text
+            if (interactive.body) {
+              text = interactive.body.text || '';
+            }
+            
+            // Get header media for media-button
+            if (interactive.header && interactive.header.type !== 'text') {
+              mediaType = interactive.header.type;
+              if (interactive.header[mediaType]) {
+                mediaUrl = interactive.header[mediaType].url || interactive.header[mediaType].link || interactive.header[mediaType].id || '';
+              }
+            }
+            
+            // Get buttons
+            if (interactive.action && interactive.action.buttons) {
+              buttons = interactive.action.buttons.map((btn, index) => ({
+                id: `${node.id}-${index}`,  // Generate unique button ID (without btn- prefix)
+                text: btn.reply?.title || '',
+                nodeResultId: btn.reply?.id || ''  // Target node ID
+              }));
+            }
+            
+            // Get footer
+            caption = interactive.footer?.text || '';
+          }
 
           if (node.flowReplies && node.flowReplies.length > 0) {
             const firstReply = node.flowReplies[0];
@@ -446,8 +620,14 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
             }));
           }
 
-          // Map database format to component format
-          const rawButtons = node.interactiveButtonsItems || node.data?.interactiveButtonsItems || node.data?.buttons || [];
+          // Use extracted buttons or fallback to raw data
+          const finalButtons = buttons.length > 0 ? buttons : (node.interactiveButtonsItems || node.data?.interactiveButtonsItems || node.data?.buttons || []).map(btn => ({
+            id: btn.id || `${node.id}-${Date.now()}`,
+            text: btn.title || btn.buttonText || btn.text || '',
+            nodeResultId: btn.nodeResultId || btn.targetNodeId || ''
+          }));
+          
+          console.log(`🔘 Loading buttons for node ${node.id}:`, finalButtons);
           
           transformedData = {
             ...transformedData,
@@ -455,15 +635,11 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
             mediaUrl: mediaUrl || node.mediaUrl || node.data?.mediaUrl || '',
             mediaType: mediaType || node.mediaType || node.data?.mediaType || '',
             caption: caption || node.caption || node.data?.caption || '',
-            buttons: buttons.length > 0 ? buttons : rawButtons.map(btn => ({
-              id: btn.id || `btn-${Date.now()}`,
-              text: btn.title || btn.buttonText || btn.text || '',
-              nodeResultId: btn.nodeResultId || btn.targetNodeId || ''
-            })),
+            buttons: finalButtons,
             interactiveButtonsBody: text || node.interactiveButtonsBody || node.data?.interactiveButtonsBody || node.data?.text || '',
-            interactiveButtonsItems: buttons.length > 0 ? buttons : (node.interactiveButtonsItems || node.data?.interactiveButtonsItems || node.data?.buttons || []),
+            interactiveButtonsItems: finalButtons,
             interactiveButtonsHeader: node.interactiveButtonsHeader || node.data?.interactiveButtonsHeader || { type: "Text", text: text, media: null },
-            interactiveButtonsFooter: node.interactiveButtonsFooter || node.data?.interactiveButtonsFooter || "",
+            interactiveButtonsFooter: caption || node.interactiveButtonsFooter || node.data?.interactiveButtonsFooter || "",
             interactiveButtonsUserInputVariable: node.interactiveButtonsUserInputVariable || node.data?.interactiveButtonsUserInputVariable || "",
             interactiveButtonsDefaultNodeResultId: node.interactiveButtonsDefaultNodeResultId || node.data?.interactiveButtonsDefaultNodeResultId || ""
           };
@@ -560,6 +736,21 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
         let sourceHandle = edge.sourceHandle;
         let targetHandle = edge.targetHandle;
         
+        // Find the source node to check if it has buttons
+        const sourceNode = transformedNodes.find(n => n.id === source);
+        if (sourceNode && (sourceNode.type === 'text-button' || sourceNode.type === 'media-button')) {
+          // Find which button connects to this target
+          const buttons = sourceNode.data?.interactiveButtonsItems || sourceNode.data?.buttons || [];
+          const matchingButton = buttons.find(btn => btn.nodeResultId === target);
+          
+          if (matchingButton) {
+            sourceHandle = `btn-${matchingButton.id}`;
+            console.log(`🔗 Edge ${source} → ${target}: Found button "${matchingButton.text}", sourceHandle = ${sourceHandle}`);
+          } else {
+            console.warn(`⚠️ Edge ${source} → ${target}: No matching button found. Buttons:`, buttons.map(b => ({ id: b.id, target: b.nodeResultId })));
+          }
+        }
+        
         // Parse complex source IDs that include button information
         // Format: "node-welcomebtn-btn-cat1" should become source="node-welcome", sourceHandle="btn-btn-cat1"
         if (source && source.includes('btn-')) {
@@ -608,7 +799,7 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
           return null;
         }
 
-        return {
+        const finalEdge = {
           id: edge.id || `edge-${Math.random().toString(36).substr(2, 9)}`,
           source,
           target,
@@ -619,7 +810,23 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
           style: edge.style || { stroke: '#0ea5e9', strokeWidth: 2 },
           markerEnd: edge.markerEnd || { type: 'arrowclosed', color: '#0ea5e9' }
         };
+        
+        if (sourceHandle) {
+          console.log(`✅ Final edge with handle: ${source} → ${target}, sourceHandle: ${sourceHandle}`);
+        }
+        
+        return finalEdge;
       }).filter(edge => edge !== null);
+
+      // Extract transform/viewport data from WATI format
+      let savedTransform = null;
+      if (flowData.transform) {
+        savedTransform = {
+          x: parseFloat(flowData.transform.posX || 0),
+          y: parseFloat(flowData.transform.posY || 0),
+          zoom: parseFloat(flowData.transform.zoom || 1)
+        };
+      }
 
       // Only switch to edit mode if we have valid data
       if (transformedNodes.length > 0) {
@@ -629,41 +836,55 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
         setFlowEnabled(flow.status === 'ACTIVE' || flow.isActive === true);
         setMode("edit");
         toast.info(`Loaded flow: ${flow.flow_name || flow.name}`);
+        
+        // Return the saved transform for viewport restoration
+        return savedTransform;
       } else {
         toast.error('Cannot load flow: No nodes found');
+        return null;
       }
     } catch (error) {
       console.error('Error loading flow:', error);
       toast.error('Failed to load flow data');
+      return null;
     } finally {
       setLoadingFlow(false);
     }
   }, [setNodes, setEdges, setMode]);
 
   // Update a flow
-  const handleUpdateFlow = useCallback(async (flowId, title, enabled, nodes, edges) => {
+  const handleUpdateFlow = useCallback(async (flowId, title, enabled, nodes, edges, viewport) => {
     if (!title.trim()) {
       toast.error("Please enter a flow name");
       return;
     }
 
+    console.log('🔄 PREPARING TO UPDATE FLOW');
+    console.log('🆔 Flow ID:', flowId);
+    console.log('📝 Title:', title);
+    console.log('✅ Enabled:', enabled);
+    console.log('🎨 Raw Nodes:', nodes);
+    console.log('🔗 Raw Edges:', edges);
+    console.log('📐 Viewport:', viewport);
+
     // Clean nodes and edges before updating
     const cleanedNodes = cleanNodesForSave(nodes);
     const cleanedEdges = cleanEdgesForSave(edges);
+
+    console.log('🧹 Cleaned Nodes:', cleanedNodes);
+    console.log('🧹 Cleaned Edges:', cleanedEdges);
 
     setLoadingFlow(true);
 
     try {
       const flowMetadata = {
-        name: title.trim(),
-        description: "",
-        triggers: ['hi', 'hello'],
-        priority: 1,
-        type: 'inbound',
-        isPro: false
+        customer_id: user?.customer_id,
+        name: title.trim()
       };
 
-      const result = await flowAPI.update(flowId, cleanedNodes, cleanedEdges, flowMetadata);
+      console.log('📋 Flow Metadata:', flowMetadata);
+
+      const result = await flowAPI.update(flowId, cleanedNodes, cleanedEdges, flowMetadata, viewport);
 
       if (result) {
         // Update the flow in the saved flows list with cleaned data
@@ -673,12 +894,17 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
           flowNodes: cleanedNodes,
           flowEdges: cleanedEdges,
           triggerConfig: extractTriggerConfig(cleanedNodes),
+          transform: viewport ? {
+            posX: viewport.x.toString(),
+            posY: viewport.y.toString(),
+            zoom: viewport.zoom.toString()
+          } : { posX: "0", posY: "0", zoom: "1" },
           lastUpdated: new Date().toISOString(),
           isPro: false
         };
 
-        setSavedFlows(prev => {
-          const updated = prev.map(f => 
+        setSavedFlows(prev => 
+          prev.map(f => 
             f.id === flowId 
               ? { 
                   ...f, 
@@ -690,10 +916,8 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
                   updated_at: new Date().toISOString()
                 }
               : f
-          );
-          localStorage.setItem("savedFlows", JSON.stringify(updated));
-          return updated;
-        });
+          )
+        );
 
         toast.success(`Flow "${title}" updated successfully!`);
         return true;
@@ -713,11 +937,7 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
       setLoadingFlow(true);
       await flowAPI.delete(id);
 
-      setSavedFlows(prev => {
-        const updated = prev.filter(f => f.id !== id);
-        localStorage.setItem("savedFlows", JSON.stringify(updated));
-        return updated;
-      });
+      setSavedFlows(prev => prev.filter(f => f.id !== id));
 
       toast.success("Flow deleted successfully!");
     } catch (error) {
@@ -730,6 +950,7 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
   return {
     savedFlows,
     loadingFlow,
+    initialLoading,
     flowTitle,
     flowEnabled,
     setFlowTitle,

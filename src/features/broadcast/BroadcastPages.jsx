@@ -1,7 +1,7 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import React, { useState, useEffect, useCallback } from "react";
 import { toast } from "react-toastify";
-import SendTemplate from "../chats/chatfeautures/SendTemplate";
+import SendTemplate from "../chats/chatFeatures/SendTemplate";
 import BroadcastForm from "./components/BroadcastForm";
 import ConfirmationDialog from "./components/ConfirmationDialog";
 import { API_ENDPOINTS } from "../../config/api";

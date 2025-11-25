@@ -2,6 +2,8 @@ import { useMemo } from "react";
 
 import FlowStartNode from "../FlowStartNode";
 import TemplateNode from "../TemplateNode";
+import TextNode from "../components/nodes/TextNode";
+import MediaNode from "../components/nodes/MediaNode";
 import TextButtonNode from "../components/nodes/TextButtonNode";
 import MediaButtonNode from "../components/nodes/MediaButtonNode";
 import ListNode from "../components/nodes/ListNode";
@@ -36,6 +38,8 @@ export const useNodeTypes = (
       flowStartNode: FlowStartNode,
       templateNode: TemplateNode,
 
+      text: wrap(TextNode),
+      media: wrap(MediaNode),
       "text-button": wrap(TextButtonNode),
       "media-button": wrap(MediaButtonNode),
       list: wrap(ListNode),

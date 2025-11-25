@@ -43,9 +43,6 @@ const FlowEditor = () => {
   const [showPreview, setShowPreview] = useState(false);
   const [showFlowNameModal, setShowFlowNameModal] = useState(false);
   const [shouldFitView, setShouldFitView] = useState(true);
-  
-  // Store viewport state per flow
-  const viewportStateRef = useRef({});
 
   // Get live preview data from the actual node with button connections
   const previewData = useMemo(() => {
@@ -55,7 +52,7 @@ const FlowEditor = () => {
 
     const nodeData = { ...node.data };
 
-    // Enrich button data with connections from edges
+  
     if (nodeData.interactiveButtonsItems || nodeData.buttons) {
       const buttons = nodeData.interactiveButtonsItems || nodeData.buttons || [];
       
@@ -86,6 +83,7 @@ const FlowEditor = () => {
   const {
     savedFlows,
     loadingFlow,
+    initialLoading,
     flowTitle,
     flowEnabled,
     setFlowTitle,
@@ -190,52 +188,55 @@ const FlowEditor = () => {
   }, [createStartNode, setNodes, setEdges, setFlowTitle, setFlowEnabled]);
 
   const handleLoadFlowAndEdit = useCallback(
-    (flow) => {
-      console.log('📍 Loading flow:', flow.id);
-      console.log('📍 Saved viewport for this flow:', viewportStateRef.current[flow.id]);
-      
-      // Disable fitView if we have a saved viewport
-      const hasSavedViewport = !!viewportStateRef.current[flow.id];
-      setShouldFitView(!hasSavedViewport);
+    async (flow) => {
+      console.log('🔵 LOADING FLOW:', flow.id);
       
       setMode("edit");
       setEditingFlowId(flow.id);
-      handleLoadFlow(flow);
+      
+      // Load flow and get the saved transform data from API
+      const savedTransform = await handleLoadFlow(flow);
+      
+      // Use API transform if available, otherwise fitView
+      const hasTransform = !!savedTransform;
+      setShouldFitView(!hasTransform);
       
       // Restore viewport after nodes are loaded and rendered
-      if (hasSavedViewport) {
-        const savedViewport = viewportStateRef.current[flow.id];
-        
+      if (hasTransform) {
         // Use multiple animation frames to ensure React Flow is ready
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
             setTimeout(() => {
-              console.log('📍 Restoring viewport:', savedViewport);
-              setViewport(savedViewport, { duration: 0 });
+              console.log('🔵 RESTORING viewport from API:', savedTransform);
+              setViewport(savedTransform, { duration: 0 });
+              
+              // Verify it was applied
+              setTimeout(() => {
+                const currentViewport = getViewport();
+                console.log('🔵 Current viewport after restore:', currentViewport);
+              }, 100);
             }, 200);
           });
         });
-      } else {
-        console.log('📍 No saved viewport for this flow - will use fitView');
       }
     },
-    [handleLoadFlow, setViewport]
+    [handleLoadFlow, setViewport, getViewport]
   );
 
   const handleSaveFlow = useCallback(
     async (title, enabled) => {
-      // Save current viewport before leaving edit mode
+      // Get current viewport to save to API
+      const currentViewport = getViewport();
+      console.log('🟢 SAVING viewport to API:', currentViewport);
+      
       if (editingFlowId) {
-        const currentViewport = getViewport();
-        console.log('📍 Saving viewport on update for flow:', editingFlowId, currentViewport);
-        viewportStateRef.current[editingFlowId] = currentViewport;
-        
         const success = await handleUpdateFlow(
           editingFlowId,
           title,
           enabled,
           nodes,
-          edges
+          edges,
+          currentViewport
         );
         if (success) {
           setMode("table");
@@ -246,7 +247,7 @@ const FlowEditor = () => {
           setEditingFlowId(null);
         }
       } else {
-        handleSaveFlowFromHeader(title, enabled, nodes, edges);
+        handleSaveFlowFromHeader(title, enabled, nodes, edges, currentViewport);
       }
     },
     [
@@ -308,13 +309,15 @@ const FlowEditor = () => {
             onDeleteFlow={handleDeleteFlow}
             onAddFlow={handleAddFlow}
             loadingFlow={loadingFlow}
+            initialLoading={initialLoading}
           />
         )}
 
         {mode === "edit" && (
-          <div className="flex h-full">
+          <div className="flex h-full" key={`edit-${editingFlowId || 'new'}`}>
             <div className="flex-1 flex flex-col">
               <Header
+                key={`header-${editingFlowId || 'new'}`}
                 title={flowTitle}
                 onTitleChange={setFlowTitle}
                 onSave={handleSaveFlow}
@@ -324,14 +327,6 @@ const FlowEditor = () => {
                 onImport={handleImportFlow}
                 isEditingFlow={!!editingFlowId}
                 onBack={() => {
-                  // Save current viewport before leaving
-                  if (editingFlowId) {
-                    const currentViewport = getViewport();
-                    console.log('📍 Saving viewport for flow:', editingFlowId, currentViewport);
-                    viewportStateRef.current[editingFlowId] = currentViewport;
-                    console.log('📍 All saved viewports:', viewportStateRef.current);
-                  }
-                  
                   setMode("table");
                   setNodes([]);
                   setEdges([]);

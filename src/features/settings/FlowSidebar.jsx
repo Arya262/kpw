@@ -6,6 +6,8 @@ import {
   Boxes,
   Layout,
   HelpCircle,
+  Type,
+  Image,
 } from "lucide-react";
 
 const DraggableCard = ({ type, label, Icon, onAddNode }) => {
@@ -18,7 +20,6 @@ const DraggableCard = ({ type, label, Icon, onAddNode }) => {
   };
 
   const handleClick = (e) => {
-    // Prevent drag from interfering with click
     e.stopPropagation();
     
     if (onAddNode) {
@@ -51,14 +52,16 @@ const DraggableCard = ({ type, label, Icon, onAddNode }) => {
 
 const FlowSidebar = ({ onAddNode }) => {
   const messageNodes = [
+    { label: "Text", type: "text", Icon: Type },
+    { label: "Media", type: "media", Icon: Image },
     { label: "Text Button", type: "text-button", Icon: MessageSquare },
     { label: "Media Button", type: "media-button", Icon: Video },
-    { label: "List", type: "list", Icon: List },
-    { label: "Catalog Message", type: "catalog", Icon: ShoppingCart },
-    { label: "Single Product", type: "single-product", Icon: Boxes },
-    { label: "Multi Product", type: "multi-product", Icon: Boxes },
-    { label: "Template", type: "template", Icon: Layout },
-    { label: "Ask Question", type: "ask-question", Icon: HelpCircle },
+    // { label: "List", type: "list", Icon: List },
+    // { label: "Catalog Message", type: "catalog", Icon: ShoppingCart },
+    // { label: "Single Product", type: "single-product", Icon: Boxes },
+    // { label: "Multi Product", type: "multi-product", Icon: Boxes },
+    // { label: "Template", type: "template", Icon: Layout },
+    // { label: "Ask Question", type: "ask-question", Icon: HelpCircle },
   ];
 
   return (

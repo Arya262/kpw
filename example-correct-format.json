@@ -1,0 +1,108 @@
+{
+  "customer_id": 1000,
+  "flow_name": "e-com sale",
+  "flow_json": {
+    "id": 40,
+    "name": "e-com sale",
+    "flowNodes": [
+      {
+        "id": "start",
+        "flowNodeType": "start",
+        "flowNodePosition": {
+          "posX": "-291.66",
+          "posY": "578.16"
+        },
+        "flowReplies": {
+          "type": "interactive",
+          "interactive": {
+            "type": "button",
+            "body": {
+              "text": "👋 Welcome to *ShopEase*! \nYour one-stop shop for the best deals online.\n\nWhat would you like to explore today?"
+            },
+            "action": {
+              "buttons": [
+                {
+                  "type": "reply",
+                  "reply": {
+                    "id": "node-electronics",
+                    "title": "Electronics"
+                  }
+                },
+                {
+                  "type": "reply",
+                  "reply": {
+                    "id": "node-fashion",
+                    "title": "Fashion"
+                  }
+                },
+                {
+                  "type": "reply",
+                  "reply": {
+                    "id": "node-home",
+                    "title": "Home & Kitchen"
+                  }
+                }
+              ]
+            },
+            "header": {
+              "type": "Text",
+              "text": "👋 Welcome to *ShopEase*!"
+            }
+          }
+        }
+      },
+      {
+        "id": "node-electronics",
+        "flowNodeType": "image",
+        "flowReplies": {
+          "type": "image",
+          "image": {
+            "url": "https://res.cloudinary.com/...",
+            "caption": "Electronics"
+          }
+        },
+        "flowNodePosition": {
+          "posX": "1577.97",
+          "posY": "-329.15"
+        }
+      },
+      {
+        "id": "node-fashion",
+        "flowNodeType": "image",
+        "flowReplies": {
+          "type": "image",
+          "image": {
+            "url": "https://res.cloudinary.com/...",
+            "caption": "Fashion"
+          }
+        },
+        "flowNodePosition": {
+          "posX": "1587.99",
+          "posY": "603.13"
+        }
+      }
+    ],
+    "flowEdges": [
+      {
+        "id": "edge-electronics-to-submenu",
+        "sourceNodeId": "node-electronics",
+        "targetNodeId": "node-electronics-submenu"
+      },
+      {
+        "id": "edge-fashion-to-submenu",
+        "sourceNodeId": "node-fashion",
+        "targetNodeId": "node-fashion-submenu"
+      }
+    ],
+    "triggerConfig": {
+      "keywords": ["shop", "buy", "product"],
+      "regex": "",
+      "caseSensitive": false
+    },
+    "transform": {
+      "posX": "-565.07",
+      "posY": "214.69",
+      "zoom": "0.44"
+    }
+  }
+}

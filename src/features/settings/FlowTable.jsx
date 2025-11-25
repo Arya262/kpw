@@ -7,6 +7,7 @@ import OptionsDropdown from "../shared/OptionsDropdown";
 const FlowTable = ({
   savedFlows,
   loadingFlow,
+  initialLoading,
   onLoadFlow,
   onDeleteFlow,
   onAddFlow,
@@ -236,6 +237,20 @@ const FlowTable = ({
               <tbody className="max-h-[calc(100vh-300px)] overflow-y-auto scrollbar-hide">
                 {(() => {
                   const flowsToShow = displayedFlows.length > 0 ? displayedFlows : (savedFlows || []);
+                  
+                  // Show loading state during initial fetch
+                  if (initialLoading) {
+                    return (
+                      <tr>
+                        <td colSpan="5" className="text-center py-8 text-gray-500">
+                          <div className="flex flex-col items-center gap-2">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0AA89E]"></div>
+                            <span>Loading flows...</span>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  }
                   
                   if (flowsToShow.length === 0) {
                     return (
