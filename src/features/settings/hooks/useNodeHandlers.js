@@ -2,9 +2,8 @@ import { useCallback } from "react";
 import { toast } from "react-toastify";
 
 export const useNodeHandlers = (setNodes, setEdges, updateNodeData) => {
-
   /* -------------------------------------------------------------------------- */
-  /*                                 DELETE NODE                                */
+  /*                                 DELETE NODE                                 */
   /* -------------------------------------------------------------------------- */
   const handleNodeDelete = useCallback(
     (nodeId) => {
@@ -18,7 +17,7 @@ export const useNodeHandlers = (setNodes, setEdges, updateNodeData) => {
   );
 
   /* -------------------------------------------------------------------------- */
-  /*                               DUPLICATE NODE                               */
+  /*                           DUPLICATE → CLEAN EMPTY NODE                      */
   /* -------------------------------------------------------------------------- */
   const handleNodeDuplicate = useCallback(
     (nodeId) => {
@@ -28,112 +27,141 @@ export const useNodeHandlers = (setNodes, setEdges, updateNodeData) => {
 
         const newId = `node-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-        // Create empty data based on node type
-        const getEmptyData = (nodeType, originalData) => {
-          const base = {
-            label: originalData.label || "New Node",
-            updateNodeData,
-          };
+        // IMPORTANT:
+        // When duplicating, we must produce a CLEAN EMPTY node of same type,
+        // without copying old values (buttons, media, lists, etc.)
+        const getEmptyData = (type) => {
+          const base = { updateNodeData, label: "New Node" };
 
-          // Type-specific empty data structures
-          const emptyDataMap = {
-            "text-button": {
-              text: "",
-              buttons: [],
-              interactiveButtonsBody: "",
-              interactiveButtonsItems: [],
-              interactiveButtonsHeader: { type: "Text", text: "", media: null },
-              interactiveButtonsFooter: "",
-              interactiveButtonsUserInputVariable: "",
-              interactiveButtonsDefaultNodeResultId: "",
-            },
-            "media-button": {
-              mediaUrl: "",
-              mediaType: originalData.mediaType || "image", // Keep media type
-              caption: "",
-              buttons: [],
-              interactiveButtonsItems: [],
-              interactiveButtonsHeader: { type: "Text", text: "", media: null },
-              interactiveButtonsFooter: "",
-              interactiveButtonsUserInputVariable: "",
-              interactiveButtonsDefaultNodeResultId: "",
-            },
-            list: {
-              listHeader: "",
-              listBody: "",
-              listFooter: "",
-              listSections: [],
-            },
-            "ask-question": {
-              questionText: "",
-              customField: "",
-              validationType: originalData.validationType || "None", // Keep validation type
-              isMediaAccepted: false,
-              expectedAnswers: [],
-            },
-            "ask-address": {
-              questionText: "",
-              customField: "",
-            },
-            "ask-location": {
-              questionText: "",
-              longitudeField: "",
-              latitudeField: "",
-            },
-            "single-product": {
-              body: "",
-              footer: "",
-              product: {},
-            },
-            "multi-product": {
-              header: "",
-              body: "",
-              footer: "",
-              products: [],
-            },
-            catalog: {
-              body: "",
-              footer: "",
-            },
-            summary: {
-              title: "Summary",
-              messageText: "",
-              includeTimestamp: false,
-            },
-            "set-variable": {
-              variableName: "",
-              value: "",
-            },
-            "set-custom-field": {
-              customField: "",
-              value: "",
-            },
-            template: {
-              selectedTemplate: null,
-              templateId: "",
-              templateName: "",
-            },
-          };
+          switch (type) {
+            case "text-button":
+              return {
+                ...base,
+                text: "",
+                buttons: [],
+                interactiveButtonsItems: [],
+                interactiveButtonsHeader: { type: "text", text: "" },
+                interactiveButtonsFooter: "",
+              };
 
-          return {
-            ...base,
-            ...(emptyDataMap[nodeType] || {}),
-          };
+            case "media-button":
+              return {
+                ...base,
+                mediaUrl: "",
+                mediaId: "",
+                mediaType: node.data.mediaType || "image",
+                caption: "",
+                buttons: [],
+                interactiveButtonsItems: [],
+                interactiveButtonsHeader: { type: "text", text: "" },
+                interactiveButtonsFooter: "",
+              };
+
+            case "list":
+              return {
+                ...base,
+                listHeader: "",
+                listBody: "",
+                listFooter: "",
+                listSections: [],
+              };
+
+            case "ask-question":
+              return {
+                ...base,
+                questionText: "",
+                customField: "",
+                validationType: node.data.validationType || "None",
+                isMediaAccepted: false,
+                expectedAnswers: [],
+              };
+
+            case "ask-address":
+              return {
+                ...base,
+                questionText: "",
+                customField: "",
+              };
+
+            case "ask-location":
+              return {
+                ...base,
+                questionText: "",
+                longitudeField: "",
+                latitudeField: "",
+              };
+
+            case "single-product":
+              return {
+                ...base,
+                body: "",
+                footer: "",
+                product: {},
+              };
+
+            case "multi-product":
+              return {
+                ...base,
+                header: "",
+                body: "",
+                footer: "",
+                products: [],
+              };
+
+            case "catalog":
+              return {
+                ...base,
+                body: "",
+                footer: "",
+                catalogId: "",
+              };
+
+            case "summary":
+              return {
+                ...base,
+                title: "Summary",
+                messageText: "",
+                includeTimestamp: false,
+              };
+
+            case "set-variable":
+              return {
+                ...base,
+                variableName: "",
+                value: "",
+              };
+
+            case "set-custom-field":
+              return {
+                ...base,
+                customField: "",
+                value: "",
+              };
+
+            case "template":
+              return {
+                ...base,
+                selectedTemplate: null,
+                templateId: "",
+                templateName: "",
+              };
+
+            default:
+              return base;
+          }
         };
 
-        const duplicatedNode = {
+        const cleanEmptyData = getEmptyData(node.type);
+
+        const duplicated = {
           ...node,
           id: newId,
-          position: {
-            x: node.position.x + 50,
-            y: node.position.y + 50,
-          },
-          data: getEmptyData(node.type, node.data),
-          selected: true, // Select the new node
+          position: { x: node.position.x + 50, y: node.position.y + 50 },
+          data: cleanEmptyData,
+          selected: true,
         };
 
-        // Deselect all other nodes and add the new one
-        return nodes.map(n => ({ ...n, selected: false })).concat(duplicatedNode);
+        return nodes.map((n) => ({ ...n, selected: false })).concat(duplicated);
       });
 
       toast.success("Empty node created", { autoClose: 1200 });
@@ -142,7 +170,7 @@ export const useNodeHandlers = (setNodes, setEdges, updateNodeData) => {
   );
 
   /* -------------------------------------------------------------------------- */
-  /*                               CREATE NEW NODE                              */
+  /*                                  CREATE NODE                                */
   /* -------------------------------------------------------------------------- */
   const createNewNode = useCallback(
     (type, label, position, nodeTypes) => {
@@ -152,37 +180,33 @@ export const useNodeHandlers = (setNodes, setEdges, updateNodeData) => {
       }
 
       const base = {
-        label: label || "New Node",
         updateNodeData,
+        label: label || "New Node",
       };
 
-      const typeMap = {
+      const typeDefaults = {
+        "text-button": {
+          text: "",
+          buttons: [],
+          interactiveButtonsItems: [],
+          interactiveButtonsHeader: { type: "text", text: "" },
+          interactiveButtonsFooter: "",
+        },
+        "media-button": {
+          mediaUrl: "",
+          mediaId: "",
+          mediaType: "image",
+          caption: "",
+          buttons: [],
+          interactiveButtonsItems: [],
+          interactiveButtonsHeader: { type: "text", text: "" },
+          interactiveButtonsFooter: "",
+        },
         list: {
           listHeader: "",
           listBody: "",
           listFooter: "",
           listSections: [],
-        },
-        "text-button": {
-          text: "",
-          buttons: [],
-          interactiveButtonsBody: "",
-          interactiveButtonsItems: [],
-          interactiveButtonsHeader: { type: "Text", text: "", media: null },
-          interactiveButtonsFooter: "",
-          interactiveButtonsUserInputVariable: "",
-          interactiveButtonsDefaultNodeResultId: "",
-        },
-        "media-button": {
-          mediaUrl: "",
-          mediaType: "image",
-          caption: "",
-          buttons: [],
-          interactiveButtonsItems: [],
-          interactiveButtonsHeader: { type: "Text", text: "", media: null },
-          interactiveButtonsFooter: "",
-          interactiveButtonsUserInputVariable: "",
-          interactiveButtonsDefaultNodeResultId: "",
         },
         "ask-question": {
           questionText: "",
@@ -202,10 +226,7 @@ export const useNodeHandlers = (setNodes, setEdges, updateNodeData) => {
         },
       };
 
-      const initialData = {
-        ...base,
-        ...(typeMap[type] || {}),
-      };
+      const initialData = { ...base, ...(typeDefaults[type] || {}) };
 
       return {
         id: `node-${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -218,7 +239,7 @@ export const useNodeHandlers = (setNodes, setEdges, updateNodeData) => {
   );
 
   /* -------------------------------------------------------------------------- */
-  /*                               ADD NODE BUTTON                              */
+  /*                            ADD NODE FROM TOOLBAR                            */
   /* -------------------------------------------------------------------------- */
   const handleAddNodeClick = useCallback(
     (type, label, screenToFlowPosition, wrapperRef, nodeTypes, setNodesState) => {
@@ -238,10 +259,7 @@ export const useNodeHandlers = (setNodes, setEdges, updateNodeData) => {
 
       setNodesState((nodes) => [...nodes, newNode]);
 
-      toast.success(`✓ Added ${label}`, {
-        autoClose: 1500,
-        icon: "➕",
-      });
+      toast.success(`✓ Added ${label}`, { autoClose: 1500, icon: "➕" });
     },
     [createNewNode]
   );

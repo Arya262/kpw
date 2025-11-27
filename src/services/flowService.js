@@ -1,67 +1,77 @@
 import axios from 'axios';
 import { API_ENDPOINTS } from '../config/api';
-import { transformNodesToBackendFormat, transformEdgesToBackendFormat } from './flowTransformers';
+import {
+  transformNodesToBackendFormat,
+  transformEdgesToBackendFormat,
+} from './flowTransformers';
 
 export const flowAPI = {
   async save(nodes, edges, metadata, viewport) {
     try {
+      // 1️⃣ Transform nodes/edges normally
       const transformedNodes = transformNodesToBackendFormat(nodes, edges);
-      
-      // Extract trigger config from start node
+      const transformedEdges = transformEdgesToBackendFormat(edges);
+
+      // 2️⃣ Extract trigger config from real start node (not moved)
       const startNode = transformedNodes.find(n => n.id === 'start');
-      const triggerConfig = startNode?.triggerConfig || {
-        keywords: [],
-        regex: '',
-        caseSensitive: false
-      };
-      
-      // Remove triggerConfig from start node (it's stored at flow level)
-      const cleanedNodes = transformedNodes.map(n => {
-        if (n.id === 'start') {
-          const { triggerConfig, ...rest } = n;
-          return rest;
-        }
-        return n;
-      });
-      
+
+      const triggerConfig =
+        startNode?.config?.triggerConfig ??
+        startNode?.triggerConfig ?? {
+          keywords: [],
+          regex: '',
+          caseSensitive: false,
+        };
+
+      // 3️⃣ Build backend flow_json exactly as you want
       const flow_json = {
         id: null,
         name: metadata.name,
-        flowNodes: cleanedNodes,
-        flowEdges: transformEdgesToBackendFormat(edges, nodes),
-        triggerConfig: triggerConfig,
-        transform: viewport ? {
-          posX: viewport.x.toString(),
-          posY: viewport.y.toString(),
-          zoom: viewport.zoom.toString()
-        } : {
-          posX: "0",
-          posY: "0",
-          zoom: "1"
-        }
+        flowNodes: transformedNodes,
+        flowEdges: transformedEdges,
+        transform: viewport
+          ? {
+              posX: viewport.x.toString(),
+              posY: viewport.y.toString(),
+              zoom: viewport.zoom.toString(),
+            }
+          : { posX: '0', posY: '0', zoom: '1' },
       };
 
+      // 4️⃣ Build backend triggers structure
+      const triggers = [];
+
+      if (triggerConfig.keywords?.length) {
+        triggerConfig.keywords.forEach(keyword =>
+          triggers.push({
+            keyword,
+            match_type: triggerConfig.caseSensitive ? 'exact' : 'contains',
+          }),
+        );
+      }
+
+      if (triggerConfig.regex) {
+        triggers.push({
+          keyword: triggerConfig.regex,
+          match_type: 'regex',
+        });
+      }
+
+      // 5️⃣ Final payload
       const flowData = {
         customer_id: metadata.customer_id,
         flow_name: metadata.name,
-        flow_json: flow_json
+        flow_json,
+        status: metadata.enabled ? 'ACTIVE' : 'INACTIVE',
+        triggers,
+        triggerConfig,
       };
 
-      console.log('🚀 SAVING FLOW TO BACKEND:');
-      console.log('📦 Full Payload:', JSON.stringify(flowData, null, 2));
-      console.log('📝 Flow Name:', flowData.flow_name);
-      console.log('🔢 Customer ID:', flowData.customer_id);
-      console.log('📊 Nodes Count:', flow_json.flowNodes.length);
-      console.log('🔗 Edges Count:', flow_json.flowEdges.length);
-      console.log('📐 Transform:', flow_json.transform);
-      console.log('🌳 Flow Nodes:', flow_json.flowNodes);
-      console.log('🔗 Flow Edges:', flow_json.flowEdges);
+      console.log('🚀 SAVING FLOW', JSON.stringify(flowData, null, 2));
 
       const response = await axios.post(API_ENDPOINTS.FLOWS.CREATE, flowData, {
         withCredentials: true,
       });
-
-      console.log('✅ SAVE RESPONSE:', response.data);
 
       return response.data;
     } catch (err) {
@@ -72,9 +82,10 @@ export const flowAPI = {
 
   async getAll(customerId) {
     try {
-      const response = await axios.get(API_ENDPOINTS.FLOWS.GET_ALL(customerId), {
-        withCredentials: true,
-      });
+      const response = await axios.get(
+        API_ENDPOINTS.FLOWS.GET_ALL(customerId),
+        { withCredentials: true },
+      );
 
       return response.data.data || response.data.flows || [];
     } catch (err) {
@@ -85,63 +96,66 @@ export const flowAPI = {
   async update(flowId, nodes, edges, metadata, viewport) {
     try {
       const transformedNodes = transformNodesToBackendFormat(nodes, edges);
-      
-      // Extract trigger config from start node
+      const transformedEdges = transformEdgesToBackendFormat(edges);
+
       const startNode = transformedNodes.find(n => n.id === 'start');
-      const triggerConfig = startNode?.triggerConfig || {
-        keywords: [],
-        regex: '',
-        caseSensitive: false
-      };
-      
-      // Remove triggerConfig from start node (it's stored at flow level)
-      const cleanedNodes = transformedNodes.map(n => {
-        if (n.id === 'start') {
-          const { triggerConfig, ...rest } = n;
-          return rest;
-        }
-        return n;
-      });
-      
+
+      const triggerConfig =
+        startNode?.config?.triggerConfig ??
+        startNode?.triggerConfig ?? {
+          keywords: [],
+          regex: '',
+          caseSensitive: false,
+        };
+
       const flow_json = {
         id: flowId,
         name: metadata.name,
-        flowNodes: cleanedNodes,
-        flowEdges: transformEdgesToBackendFormat(edges, nodes),
-        triggerConfig: triggerConfig,
-        transform: viewport ? {
-          posX: viewport.x.toString(),
-          posY: viewport.y.toString(),
-          zoom: viewport.zoom.toString()
-        } : {
-          posX: "0",
-          posY: "0",
-          zoom: "1"
-        }
+        flowNodes: transformedNodes,
+        flowEdges: transformedEdges,
+        transform: viewport
+          ? {
+              posX: viewport.x.toString(),
+              posY: viewport.y.toString(),
+              zoom: viewport.zoom.toString(),
+            }
+          : { posX: '0', posY: '0', zoom: '1' },
       };
+
+      const triggers = [];
+
+      if (triggerConfig.keywords?.length) {
+        triggerConfig.keywords.forEach(k =>
+          triggers.push({
+            keyword: k,
+            match_type: triggerConfig.caseSensitive ? 'exact' : 'contains',
+          }),
+        );
+      }
+
+      if (triggerConfig.regex) {
+        triggers.push({
+          keyword: triggerConfig.regex,
+          match_type: 'regex',
+        });
+      }
 
       const flowData = {
         customer_id: metadata.customer_id,
         flow_name: metadata.name,
-        flow_json: flow_json
+        flow_json,
+        status: metadata.enabled ? 'ACTIVE' : 'INACTIVE',
+        triggers,
+        triggerConfig,
       };
 
-      console.log('🔄 UPDATING FLOW TO BACKEND:');
-      console.log('🆔 Flow ID:', flowId);
-      console.log('📦 Full Payload:', JSON.stringify(flowData, null, 2));
-      console.log('📝 Flow Name:', flowData.flow_name);
-      console.log('🔢 Customer ID:', flowData.customer_id);
-      console.log('📊 Nodes Count:', flow_json.flowNodes.length);
-      console.log('🔗 Edges Count:', flow_json.flowEdges.length);
-      console.log('📐 Transform:', flow_json.transform);
-      console.log('🌳 Flow Nodes:', flow_json.flowNodes);
-      console.log('🔗 Flow Edges:', flow_json.flowEdges);
+      console.log('🔄 UPDATING FLOW', JSON.stringify(flowData, null, 2));
 
-      const response = await axios.put(API_ENDPOINTS.FLOWS.UPDATE(flowId), flowData, {
-        withCredentials: true,
-      });
-
-      console.log('✅ UPDATE RESPONSE:', response.data);
+      const response = await axios.put(
+        API_ENDPOINTS.FLOWS.UPDATE(flowId),
+        flowData,
+        { withCredentials: true },
+      );
 
       return response.data;
     } catch (err) {
@@ -162,15 +176,5 @@ export const flowAPI = {
     }
   },
 };
-
-// Helper: Extract trigger config from start node
-function extractTriggerConfig(nodes) {
-  const startNode = nodes.find(node => node.id === 'start');
-  return startNode ? {
-    keywords: startNode.data.keywords || [],
-    regex: startNode.data.regex || '',
-    caseSensitive: startNode.data.caseSensitive || false,
-  } : {};
-}
 
 export default flowAPI;

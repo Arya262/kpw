@@ -3,21 +3,42 @@ import debounce from "lodash.debounce";
 import { toast } from "react-toastify";
 import { FLOW_CONSTANTS } from "../config/flowConfig";
 
+/**
+ * Start Node Management Hook
+ * - Clean separation between backend-safe data and UI handlers
+ * - No functions saved to backend
+ * - Correct triggerConfig structure
+ */
 export const useStartNode = (setNodes, edges) => {
-  // Helper to update start node safely
-  const updateStartNode = useCallback((updater) => {
-    setNodes((prev) =>
-      prev.map((node) =>
-        node.id === "start"
-          ? { ...node, data: { ...node.data, ...updater(node.data) } }
-          : node
-      )
-    );
-  }, [setNodes]);
 
-  // Memoized debounced functions
+  /* -------------------------------------------------------------------------- */
+  /*                         SAFE UPDATE START NODE DATA                        */
+  /* -------------------------------------------------------------------------- */
+  const updateStartNode = useCallback(
+    (updater) => {
+      setNodes((prev) =>
+        prev.map((node) =>
+          node.id === "start"
+            ? {
+                ...node,
+                data: {
+                  ...node.data,
+                  ...updater(node.data),
+                },
+              }
+            : node
+        )
+      );
+    },
+    [setNodes]
+  );
+
+  /* -------------------------------------------------------------------------- */
+  /*                     MEMOIZED & DEBOUNCED START NODE HANDLERS              */
+  /* -------------------------------------------------------------------------- */
   const handlers = useMemo(() => {
     return {
+      /** KEYWORDS */
       onAddKeyword: debounce((word) => {
         const keyword = String(word || "").trim();
         if (!keyword) return;
@@ -33,25 +54,12 @@ export const useStartNode = (setNodes, edges) => {
         }));
       }, FLOW_CONSTANTS.DEBOUNCE_DELAY),
 
-      onAddSubstring: debounce((word) => {
-        const s = String(word || "").trim();
-        if (!s) return;
-
-        updateStartNode((data) => ({
-          substrings: [...(data.substrings || []), s],
-        }));
-      }, FLOW_CONSTANTS.DEBOUNCE_DELAY),
-
-      onRemoveSubstring: debounce((index) => {
-        updateStartNode((data) => ({
-          substrings: (data.substrings || []).filter((_, i) => i !== index),
-        }));
-      }, FLOW_CONSTANTS.DEBOUNCE_DELAY),
-
+      /** REGEX */
       onChangeRegex: debounce((value) => {
         updateStartNode(() => ({ regex: value }));
       }, FLOW_CONSTANTS.DEBOUNCE_DELAY),
 
+      /** CASE SENSITIVE */
       onToggleCaseSensitive: debounce(() => {
         updateStartNode((data) => ({
           caseSensitive: !data.caseSensitive,
@@ -60,7 +68,9 @@ export const useStartNode = (setNodes, edges) => {
     };
   }, [updateStartNode]);
 
-  // Flow trigger handler (not debounced)
+  /* -------------------------------------------------------------------------- */
+  /*                         FLOW TRIGGER DEMONSTRATION                         */
+  /* -------------------------------------------------------------------------- */
   const onFlowTriggered = useCallback(
     (triggerData) => {
       toast.success(`Flow triggered by message: "${triggerData.message}"`);
@@ -75,26 +85,31 @@ export const useStartNode = (setNodes, edges) => {
       connected.forEach((edge, i) => {
         setTimeout(() => {
           toast.info(`Step ${i + 1}: Executing ${edge.target}`);
-        }, (i + 1) * 1000);
+        }, (i + 1) * 700);
       });
     },
     [edges]
   );
 
-  // Final node creator (stable)
+  /* -------------------------------------------------------------------------- */
+  /*                        CREATE START NODE (BACKEND SAFE)                     */
+  /* -------------------------------------------------------------------------- */
   const createStartNode = useCallback(() => {
     return {
       id: "start",
       type: "flowStartNode",
       position: { x: 0, y: 100 },
+
+      // ONLY backend-safe fields here
       data: {
         keywords: [],
-        substrings: [],
-        caseSensitive: false,
         regex: "",
+        caseSensitive: false,
+
+        /** UI HANDLERS (runtime only, NOT saved to backend) */
         ...handlers,
-        onChooseTemplate: () => alert("Choose Template Clicked"),
         onFlowTriggered,
+        onChooseTemplate: () => alert("Choose Template Clicked"),
       },
     };
   }, [handlers, onFlowTriggered]);

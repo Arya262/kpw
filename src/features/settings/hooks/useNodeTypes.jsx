@@ -23,7 +23,7 @@ export const useNodeTypes = (
   handleNodeDelete,
   handleNodeDuplicate
 ) => {
-  // Factory wrapper that adds common props
+
   const wrap = (Component) => (props) => (
     <Component
       {...props}
@@ -33,26 +33,31 @@ export const useNodeTypes = (
     />
   );
 
+
   const nodeTypes = useMemo(
     () => ({
       flowStartNode: FlowStartNode,
-      templateNode: TemplateNode,
 
       text: wrap(TextNode),
       media: wrap(MediaNode),
       "text-button": wrap(TextButtonNode),
       "media-button": wrap(MediaButtonNode),
       list: wrap(ListNode),
+
       template: wrap(TemplateboxNode),
+
       "single-product": wrap(SingleProductNode),
       "multi-product": wrap(MultiProductNode),
       catalog: wrap(CatalogNode),
+
       "ask-question": wrap(QuestionNode),
       "ask-address": wrap(AddressNode),
       "ask-location": wrap(LocationNode),
+
       "set-custom-field": wrap(ContactCustomFieldNode),
-      summary: wrap(SummaryNode),
       "set-variable": wrap(SetVariableNode),
+
+      summary: wrap(SummaryNode),
     }),
     [handlePreviewRequest, handleNodeDelete, handleNodeDuplicate]
   );

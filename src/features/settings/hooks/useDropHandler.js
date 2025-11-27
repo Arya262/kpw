@@ -24,44 +24,61 @@ export const useDropHandler = (
 
         const bounds = wrapper.getBoundingClientRect();
         if (!bounds) {
-          toast.error("Unable to determine flow editor limits.");
+          toast.error("Unable to determine editor boundaries.");
           return;
         }
 
-        // Ensure drop happens *inside* the editor
+        // Must drop inside editor
         if (
           event.clientX < bounds.left ||
           event.clientX > bounds.right ||
           event.clientY < bounds.top ||
           event.clientY > bounds.bottom
         ) {
-          toast.error("Drop inside the editor to add a node.");
+          toast.error("Drop inside the editor.");
           return;
         }
 
-        const rawData = event.dataTransfer.getData("application/reactflow");
-        if (!rawData) {
-          toast.error("Invalid node data.");
+        const raw = event.dataTransfer.getData("application/reactflow");
+        if (!raw) {
+          toast.error("Invalid drag data.");
           return;
         }
 
         let parsed;
         try {
-          parsed = JSON.parse(rawData);
+          parsed = JSON.parse(raw);
         } catch (err) {
-          console.error("Drag data parse failed:", err);
-          toast.error("Node data is corrupted.");
+          console.error("Failed to parse drag data:", err);
+          toast.error("Node data corrupted.");
           return;
         }
 
-        const { type, label } = parsed;
+        let { type, label } = parsed;
 
-        if (!type || !nodeTypes[type]) {
-          toast.error("Invalid node type.");
+        if (!type) {
+          toast.error("No node type provided.");
           return;
         }
 
-        // Convert screen → Flow coordinate
+        // Normalize type (ReactFlow requires exact lowercase keys)
+        const normalizedType = Object.keys(nodeTypes).find(
+          (t) => t.toLowerCase() === type.toLowerCase()
+        );
+
+        if (!normalizedType) {
+          toast.error(`Invalid node type: ${type}`);
+          return;
+        }
+
+        type = normalizedType;
+
+        // Ensure label exists
+        if (!label) {
+          label = type.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+        }
+
+        // Convert cursor coordinates → canvas coordinates
         const position = screenToFlowPosition({
           x: event.clientX,
           y: event.clientY,
@@ -70,15 +87,15 @@ export const useDropHandler = (
         const newNode = createNewNode(type, label, position, nodeTypes);
         if (!newNode) return;
 
-        setNodes((nds) => [...nds, newNode]);
+        setNodes((prev) => [...prev, newNode]);
 
         toast.success(`✓ Added ${label}`, {
-          autoClose: 1500,
+          autoClose: 1200,
           icon: "➕",
         });
       } catch (error) {
-        console.error("Error in onDrop:", error);
-        toast.error("Failed to place node. Try again.");
+        console.error("❌ Drop handler error:", error);
+        toast.error("Failed to drop node.");
       }
     },
     [reactFlowWrapperRef, screenToFlowPosition, createNewNode, setNodes, nodeTypes]

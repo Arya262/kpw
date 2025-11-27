@@ -1,136 +1,87 @@
 import { useEffect, useState } from "react";
-import { Trash2, Plus, Upload, Loader2 } from "lucide-react";
+import { Plus, Upload, Loader2 } from "lucide-react";
 import { Handle, Position } from "reactflow";
 import NodeHeader from "../ui/NodeHeader";
 import FormInput from "../forms/FormInput";
 import FormTextarea from "../forms/FormTextarea";
 import FormSection from "../forms/FormSection";
 import ButtonInput from "../forms/ButtonInput";
-import { nodeContainerStyle, targetHandleStyle, getSourceHandleStyle } from "./nodeStyles";
+import { nodeContainerStyle, targetHandleStyle } from "./nodeStyles";
 import { CHAR_LIMITS } from "../../constants/nodeConstants";
-import { generateButtonId } from "../../utils/nodeUtils";
+import { useButtonManager } from "../../hooks/useButtonManager";
 import { uploadToCloudinary, validateFile } from "../../../../utils/cloudinaryUpload";
 
 const MediaButtonNode = ({ data, isConnectable, id, onPreviewRequest, onDelete, onDuplicate }) => {
+
   const [formData, setFormData] = useState({
     mediaType: "",
     mediaUrl: "",
     caption: "",
-    buttons: [],
   });
+
+  const [initialized, setInitialized] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadedFile, setUploadedFile] = useState(null);
-  const [initialized, setInitialized] = useState(false);
 
-  // Initialize from props
-  useEffect(() => {
-    if (data && !initialized) {
-      const existingButtons = data.buttons || data.interactiveButtonsItems || [];
-      console.log(`🎨 MediaButtonNode ${id} initializing with buttons:`, existingButtons);
-      
-      setFormData({
-        mediaType: data.mediaType || "",
-        mediaUrl: data.mediaUrl || "",
-        caption: data.caption || "",
-        buttons: existingButtons.map((btn) => ({
-          id: btn.id || generateButtonId(),  // Use existing ID if available
-          text: btn.text || btn.buttonText || "",
-          charCount: (btn.text || btn.buttonText || "").length,
-          isError: (btn.text || btn.buttonText || "").length > CHAR_LIMITS.BUTTON_TEXT,
-          nodeResultId: btn.nodeResultId || "",
-        })),
-      });
-      setInitialized(true);
-    }
-  }, [data, initialized, id]);
+  // Initialize buttons from data
+  const initialButtons = data?.buttons || data?.interactiveButtonsItems || [];
 
-  // Update parent when data changes
+  const {
+    buttons,
+    addButton,
+    removeButton,
+    updateButtonText,
+    canAddMore,
+  } = useButtonManager(initialButtons, CHAR_LIMITS.MAX_BUTTONS, CHAR_LIMITS.BUTTON_TEXT);
+
+  // Initialize form data once
   useEffect(() => {
-    if (!initialized) return;
-    if (data?.updateNodeData) {
-      data.updateNodeData(id, {
-        mediaType: formData.mediaType,
-        mediaUrl: formData.mediaUrl,
-        caption: formData.caption,
-        text: formData.caption,
-        buttons: formData.buttons,
-        interactiveButtonsItems: formData.buttons.map((btn) => ({
-          id: btn.id,
-          buttonText: btn.text,
-          nodeResultId: btn.nodeResultId || "",
-        })),
-        interactiveButtonsHeader: {
-          type: "Media",
-          text: formData.mediaUrl,
-          media: formData.mediaType,
-        },
-      });
-    }
-  }, [formData, id, initialized, data]);
+    if (!data || initialized) return;
+
+    setFormData({
+      mediaType: data.mediaType || "",
+      mediaUrl: data.mediaUrl || "",
+      caption: data.caption || "",
+    });
+
+    setInitialized(true);
+  }, [data, initialized]);
+
+  // Update node data - buttons array has { id, text, nodeResultId }
+  // Transformer converts to backend format { type: "reply", reply: { id, title } }
+  useEffect(() => {
+    if (!initialized || !data?.updateNodeData) return;
+
+    data.updateNodeData(id, {
+      mediaType: formData.mediaType,
+      mediaUrl: formData.mediaUrl,
+      caption: formData.caption,
+      text: formData.caption,
+      buttons: buttons,
+      interactiveButtonsHeader: {
+        type: formData.mediaType,
+        media: formData.mediaType,
+        text: formData.mediaUrl,
+      },
+    });
+  }, [formData, initialized, id, data, buttons]);
 
   const handleInputChange = (field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const addButton = () => {
-    if (formData.buttons.length >= CHAR_LIMITS.MAX_BUTTONS) return;
-
-    setFormData((prev) => ({
-      ...prev,
-      buttons: [
-        ...prev.buttons,
-        {
-          id: generateButtonId(),
-          text: "",
-          charCount: 0,
-          isError: false,
-          nodeResultId: "",
-        },
-      ],
-    }));
-  };
-
-  const removeButton = (id) => {
-    setFormData((prev) => ({
-      ...prev,
-      buttons: prev.buttons.filter((btn) => btn.id !== id),
-    }));
-  };
-
-  const handleButtonTextChange = (id, text) => {
-    const charCount = text.length;
-    setFormData((prev) => ({
-      ...prev,
-      buttons: prev.buttons.map((btn) =>
-        btn.id === id
-          ? {
-              ...btn,
-              text,
-              charCount,
-              isError: charCount > CHAR_LIMITS.BUTTON_TEXT,
-            }
-          : btn
-      ),
-    }));
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Validate file
     const validation = validateFile(file);
     if (!validation.valid) {
       alert(validation.error);
       return;
     }
 
-    // Show preview immediately
     const previewUrl = URL.createObjectURL(file);
     setUploadedFile(file);
     
@@ -146,7 +97,6 @@ const MediaButtonNode = ({ data, isConnectable, id, onPreviewRequest, onDelete, 
       mediaType,
     }));
 
-    // Upload to Cloudinary
     try {
       setIsUploading(true);
       setUploadProgress(0);
@@ -155,21 +105,16 @@ const MediaButtonNode = ({ data, isConnectable, id, onPreviewRequest, onDelete, 
         setUploadProgress(progress);
       });
 
-      console.log('✅ Cloudinary upload successful:', result);
-
-      // Update with Cloudinary URL
       setFormData((prev) => ({
         ...prev,
         mediaUrl: result.url,
       }));
 
-      // Clean up preview URL
       URL.revokeObjectURL(previewUrl);
     } catch (error) {
       console.error('❌ Cloudinary upload failed:', error);
       alert('Failed to upload file to Cloudinary. Please try again.');
       
-      // Reset on error
       setUploadedFile(null);
       setFormData((prev) => ({
         ...prev,
@@ -198,14 +143,12 @@ const MediaButtonNode = ({ data, isConnectable, id, onPreviewRequest, onDelete, 
     const file = e.dataTransfer.files[0];
     if (!file) return;
 
-    // Validate file
     const validation = validateFile(file);
     if (!validation.valid) {
       alert(validation.error);
       return;
     }
 
-    // Show preview immediately
     const previewUrl = URL.createObjectURL(file);
     setUploadedFile(file);
     
@@ -221,7 +164,6 @@ const MediaButtonNode = ({ data, isConnectable, id, onPreviewRequest, onDelete, 
       mediaType,
     }));
 
-    // Upload to Cloudinary
     try {
       setIsUploading(true);
       setUploadProgress(0);
@@ -230,21 +172,16 @@ const MediaButtonNode = ({ data, isConnectable, id, onPreviewRequest, onDelete, 
         setUploadProgress(progress);
       });
 
-      console.log('✅ Cloudinary upload successful:', result);
-
-      // Update with Cloudinary URL
       setFormData((prev) => ({
         ...prev,
         mediaUrl: result.url,
       }));
 
-      // Clean up preview URL
       URL.revokeObjectURL(previewUrl);
     } catch (error) {
       console.error('❌ Cloudinary upload failed:', error);
       alert('Failed to upload file to Cloudinary. Please try again.');
       
-      // Reset on error
       setUploadedFile(null);
       setFormData((prev) => ({
         ...prev,
@@ -260,17 +197,6 @@ const MediaButtonNode = ({ data, isConnectable, id, onPreviewRequest, onDelete, 
   const handleBrowseClick = () => {
     document.getElementById(`file-upload-${id}`).click();
   };
-
-  const getPreviewData = () => ({
-    mediaUrl: formData.mediaUrl,
-    mediaType: formData.mediaType,
-    caption: formData.caption,
-    interactiveButtonsItems: formData.buttons.map((btn) => ({
-      id: btn.id,
-      text: btn.text,
-      buttonText: btn.text,
-    })),
-  });
 
   return (
     <div style={nodeContainerStyle}>
@@ -407,46 +333,40 @@ const MediaButtonNode = ({ data, isConnectable, id, onPreviewRequest, onDelete, 
         </FormSection>
 
         {/* Buttons Section */}
-        <FormSection 
-          title="Interactive Buttons" 
-          icon="🔘" 
-          badge={formData.buttons.length > 0 ? formData.buttons.length : null}
+        <FormSection
+          title="Interactive Buttons"
+          icon="🔘"
+          badge={buttons.length || null}
           defaultOpen={true}
         >
-          {formData.buttons.length === 0 ? (
+          {buttons.length === 0 ? (
             <div className="text-center py-4 bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg">
               <p className="text-sm text-gray-500 mb-1">No buttons added yet</p>
-              <p className="text-xs text-gray-400">Add up to {CHAR_LIMITS.MAX_BUTTONS} interactive buttons</p>
             </div>
           ) : (
             <div className="space-y-2">
-              {formData.buttons.map((button, index) => (
-                <div key={button.id} className="relative">
-                  <ButtonInput
-                    button={button}
-                    index={index}
-                    totalButtons={formData.buttons.length}
-                    onTextChange={handleButtonTextChange}
-                    onRemove={removeButton}
-                    isConnectable={isConnectable}
-                    placeholder={`Button ${index + 1} (e.g., "View Details", "Buy Now")`}
-                  />
-                </div>
+              {buttons.map((btn, index) => (
+                <ButtonInput
+                  key={btn.id}
+                  button={btn}
+                  index={index}
+                  totalButtons={buttons.length}
+                  onTextChange={updateButtonText}
+                  onRemove={removeButton}
+                  isConnectable={isConnectable}
+                  placeholder={`Button ${index + 1}`}
+                />
               ))}
             </div>
           )}
 
-          {formData.buttons.length < CHAR_LIMITS.MAX_BUTTONS && (
+          {canAddMore && (
             <button
               type="button"
               onClick={addButton}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 
-                text-blue-600 bg-blue-50 border-2 border-blue-200 border-dashed
-                rounded-lg hover:bg-blue-100 hover:border-blue-300 
-                transition-all text-sm font-medium"
+              className="w-full flex items-center justify-center py-2.5 text-blue-600 bg-blue-50 border-2 border-blue-200 border-dashed rounded-lg"
             >
-              <Plus size={16} />
-              Add Button ({formData.buttons.length}/{CHAR_LIMITS.MAX_BUTTONS})
+              <Plus size={16} /> Add Button ({buttons.length}/{CHAR_LIMITS.MAX_BUTTONS})
             </button>
           )}
         </FormSection>
