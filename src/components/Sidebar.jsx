@@ -192,15 +192,16 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
             <NavLink
               key={item.name}
               to={item.path}
-              end
+              end={item.path !== "/autocampaign"}
               onClick={handleNavClick}
-              className={({ isActive }) =>
-                `group flex items-center gap-4 px-4 py-3 rounded-xl font-medium text-base shadow-sm transition-all duration-200 ${
-                  isActive
+              className={({ isActive }) => {
+                const isAutocampaignActive = item.path === "/autocampaign" && location.pathname.startsWith("/autocampaign");
+                return `group flex items-center gap-4 px-4 py-3 rounded-xl font-medium text-base shadow-sm transition-all duration-200 ${
+                  isActive || isAutocampaignActive
                     ? "bg-teal-500 text-white"
                     : "bg-white text-black hover:bg-gray-100"
-                }`
-              }
+                }`;
+              }}
             >
               <span className="w-5 h-5 flex items-center justify-center relative">
                 {item.icon}

@@ -31,6 +31,8 @@ import { API_ENDPOINTS } from "../../config/api";
 import { CalendarClock, Megaphone, Radio, Send } from "lucide-react";
 import axios from "axios";
 import ContactPart from "./ContactPart";
+import DatePicker from "../../components/DatePicker";
+import MonthPicker from "../../components/MonthPicker";
 
 // Utility: Get date range for filter
 function getDateRange(filter, options) {
@@ -137,10 +139,12 @@ export default function MessagingAnalytics({ usageHistory }) {
   }, [user]);
 
   const YEAR_OPTIONS = useMemo(() => {
-    const years = data.map((d) => new Date(d.usage_date).getFullYear());
-    return Array.from(new Set(years))
-      .sort((a, b) => b - a)
-      .map(String);
+    const currentYear = new Date().getFullYear();
+    // Show last 5 years plus any years from data
+    const dataYears = data.map((d) => new Date(d.usage_date).getFullYear());
+    const rangeYears = Array.from({ length: 5 }, (_, i) => currentYear - i);
+    const allYears = [...new Set([...dataYears, ...rangeYears])];
+    return allYears.sort((a, b) => b - a).map(String);
   }, [data]);
 
   const filteredData = useMemo(() => {
@@ -430,7 +434,7 @@ export default function MessagingAnalytics({ usageHistory }) {
 
       <div className="flex flex-col md:flex-row md:justify-between gap-4 w-full">
         {/* Filter row */}
-        <div className="flex flex-col md:flex-row flex-wrap md:items-center gap-4 w-full">
+        <div className="flex flex-col md:flex-row flex-wrap md:items-center gap-3 w-full">
           {/* Main Filter Select */}
           <label htmlFor="filter-select" className="sr-only">
             Select Filter
@@ -439,7 +443,7 @@ export default function MessagingAnalytics({ usageHistory }) {
             id="filter-select"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="border border-gray-200 text-gray-700 px-3 py-2 rounded w-full md:w-auto"
+            className="border border-gray-300 text-gray-700 px-4 py-2.5 rounded-xl bg-white hover:bg-gray-50 hover:border-gray-400 transition-all cursor-pointer text-sm font-medium w-full md:w-auto"
             aria-label="Select time filter"
           >
             {FILTER_OPTIONS.map((opt) => (
@@ -454,7 +458,7 @@ export default function MessagingAnalytics({ usageHistory }) {
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(e.target.value)}
-              className="border border-gray-200 text-gray-700 px-3 py-2 rounded w-full md:w-auto"
+              className="border border-gray-300 text-gray-700 px-4 py-2.5 rounded-xl bg-white hover:bg-gray-50 hover:border-gray-400 transition-all cursor-pointer text-sm font-medium w-full md:w-auto"
               aria-label="Select year"
             >
               {YEAR_OPTIONS.map((yr) => (
@@ -467,46 +471,38 @@ export default function MessagingAnalytics({ usageHistory }) {
 
           {/* Monthly */}
           {filter === "Monthly" && (
-            <input
-              type="month"
+            <MonthPicker
               value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              max={todayMonth}
-              className="border border-gray-200 text-gray-700 px-3 py-2 rounded w-full md:w-auto"
-              aria-label="Select month"
+              onChange={setSelectedMonth}
+              maxMonth={todayMonth}
+              label="Select month"
             />
           )}
 
           {/* Weekly */}
           {filter === "Weekly" && (
-            <input
-              type="date"
+            <DatePicker
               value={selectedWeekStart}
-              onChange={(e) => setSelectedWeekStart(e.target.value)}
-              max={todayDate}
-              className="border border-gray-200 text-gray-700 px-3 py-2 rounded w-full md:w-auto"
-              aria-label="Select week start"
+              onChange={setSelectedWeekStart}
+              maxDate={todayDate}
+              label="Select week start"
             />
           )}
 
           {/* Custom */}
           {filter === "Custom" && (
             <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
-              <input
-                type="date"
+              <DatePicker
                 value={customStart}
-                onChange={(e) => setCustomStart(e.target.value)}
-                max={todayDate}
-                className="border border-gray-200 text-gray-700 px-3 py-2 rounded w-full md:w-auto"
-                aria-label="Select start date"
+                onChange={setCustomStart}
+                maxDate={todayDate}
+                label="Start date"
               />
-              <input
-                type="date"
+              <DatePicker
                 value={customEnd}
-                onChange={(e) => setCustomEnd(e.target.value)}
-                max={todayDate}
-                className="border border-gray-200 text-gray-700 px-3 py-2 rounded w-full md:w-auto"
-                aria-label="Select end date"
+                onChange={setCustomEnd}
+                maxDate={todayDate}
+                label="End date"
               />
             </div>
           )}

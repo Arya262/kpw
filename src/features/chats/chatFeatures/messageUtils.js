@@ -1,7 +1,3 @@
-/**
- * Parse WhatsApp-style text formatting
- * Supports: *bold*, _italic_, ~strikethrough~, URLs, emails, phone numbers
- */
 export const parseWhatsAppFormatting = (text) => {
   if (!text) return "";
 
@@ -13,11 +9,11 @@ export const parseWhatsAppFormatting = (text) => {
 
   // WhatsApp-style formatting
   formatted = formatted
-    .replace(/\*(.*?)\*/g, "<b>$1</b>")        // *bold*
-    .replace(/_(.*?)_/g, "<i>$1</i>")          // _italic_
-    .replace(/~(.*?)~/g, "<s>$1</s>")          // ~strikethrough~
-    .replace(/```(.*?)```/gs, "<code>$1</code>") // ```code```
-    .replace(/\n/g, "<br>");                   // line breaks
+    .replace(/\*(.*?)\*/g, "<b>$1</b>")       
+    .replace(/_(.*?)_/g, "<i>$1</i>")          
+    .replace(/~(.*?)~/g, "<s>$1</s>")          
+    .replace(/```(.*?)```/gs, "<code>$1</code>") 
+    .replace(/\n/g, "<br>");               
 
   // Auto-detect and linkify URLs
   const urlRegex = /(https?:\/\/[^\s]+)/g;

@@ -94,10 +94,8 @@ const Templates = () => {
 
   const handleDelete = async (templatesToDelete) => {
     try {
-      // Handle both single template (object) and multiple templates (array)
       const templatesArray = Array.isArray(templatesToDelete) ? templatesToDelete : [templatesToDelete];
       
-      // Delete each template in the array
       const deletePromises = templatesArray.map(template => 
         deleteTemplate(template.element_name || template.elementName, template.id)
       );
@@ -139,7 +137,7 @@ const Templates = () => {
             title="Add a new template"
           >
             <img src={vendor} alt="plus sign" className="w-5 h-5" />
-            Add New Template
+            Add Template
           </button>
         )}
       </div>

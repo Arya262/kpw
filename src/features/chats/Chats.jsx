@@ -1,10 +1,4 @@
-import React, {
-  useState,
-  useEffect,
-  useRef,
-  useMemo,
-  useCallback,
-} from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useLocation } from "react-router-dom";
 import { useSocket } from "../../context/SocketContext";
@@ -16,11 +10,15 @@ import UserDetails from "./UserDetails";
 import { MessageCircle } from "lucide-react";
 import { useChatLogic } from "../../hooks/useChatLogic";
 import { getPermissions } from "../../utils/getPermissions";
+import { GripVertical } from "lucide-react";
 import Loader from "../../components/Loader";
 import ContactsLoader from "./ContactsLoader";
-const MOBILE_BREAKPOINT = 768;
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import EmptyState from "./chatFeatures/EmptyState";
+import { CHAT_CONFIG, ERROR_MESSAGES } from "./chatConstants";
+
+const { MOBILE_BREAKPOINT, SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH, SIDEBAR_DEFAULT_WIDTH } = CHAT_CONFIG;
 
 const Chat = () => {
   const [showUserDetails, setShowUserDetails] = useState(false);
@@ -39,14 +37,14 @@ const Chat = () => {
     window.innerWidth <= MOBILE_BREAKPOINT
   );
   const [showMobileChat, setShowMobileChat] = useState(false);
-  const [width, setWidth] = useState(
-    () => parseInt(localStorage.getItem("sidebarWidth")) || 300
-  );
   const isResizing = useRef(false);
-
-  // ✅ Multiple select state
+  const [isResizingState, setIsResizingState] = useState(false);
   const [selectedContacts, setSelectedContacts] = useState(new Set());
   const [isSelectMode, setIsSelectMode] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    const saved = localStorage.getItem("sidebarWidth");
+    return saved ? parseInt(saved, 10) : SIDEBAR_DEFAULT_WIDTH;
+  });
 
   useEffect(() => {
     const handleResize = () =>
@@ -144,44 +142,40 @@ const Chat = () => {
   }, []);
 
   // Sidebar resize handlers
-  const startResizing = (e) => {
+  const startResizing = useCallback((e) => {
+    if (isMobile) return;
+    
     e.preventDefault();
+    e.stopPropagation();
     isResizing.current = true;
-    document.body.style.userSelect = "none";
-    document.body.style.cursor = "col-resize";
-  };
+    setIsResizingState(true);
+  }, [isMobile]);
 
-  const stopResizing = () => {
+  const stopResizing = useCallback(() => {
     if (!isResizing.current) return;
     isResizing.current = false;
-    localStorage.setItem("sidebarWidth", width);
-    document.body.style.userSelect = "auto";
-    document.body.style.cursor = "default";
-  };
+    setIsResizingState(false);
+    localStorage.setItem("sidebarWidth", sidebarWidth);
+  }, [sidebarWidth]);
 
-  const resize = (e) => {
+  const resize = useCallback((e) => {
     if (!isResizing.current) return;
 
-    const minWidth = 200;
-    const maxWidth = 450;
     let newWidth = e.clientX;
-    newWidth = Math.min(Math.max(newWidth, minWidth), maxWidth);
-    setWidth(newWidth);
+    newWidth = Math.min(Math.max(newWidth, SIDEBAR_MIN_WIDTH), SIDEBAR_MAX_WIDTH);
+    setSidebarWidth(newWidth);
+  }, []);
 
-    if (newWidth > minWidth && newWidth < maxWidth) {
-      document.body.style.cursor = "col-resize";
-    } else {
-      document.body.style.cursor = "default";
-    }
-  };
   useEffect(() => {
+    if (isMobile) return;
+    
     window.addEventListener("mousemove", resize);
     window.addEventListener("mouseup", stopResizing);
     return () => {
       window.removeEventListener("mousemove", resize);
       window.removeEventListener("mouseup", stopResizing);
     };
-  }, [width]);
+  }, [resize, stopResizing, isMobile]);
 
   const handleSelectContact = useCallback(
     (contact, e) => {
@@ -254,6 +248,12 @@ const handleSearchChange = useCallback(
   return (
     <div className="flex flex-col md:flex-row w-full flex-1 min-h-0 h-full md:border md:rounded-2xl border-gray-300 bg-white overflow-hidden">
       <ToastContainer position="top-right" autoClose={3000} />
+      {isResizingState && !isMobile && (
+        <div 
+          className="fixed inset-0 z-[9999] cursor-col-resize"
+          style={{ userSelect: 'none' }}
+        />
+      )}
       {/* Sidebar */}
       {loading ? (
         <div className="basis-full md:basis-1/4 border-r border-gray-200 overflow-y-auto">
@@ -262,8 +262,8 @@ const handleSearchChange = useCallback(
       ) : (
         (!isMobile || !showMobileChat) && (
           <div
-            className="relative border-r border-gray-200 overflow-y-auto"
-            style={{ width: isMobile ? "100%" : `${width}px` }}
+            className="relative overflow-y-auto"
+            style={{ width: isMobile ? "100%" : `${sidebarWidth}px` }}
           >
             <ChatSidebar
               contacts={contacts}
@@ -275,10 +275,21 @@ const handleSearchChange = useCallback(
             />
             {/* Drag handle */}
             <div
-              className="absolute top-0 right-0 h-full w-[4px] cursor-col-resize group"
+              className={`absolute top-0 right-0 h-full w-[12px] cursor-col-resize group transition-colors z-10 hidden md:flex items-center justify-center ${
+                isResizingState 
+                  ? 'bg-[#0AA89E]/10' 
+                  : 'hover:bg-gray-100'
+              }`}
               onMouseDown={startResizing}
+              title="Drag to resize sidebar"
             >
-              <div className="h-full w-[2px] mx-auto bg-gray-300 group-hover:bg-gray-500 transition-colors" />
+              <GripVertical 
+                className={`w-4 h-4 transition-colors ${
+                  isResizingState 
+                    ? 'text-[#0AA89E]' 
+                    : 'text-gray-400 group-hover:text-[#0AA89E]'
+                }`} 
+              />
             </div>
           </div>
         )
@@ -342,13 +353,7 @@ const handleSearchChange = useCallback(
               </div>
             </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-gray-400 text-lg px-4 text-center">
-              <MessageCircle
-                className="w-16 h-16 mb-4 text-blue-500"
-                aria-hidden="true"
-              />
-              <p>Select a contact to start a conversation</p>
-            </div>
+            <EmptyState />
           )}
         </div>
       )}

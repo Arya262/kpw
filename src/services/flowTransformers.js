@@ -41,6 +41,9 @@ export const BACKEND_TO_FRONTEND_NODE_TYPES = {
   "start": "flowStartNode",
   "text": "text",
   "media": "media",
+  "image": "media",
+  "video": "media",
+  "document": "media",
   "textbutton": "text-button",
   "mediabutton": "media-button",
   "list": "list",
@@ -481,10 +484,6 @@ export function transformNodesToBackendFormat(nodes, edges = []) {
       };
     }
 
-
-    // ============================================================
-    // TEMPLATE NODE
-    // ============================================================
     if (backendType === "template") {
       return {
         id: node.id,
@@ -499,10 +498,6 @@ export function transformNodesToBackendFormat(nodes, edges = []) {
       };
     }
 
-
-    // ============================================================
-    // FALLBACK (never should happen)
-    // ============================================================
     return {
       id: node.id,
       flowNodeType: backendType,
@@ -581,16 +576,19 @@ export function transformNodesFromBackendFormat(rawNodes, updateNodeDataCallback
         }
       }
 
-      // BUTTONS
+      // BUTTONS - Use simple sequential IDs (0, 1, 2)
       if (inter.action?.buttons) {
-        const btns = inter.action.buttons.map((btn, idx) => ({
-          id: `${id}-btn-${idx}`,
-          index: idx,
-          text: btn.reply?.title || "",
-          title: btn.reply?.title || "",
-          buttonText: btn.reply?.title || "",
-          nodeResultId: btn.reply?.id || ""
-        }));
+        const btns = inter.action.buttons.map((btn, idx) => {
+          const targetNodeId = btn.reply?.id || "";
+          
+          return {
+            id: String(idx), // Simple sequential ID
+            text: btn.reply?.title || "",
+            title: btn.reply?.title || "",
+            buttonText: btn.reply?.title || "",
+            nodeResultId: targetNodeId
+          };
+        });
 
         data.buttons = btns;
         data.interactiveButtonsItems = btns;
@@ -710,8 +708,8 @@ export function transformEdgesFromBackendFormat(rawEdges) {
     id: e.id,
     source: e.sourceNodeId,
     target: e.targetNodeId,
-    sourceHandle: "right-handle",
-    targetHandle: "left-handle",
+    sourceHandle: e.sourceHandle || "right-handle",
+    targetHandle: e.targetHandle || "left-handle",
     type: "default",
     animated: true
   }));
@@ -726,15 +724,17 @@ export function rebuildButtonEdges(nodes) {
       node.data?.buttons ||
       [];
 
-    btns.forEach(btn => {
+    btns.forEach((btn, idx) => {
       if (!btn.nodeResultId) return;
 
-      // Handle format is "btn-{buttonId}" matching ButtonInput component
+      // Use simple sequential button ID
+      const buttonId = String(idx);
+
       result.push({
-        id: `${node.id}-btn-${btn.id}-${btn.nodeResultId}`,
+        id: `${node.id}-btn-${buttonId}-${btn.nodeResultId}`,
         source: node.id,
         target: btn.nodeResultId,
-        sourceHandle: `btn-${btn.id}`,
+        sourceHandle: `btn-${buttonId}`,
         targetHandle: "left-handle",
         type: "default",
         animated: true
@@ -774,11 +774,11 @@ export function buildFrontendFlow(rawFlowJson, updateNodeDataCallback) {
   const rawNodes = rawFlowJson.flowNodes || [];
   const rawEdges = rawFlowJson.flowEdges || [];
 
+  // Transform nodes - buttons will get simple sequential IDs (0, 1, 2)
   const nodes = transformNodesFromBackendFormat(rawNodes, updateNodeDataCallback);
-  const backendEdges = transformEdgesFromBackendFormat(rawEdges);
-
-  const buttonEdges = rebuildButtonEdges(nodes);
-  const edges = mergeEdges(backendEdges, buttonEdges);
+  
+  // Transform edges from backend - edges already have sourceHandle saved
+  const edges = transformEdgesFromBackendFormat(rawEdges);
 
   return { nodes, edges };
 }

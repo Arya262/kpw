@@ -80,7 +80,13 @@ export const API_ENDPOINTS = {
   WABA: {
     INFO: (customerId) => `${API_BASE}/getWabaInfo/${customerId}`,
   },
-    PROFILE: {
+  DRIP: {
+    CREATE: `${API_BASE}/drip/add`,
+    GET_ALL: (customerId) => `${API_BASE}/drip/list?customer_id=${customerId}`,
+    UPDATE: (dripId) => `${API_BASE}/drip/update/${dripId}`,
+    DELETE: (dripId) => `${API_BASE}/drip/delete/${dripId}`,
+  },
+  PROFILE: {
     GET_DETAILS: (customerId) => `${API_BASE}/${customerId}/details`,
     GET_ABOUT: (customerId) => `${API_BASE}/${customerId}/about`,
     GET_PHOTO: (customerId) => `${API_BASE}/${customerId}/photo`,

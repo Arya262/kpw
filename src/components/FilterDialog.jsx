@@ -1,8 +1,7 @@
 import React, { useRef, useEffect } from "react";
 import { X } from "lucide-react";
 import TagSelector from "../features/tags/components/TagSelector";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
+import DatePicker from "./DatePicker";
 
 const FilterDialog = ({
   isOpen,
@@ -85,39 +84,15 @@ const FilterDialog = ({
               {/* Date Range Picker */}
               <div className="flex items-center gap-2">
                 <DatePicker
-                  selected={
-                    filterOptions.lastSeenFrom
-                      ? new Date(filterOptions.lastSeenFrom)
-                      : null
-                  }
-                  onChange={(date) =>
-                    handleInputChange(
-                      "lastSeenFrom",
-                      date?.toISOString().split("T")[0]
-                    )
-                  }
-                  placeholderText="From"
-                  className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400"
-                  dateFormat="yyyy-MM-dd"
-                  popperPlacement="bottom-start"
+                  value={filterOptions.lastSeenFrom || ""}
+                  onChange={(date) => handleInputChange("lastSeenFrom", date)}
+                  label="From"
                 />
                 <span className="text-gray-500 text-sm">to</span>
                 <DatePicker
-                  selected={
-                    filterOptions.lastSeenTo
-                      ? new Date(filterOptions.lastSeenTo)
-                      : null
-                  }
-                  onChange={(date) =>
-                    handleInputChange(
-                      "lastSeenTo",
-                      date?.toISOString().split("T")[0]
-                    )
-                  }
-                  placeholderText="To"
-                  className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400"
-                  dateFormat="yyyy-MM-dd"
-                  popperPlacement="bottom-start"
+                  value={filterOptions.lastSeenTo || ""}
+                  onChange={(date) => handleInputChange("lastSeenTo", date)}
+                  label="To"
                 />
               </div>
             </div>
@@ -146,39 +121,15 @@ const FilterDialog = ({
               {/* Date Range Picker */}
               <div className="flex items-center gap-2">
                 <DatePicker
-                  selected={
-                    filterOptions.createdAtFrom
-                      ? new Date(filterOptions.createdAtFrom)
-                      : null
-                  }
-                  onChange={(date) =>
-                    handleInputChange(
-                      "createdAtFrom",
-                      date?.toISOString().split("T")[0]
-                    )
-                  }
-                  placeholderText="From"
-                  className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400"
-                  dateFormat="yyyy-MM-dd"
-                  popperPlacement="bottom-start"
+                  value={filterOptions.createdAtFrom || ""}
+                  onChange={(date) => handleInputChange("createdAtFrom", date)}
+                  label="From"
                 />
                 <span className="text-gray-500 text-sm">to</span>
                 <DatePicker
-                  selected={
-                    filterOptions.createdAtTo
-                      ? new Date(filterOptions.createdAtTo)
-                      : null
-                  }
-                  onChange={(date) =>
-                    handleInputChange(
-                      "createdAtTo",
-                      date?.toISOString().split("T")[0]
-                    )
-                  }
-                  placeholderText="To"
-                  className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400"
-                  dateFormat="yyyy-MM-dd"
-                  popperPlacement="bottom-start"
+                  value={filterOptions.createdAtTo || ""}
+                  onChange={(date) => handleInputChange("createdAtTo", date)}
+                  label="To"
                 />
               </div>
             </div>
