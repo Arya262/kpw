@@ -59,17 +59,17 @@ export const sequenceSchema = z.object({
 });
 
 // Initial sequence data
-export const getInitialSeqData = () => ({
+export const getInitialSeqData = (customerId) => ({
   drip_name: "",
   drip_description: "",
   trigger_type: "",
   status: "active",
   color: "bg-teal-500",
   icon: "📧",
-  customer_id: 1000,
+  customer_id: customerId ?? null,
   delivery_preferences: [
     {
-      days: [],
+      days: ["Mon", "Tue", "Wed", "Thu", "Fri"],
       time_type: "Any Time",
       time_from: "",
       time_to: "",

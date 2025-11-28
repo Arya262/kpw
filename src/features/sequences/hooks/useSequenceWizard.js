@@ -2,16 +2,19 @@ import { useState, useCallback, useRef } from "react";
 import { toast } from "react-toastify";
 import { sequenceSchema, getInitialSeqData } from "../utils/sequenceValidation";
 import { useDrip } from "../../../hooks/useDrip";
+import { useAuth } from "../../../context/AuthContext";
 
 export const useSequenceWizard = (onSuccess) => {
   const { actions: { createDrip } } = useDrip();
+  const { user } = useAuth();
+  const customerId = user?.customer_id;
   const [step, setStep] = useState(1);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
-  const [seqData, setSeqDataInternal] = useState(getInitialSeqData());
-  const initialDataRef = useRef(JSON.stringify(getInitialSeqData()));
+  const [seqData, setSeqDataInternal] = useState(() => getInitialSeqData(customerId));
+  const initialDataRef = useRef(JSON.stringify(getInitialSeqData(customerId)));
 
   // Only consider it "unsaved" if user has entered meaningful data
   const hasUnsavedChanges =

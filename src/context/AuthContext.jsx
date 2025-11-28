@@ -9,7 +9,6 @@ export const AuthProvider = ({ children }) => {
   const [wabaInfo, setWabaInfo] = useState(null); 
   const [loading, setLoading] = useState(true);
 
-  // Load user from localStorage on app start
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {

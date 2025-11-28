@@ -82,7 +82,7 @@ export const API_ENDPOINTS = {
   },
   DRIP: {
     CREATE: `${API_BASE}/drip/add`,
-    GET_ALL: (customerId) => `${API_BASE}/drip/list?customer_id=${customerId}`,
+    GET_ALL: (customerId) => `${API_BASE}/drip/customer/${customerId}`,
     UPDATE: (dripId) => `${API_BASE}/drip/update/${dripId}`,
     DELETE: (dripId) => `${API_BASE}/drip/delete/${dripId}`,
   },
