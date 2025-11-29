@@ -50,7 +50,15 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
       ],
     },
     { name: "Flow", icon: <Workflow size={22} />, path: "/flow" },
-    { name: "Setting", icon: <Settings size={22} />, path: "/settings" },
+    {
+      name: "Setting",
+      icon: <Settings size={22} />,
+      submenu: true,
+      submenuItems: [
+        { name: "User", path: "/settings", icon: <Users size={20} /> },
+        { name: "Tag", path: "/settings/tags", icon: <List size={20} /> },
+      ],
+    },
     { name: "Help", icon: <HelpCircle size={22} />, path: "/help" },
   ];
 

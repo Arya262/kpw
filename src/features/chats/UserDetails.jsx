@@ -1,22 +1,21 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { formatTime } from "../../utils/time";
 import Avatar from "../../utils/Avatar";
 import Dropdown from "../../components/Dropdown";
 import { FiUserX, FiUserCheck } from "react-icons/fi";
+import { getTagName, getTagColor } from "../tags/utils/tagUtils";
 
 const UserDetails = ({ isExpanded, setIsExpanded, selectedContact, updateBlockStatus }) => {
   const [status, setStatus] = useState("");
-  const [tag, setTag] = useState("");
   const [incomingStatus, setIncomingStatus] = useState("");
   const [isBlocked, setIsBlocked] = useState(selectedContact?.block || false);
   const [isUpdating, setIsUpdating] = useState(false);
-    useEffect(() => {
+
+  useEffect(() => {
     setIsBlocked(selectedContact?.block || false);
   }, [selectedContact]);
-  if (!selectedContact) return null;
-  
 
-  const isActive = selectedContact?.is_active === 1;
+  if (!selectedContact) return null;
 
   return (
     <div className="w-full md:w-auto md:min-w-[300px] bg-white border-l border-gray-300 p-0">
@@ -180,26 +179,31 @@ const UserDetails = ({ isExpanded, setIsExpanded, selectedContact, updateBlockSt
               />
             </div>
 
-            {/* Tags Dropdown */}
-           <div>
+            {/* Tags */}
+            <div>
               <label className="block text-sm font-medium text-black mb-1">
                 Tags
               </label>
 
               {selectedContact?.tags?.length > 0 ? (
                 <div className="flex flex-wrap gap-2 mt-1">
-                  {selectedContact.tags.map((tag) => (
-                    <span
-                      key={tag.tag_id || tag.id}
-                      className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
-                      style={{
-                        backgroundColor: `${tag.tag_color || "#0AA89E"}20`,
-                        color: tag.tag_color || "#0AA89E",
-                      }}
-                    >
-                      {tag.tag_name || tag.name}
-                    </span>
-                  ))}
+                  {selectedContact.tags.map((tag, index) => {
+                    const tagName = getTagName(tag);
+                    const tagColor = getTagColor(tag);
+                    return (
+                      <span
+                        key={tag?.id || tag?.tag_id || `tag-${index}`}
+                        className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium"
+                        style={{
+                          backgroundColor: `${tagColor}20`,
+                          color: tagColor,
+                          border: `1px solid ${tagColor}40`,
+                        }}
+                      >
+                        {tagName}
+                      </span>
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="text-sm text-gray-500 mt-1">No tags assigned</p>

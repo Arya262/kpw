@@ -1,25 +1,103 @@
-import PhoneInputField from './PhoneInputField';
-import OptStatusRadio from './OptStatusRadio';
-import NameInput from './NameInput';
+import { Phone, User, Tag } from "lucide-react";
+import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/style.css";
+import TagSelector from "../tags/components/TagSelector";
 
-export default function SingleContactForm(props) {
-  const { name, setName, setPhone } = props;
-
- 
-  const handlePhoneChange = (value) => {
-    const digits = value.replace(/\D/g, ''); 
-    if (digits.length > 2) {
-      setPhone(digits.replace(/^(\d{2})(\d+)/, '$1 $2'));
+export default function SingleContactForm({
+  phone,
+  setPhone,
+  phoneError,
+  setPhoneError,
+  isTouched,
+  setIsTouched,
+  name,
+  setName,
+  selectedTags = [],
+  setSelectedTags,
+}) {
+  const handlePhoneChange = (value, country) => {
+    setPhone(value);
+    setIsTouched(true);
+    
+    // Basic validation
+    const digitsOnly = value.replace(/\D/g, "");
+    if (digitsOnly.length < 10) {
+      setPhoneError("Please enter a valid phone number");
     } else {
-      setPhone(digits);
+      setPhoneError("");
     }
   };
 
   return (
-    <>
-      <PhoneInputField {...props} setPhone={handlePhoneChange} />
-      {/* <OptStatusRadio {...props} /> */}
-      <NameInput name={name} setName={setName} />
-    </>
+    <div className="space-y-5">
+      {/* Phone Number Field */}
+      <div>
+        <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+          <Phone size={16} className="text-gray-400" />
+          Phone Number
+        </label>
+        <PhoneInput
+          country="in"
+          value={phone}
+          onChange={handlePhoneChange}
+          inputStyle={{
+            width: "100%",
+            height: "44px",
+            fontSize: "0.95rem",
+            borderRadius: "0.5rem",
+            border: phoneError && isTouched ? "1px solid #ef4444" : "1px solid #e5e7eb",
+            paddingLeft: "52px",
+          }}
+          buttonStyle={{
+            borderRadius: "0.5rem 0 0 0.5rem",
+            borderTop: phoneError && isTouched ? "1px solid #ef4444" : "1px solid #e5e7eb",
+            borderBottom: phoneError && isTouched ? "1px solid #ef4444" : "1px solid #e5e7eb",
+            borderLeft: phoneError && isTouched ? "1px solid #ef4444" : "1px solid #e5e7eb",
+            borderRight: "none",
+          }}
+          containerStyle={{ width: "100%" }}
+          placeholder="Enter phone number"
+        />
+        {phoneError && isTouched && (
+          <p className="mt-1 text-xs text-red-500">{phoneError}</p>
+        )}
+        <p className="mt-1 text-xs text-gray-400">
+          Include country code for international numbers
+        </p>
+      </div>
+
+      {/* Name Field */}
+      <div>
+        <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+          <User size={16} className="text-gray-400" />
+          Contact Name
+        </label>
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Enter contact name"
+          className="w-full px-4 py-3 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
+        />
+      </div>
+
+      {/* Tags Field */}
+      <div>
+        <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+          <Tag size={16} className="text-gray-400" />
+          Tags
+          <span className="text-gray-400 font-normal">(Optional)</span>
+        </label>
+        <TagSelector
+          selectedTags={selectedTags}
+          onTagsChange={(tags) => setSelectedTags && setSelectedTags(tags)}
+          placeholder="Select or create tags..."
+          allowCreate={true}
+        />
+        <p className="mt-1 text-xs text-gray-400">
+          Add tags to organize your contacts
+        </p>
+      </div>
+    </div>
   );
 }

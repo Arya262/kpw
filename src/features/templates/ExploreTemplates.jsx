@@ -186,25 +186,25 @@ const ExploreTemplates = () => {
                     element_name: template.element_name,
                   };
                   const mediaContent = renderMedia(mediaTemplate);
-                  if (
-                    mediaTemplate.template_type?.toLowerCase() !== "text"
-                  ) {
-                    return (
-                      <div className="relative w-full aspect-video overflow-hidden rounded-t-2xl">
-                        {mediaContent ? (
-                          mediaContent
-                        ) : (
-                          <img
+                  const isTextOnly = !mediaTemplate.template_type || 
+                    mediaTemplate.template_type?.toLowerCase() === "text" ||
+                    mediaTemplate.template_type?.toLowerCase() === "none";
+                  
+                  // Always show the media section for consistent card heights
+                  return (
+                    <div className="relative w-full aspect-video overflow-hidden rounded-t-2xl">
+                      {!isTextOnly && mediaContent ? (
+                        mediaContent
+                      ) : (
+                        <img
                           src={fallbackImage}
-                            alt="Template fallback"
-                            className="w-full h-full object-cover"
-                          />
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-70 group-hover:opacity-90 transition pointer-events-none" />
-                      </div>
-                    );
-                  }
-                  return null;
+                          alt="Template"
+                          className="w-full h-full object-cover"
+                        />
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-70 group-hover:opacity-90 transition pointer-events-none" />
+                    </div>
+                  );
                 })()}
                 <div className="p-4 flex-1 flex flex-col justify-between">
                   <div className="flex justify-between items-start">
@@ -244,7 +244,13 @@ const ExploreTemplates = () => {
                     </div>
                   </div>
 
-                  <p className="text-sm text-gray-600 mt-3 line-clamp-3">
+                  {/* Show header if it's a text header (string) */}
+                  {template.container_meta?.header && typeof template.container_meta.header === 'string' && (
+                    <p className="text-sm font-semibold text-gray-800 mt-2">
+                      {template.container_meta.header}
+                    </p>
+                  )}
+                  <p className="text-sm text-gray-600 mt-2 line-clamp-3">
                     {template.container_meta?.sampleText ||
                       "No sample text available"}
                   </p>

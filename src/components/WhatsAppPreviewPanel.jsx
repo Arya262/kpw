@@ -1,6 +1,6 @@
 import React from "react";
 import { X } from "lucide-react";
-import { whatsAppMarkdownToHtml } from "../features/settings/utils/whatsappFormatting";
+import { whatsAppMarkdownToHtml } from "../features/flow/utils/whatsappFormatting";
 
 const ChatHeader = ({ onClose }) => (
   <div className="bg-teal-500 px-4 py-3 flex items-center justify-between">

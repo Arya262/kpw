@@ -1,7 +1,6 @@
 import React from "react";
 import vendor from "../../../assets/Vector.png";
 import { getPermissions } from "../../../utils/getPermissions";
-import TagFilter from "../../tags/components/TagFilter";
 import Tooltip from "../../../components/Tooltip";
 
 const ContactListHeader = ({

@@ -11,6 +11,7 @@ const transformContact = (item, customerId) => ({
   date: formatDate(item.created_at),
   number: `${item.country_code || ""} ${item.mobile_no}`,
   fullName: `${item.first_name} ${item.last_name || ""}`.trim(),
+  tags: item.tags || [],
 });
 
 export const useContactData = (user, searchTerm, filterOptions) => {
@@ -25,7 +26,7 @@ export const useContactData = (user, searchTerm, filterOptions) => {
     itemsPerPage: 10,
   });
 
-  // Fetch contacts with server-side search & pagination
+
   const fetchContacts = useCallback(async (page = 1, limit = 10, search = "") => {
     if (!user?.customer_id) return;
 

@@ -11,7 +11,10 @@ const DashboardLayout = () => {
   const location = useLocation();
   const currentPath = location.pathname;
 
+  // Routes that need overflow hidden (full-height canvas)
   const isChatRoute = location.pathname.startsWith("/chat");
+  const isFlowRoute = location.pathname.startsWith("/flow");
+  const needsOverflowHidden = isChatRoute || isFlowRoute;
 
   // Helper function to normalize routes for comparison
   const normalizeRoute = (route) => {
@@ -47,12 +50,14 @@ const DashboardLayout = () => {
   
 
         <main
-  className={`flex-1 px-2.5 pb-2.5 bg-white ${
-    isChatRoute ? "overflow-hidden" : "overflow-y-auto custom-scroll"
-  }`}
->
-  {!isRouteAllowed() ? <NotAuthorized /> : <Outlet />}
-</main>
+          className={`flex-1 min-h-0 bg-white ${
+            needsOverflowHidden 
+              ? "overflow-hidden p-0" 
+              : "overflow-y-auto custom-scroll px-2.5 pb-2.5"
+          }`}
+        >
+          {!isRouteAllowed() ? <NotAuthorized /> : <Outlet />}
+        </main>
       </div>
     </div>
   );

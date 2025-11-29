@@ -28,6 +28,7 @@ export const useDrip = () => {
     customer_id: seqData.customer_id || customer_id,
     drip_name: seqData.drip_name,
     drip_description: seqData.drip_description || "",
+    trigger_type: seqData.trigger_type || "",
     status: seqData.status || "active",
 
     delivery_preferences: {
@@ -35,7 +36,7 @@ export const useDrip = () => {
       continue_after_delivery:
         seqData.delivery_preferences?.[0]?.continue_after_delivery ?? true,
       days: seqData.delivery_preferences?.[0]?.days || ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-      time_type: "Time Range",
+      time_type: seqData.delivery_preferences?.[0]?.time_type || "Any Time",
       time_from: seqData.delivery_preferences?.[0]?.time_from || null,
       time_to: seqData.delivery_preferences?.[0]?.time_to || null,
     },
@@ -74,6 +75,66 @@ export const useDrip = () => {
     ],
   });
 
+  const convertMinutesToDelay = (minutes) => {
+    const num = Number(minutes) || 0;
+    if (num >= 1440 && num % 1440 === 0) {
+      return { value: num / 1440, unit: "days" };
+    }
+    if (num >= 60 && num % 60 === 0) {
+      return { value: num / 60, unit: "hours" };
+    }
+    return { value: num, unit: "minutes" };
+  };
+
+  const transformToEditFormat = (drip) => {
+    // The getDrip endpoint already parses steps and delivery_preferences
+    const steps = drip.steps || [];
+    const deliveryPrefs = drip.delivery_preferences || {};
+
+    return {
+      id: drip.drip_id || drip.id,
+      drip_name: drip.drip_name || "",
+      drip_description: drip.drip_description || "",
+      trigger_type: drip.trigger_type || "",
+      status: drip.status || "active",
+      color: "bg-teal-500",
+      icon: "📧",
+      customer_id: drip.customer_id,
+      delivery_preferences: [
+        {
+          days: deliveryPrefs.days || ["Mon", "Tue", "Wed", "Thu", "Fri"],
+          time_type: deliveryPrefs.time_type || "Any Time",
+          time_from: deliveryPrefs.time_from || "",
+          time_to: deliveryPrefs.time_to || "",
+          timezone: deliveryPrefs.timezone || "",
+          allow_once: deliveryPrefs.allow_once ?? true,
+          continue_after_delivery: deliveryPrefs.continue_after_delivery ?? false,
+        },
+      ],
+      retry_settings: {
+        max_attempts: drip.max_attempts || 3,
+        retry_delay_minutes: drip.retry_delay_minutes || 10,
+      },
+      steps: steps.map((s) => {
+        const delay = convertMinutesToDelay(s.delay_minutes);
+        return {
+          step_name: s.step_name || "",
+          step_order: s.step,
+          delay_value: delay.value,
+          delay_unit: delay.unit,
+          template: s.template_name ? { element_name: s.template_name, data: s.message_preview } : null,
+          parameters: s.parameters?.map((p) => ({ param: p.key, mappedTo: p.value })) || [],
+          use_custom_time: false,
+          custom_time_type: "Any Time",
+          custom_time_from: "",
+          custom_time_to: "",
+          custom_days: [],
+        };
+      }),
+      updated_at: drip.updated_at || new Date().toLocaleString(),
+    };
+  };
+
   // Fetch drip list
   const fetchDrips = useCallback(async () => {
     if (!customer_id) return;
@@ -95,6 +156,45 @@ export const useDrip = () => {
       setError(err.response?.data?.message || err.message);
     } finally {
       setLoading(false);
+    }
+  }, [customer_id]);
+
+  // Fetch single drip by ID - fetches from the full list API
+  const fetchDripById = useCallback(async (dripId) => {
+    if (!customer_id) {
+      return { success: false, error: "No customer ID" };
+    }
+    
+    console.log("=== FETCHING DRIP BY ID ===");
+    console.log("Looking for dripId:", dripId);
+    
+    try {
+      const { data: result } = await axios.get(
+        API_ENDPOINTS.DRIP.GET_ALL(customer_id),
+        { withCredentials: true }
+      );
+
+      const list = result.data || result.drips || [];
+      console.log("=== BACKEND RESPONSE (all drips) ===");
+      console.log(JSON.stringify(list, null, 2));
+      
+      const drip = list.find((d) => String(d.drip_id) === String(dripId));
+      console.log("=== FOUND DRIP (raw from backend) ===");
+      console.log(JSON.stringify(drip, null, 2));
+      
+      if (!drip) {
+        return { success: false, error: "Sequence not found" };
+      }
+      
+      const transformed = transformToEditFormat(drip);
+      console.log("=== TRANSFORMED FOR EDIT ===");
+      console.log(JSON.stringify(transformed, null, 2));
+      
+      return { success: true, data: transformed };
+    } catch (err) {
+      console.error("Failed to fetch drip:", err);
+      const msg = err.response?.data?.message || "Failed to fetch sequence";
+      return { success: false, error: msg };
     }
   }, [customer_id]);
 
@@ -169,6 +269,6 @@ export const useDrip = () => {
 
   return {
     data: { drips, loading, error },
-    actions: { fetchDrips, createDrip, updateDrip, deleteDrip },
+    actions: { fetchDrips, fetchDripById, createDrip, updateDrip, deleteDrip },
   };
 };

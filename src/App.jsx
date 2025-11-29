@@ -12,7 +12,7 @@ const ContactList = lazy(() => import("./features/contacts/ContactList"));
 const Templates = lazy(() => import("./features/templates/Templates"));
 const Chats = lazy(() => import("./features/chats/Chats"));
 const Help = lazy(() => import("./features/help/Help"));
-const Setting = lazy(() => import("./features/settings/Setting"));
+const FlowEditor = lazy(() => import("./features/flow/FlowEditor"));
 const Broadcast = lazy(() => import("./features/broadcast/Broadcast"));
 const NotFound = lazy(() => import("./components/NotFound"));
 const NotAuthorized = lazy(() => import("./components/NotAuthorized"));
@@ -22,10 +22,11 @@ const LoginRedirectHandler = lazy(() => import("./LoginRedirectHandler"));
 const ForgotPassword = lazy(() => import("./ForgotPassword"));
 const RegisterPage = lazy(() => import("./RegisterPage"));
 const GroupManagement = lazy(() => import("./features/contacts/GroupManagement"));
-const UserSetting = lazy(() => import("./features/flow/UserSetting"));
+const Settings = lazy(() => import("./features/settings/Settings"));
+const TagsManagement = lazy(() => import("./features/tags/TagsManagement"));
 const OnboardingGuide = lazy(() => import("./features/onboard/OnboardingGuide"));
 const PricingPlans = lazy(() => import("./PricingPlans"));
-const Autocampaign = lazy(() => import("./features/sequences/Autocampaign"));
+const Autocampaign = lazy(() => import("./features/sequences/AutoCampaign"));
 const CreateDrip = lazy(() => import("./features/sequences/CreateDrip"));
 function App() {
   return (
@@ -190,10 +191,26 @@ function App() {
                 }
               />
               <Route
+                path="/autocampaign/edit"
+                element={
+                  <ErrorBoundary>
+                    <CreateDrip />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
                 path="/settings"
                 element={
                   <ErrorBoundary>
-                    <UserSetting />
+                    <Settings />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/settings/tags"
+                element={
+                  <ErrorBoundary>
+                    <TagsManagement />
                   </ErrorBoundary>
                 }
               />
@@ -201,7 +218,7 @@ function App() {
                 path="/flow"
                 element={
                   <ErrorBoundary>
-                    <Setting />
+                    <FlowEditor />
                   </ErrorBoundary>
                 }
               />

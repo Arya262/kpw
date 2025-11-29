@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from "react";
+import { useRef, useEffect } from "react";
 import AddContact from "../Addcontact";
 import EditContact from "../EditContact";
 import SingleDeleteDialog from "../SingleDeleteDialog";
@@ -8,21 +8,7 @@ import ConfirmationDialog from "../../shared/ExitConfirmationDialog";
 import PlansModal from "../../dashboard/PlansModal";
 import { useAuth } from "../../../context/AuthContext";
 import DeleteConfirmationDialog from "./DeleteConfirmationDialog";
-import { checkPermission } from "../utils/contactUtils";
 import { usePayment } from "../../../hooks/usePayment";
-
-// Reusable CloseButton component
-const CloseButton = ({ onClick, highlighted }) => (
-  <button
-    onClick={onClick}
-    className={`absolute top-2 right-4 text-gray-600 hover:text-black text-3xl font-bold w-8 h-8 flex items-center justify-center pb-2 rounded-full transition-colors ${
-      highlighted ? "bg-red-500 text-white hover:text-white" : "bg-gray-100"
-    }`}
-    aria-label="Close dialog"
-  >
-    ×
-  </button>
-);
 
 const ContactModals = ({
   // Add Contact Modal
@@ -76,7 +62,6 @@ const ContactModals = ({
   onClosePlansModal,
 }) => {
   const popupRef = useRef(null);
-  const [isCrossHighlighted, setIsCrossHighlighted] = useState(false);
   const { handlePayment } = usePayment();
 
   useEffect(() => {
@@ -96,7 +81,7 @@ const ContactModals = ({
       {/* Add Contact Modal */}
       {isAddContactOpen && permissions.canAdd && permissions.canAccessModals && (
         <div
-          className="fixed inset-0 bg-[#000]/50 flex items-center justify-center z-50 transition-all duration-300"
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               onCloseAddContact();
@@ -105,11 +90,17 @@ const ContactModals = ({
         >
           <div
             ref={popupRef}
-            className={`bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto relative sm:animate-slideUp border ${
-              isCrossHighlighted ? "border-teal-500" : "border-gray-300"
-            } transition-all duration-300`}
+            className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto relative shadow-2xl"
           >
-            <CloseButton onClick={onCloseAddContact} highlighted={isCrossHighlighted} />
+            <button
+              onClick={onCloseAddContact}
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-gray-100 text-gray-500 z-10"
+              aria-label="Close"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
             <AddContact
               closePopup={onCloseAddContact}
               onSuccess={onContactAdd}
@@ -121,9 +112,24 @@ const ContactModals = ({
 
       {/* Edit Contact Modal */}
       {editContact && permissions.canEdit && permissions.canAccessModals && (
-        <div className="fixed inset-0 bg-[#000]/50 flex items-center justify-center z-50 transition-all duration-300">
-          <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto relative sm:animate-slideUp border border-gray-300 transition-all duration-300">
-            <CloseButton onClick={onCloseEditContact} highlighted={false} />
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              onCloseEditContact();
+            }
+          }}
+        >
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto relative shadow-2xl">
+            <button
+              onClick={onCloseEditContact}
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-gray-100 text-gray-500 z-10"
+              aria-label="Close"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
             <EditContact
               contact={editContact}
               closePopup={onCloseEditContact}

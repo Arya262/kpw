@@ -156,8 +156,8 @@ const AutoCampaign = () => {
     setActiveDropdown(null);
   };
 
-  const handleEdit = () => {
-    toast.info("Edit feature coming soon!");
+  const handleEdit = (sequenceId) => {
+    navigate(`/autocampaign/edit?id=${sequenceId}`);
     setActiveDropdown(null);
   };
 
@@ -185,7 +185,7 @@ const AutoCampaign = () => {
   ];
 
   return (
-    <div className="flex-1 pt-2.5">
+    <div className="flex-1 pt-2.5 overflow-x-hidden">
       <ToastContainer position="top-right" autoClose={2000} />
 
       {/* Header Section */}
@@ -305,15 +305,11 @@ const AutoCampaign = () => {
         {/* Sequence Cards */}
         {!isLoading &&
           filteredSequences.map((sequence) => (
-            <Tooltip
-              key={sequence.id}
-              text={sequence.description || "No description"}
-              position="top"
-              className="block"
-            >
               <motion.div
+                key={sequence.id}
                 whileHover={{ y: -2 }}
                 className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all overflow-hidden group cursor-pointer relative h-full"
+                onClick={() => handleEdit(sequence.id)}
               >
                 <div className="p-6">
                   {/* Header */}
@@ -342,7 +338,10 @@ const AutoCampaign = () => {
                       {activeDropdown === sequence.id && (
                         <div className="absolute right-0 top-8 w-44 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
                           <button
-                            onClick={handleEdit}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEdit(sequence.id);
+                            }}
                             className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                           >
                             <Edit2 className="w-4 h-4" />
@@ -418,7 +417,6 @@ const AutoCampaign = () => {
                   </div>
                 </div>
               </motion.div>
-            </Tooltip>
           ))}
       </div>
 

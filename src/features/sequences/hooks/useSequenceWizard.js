@@ -1,11 +1,11 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { toast } from "react-toastify";
 import { sequenceSchema, getInitialSeqData } from "../utils/sequenceValidation";
 import { useDrip } from "../../../hooks/useDrip";
 import { useAuth } from "../../../context/AuthContext";
 
-export const useSequenceWizard = (onSuccess) => {
-  const { actions: { createDrip } } = useDrip();
+export const useSequenceWizard = (onSuccess, dripId = null) => {
+  const { actions: { createDrip, updateDrip, fetchDripById } } = useDrip();
   const { user } = useAuth();
   const customerId = user?.customer_id;
   const [step, setStep] = useState(1);
@@ -13,8 +13,26 @@ export const useSequenceWizard = (onSuccess) => {
   const [fieldErrors, setFieldErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const [isLoading, setIsLoading] = useState(!!dripId);
   const [seqData, setSeqDataInternal] = useState(() => getInitialSeqData(customerId));
   const initialDataRef = useRef(JSON.stringify(getInitialSeqData(customerId)));
+  const isEditMode = !!dripId;
+
+  // Fetch existing drip data for edit mode
+  useEffect(() => {
+    if (dripId) {
+      setIsLoading(true);
+      fetchDripById(dripId).then((result) => {
+        if (result.success) {
+          setSeqDataInternal(result.data);
+          initialDataRef.current = JSON.stringify(result.data);
+        } else {
+          toast.error(result.error || "Failed to load sequence");
+        }
+        setIsLoading(false);
+      });
+    }
+  }, [dripId, fetchDripById]);
 
   // Only consider it "unsaved" if user has entered meaningful data
   const hasUnsavedChanges =
@@ -160,15 +178,18 @@ export const useSequenceWizard = (onSuccess) => {
     setIsSubmitting(true);
     setError("");
 
-    const apiResult = await createDrip({ ...seqData, status: "active" });
+    const apiResult = isEditMode
+      ? await updateDrip(dripId, { ...seqData, status: "active" })
+      : await createDrip({ ...seqData, status: "active" });
+      
     if (apiResult.success) {
       initialDataRef.current = JSON.stringify(seqData);
       onSuccess?.();
     } else {
-      setError(apiResult.error || "Failed to create sequence");
+      setError(apiResult.error || `Failed to ${isEditMode ? "update" : "create"} sequence`);
     }
     setIsSubmitting(false);
-  }, [seqData, createDrip, onSuccess]);
+  }, [seqData, createDrip, updateDrip, onSuccess, isEditMode, dripId]);
 
   const handleSaveDraft = useCallback(async () => {
     if (!seqData.drip_name || !seqData.drip_name.trim()) {
@@ -177,7 +198,10 @@ export const useSequenceWizard = (onSuccess) => {
     }
 
     setIsSavingDraft(true);
-    const apiResult = await createDrip({ ...seqData, status: "draft" });
+    const apiResult = isEditMode
+      ? await updateDrip(dripId, { ...seqData, status: "draft" })
+      : await createDrip({ ...seqData, status: "draft" });
+      
     if (apiResult.success) {
       toast.success("Draft saved successfully!");
       initialDataRef.current = JSON.stringify(seqData);
@@ -185,7 +209,7 @@ export const useSequenceWizard = (onSuccess) => {
       toast.error(apiResult.error || "Failed to save draft");
     }
     setIsSavingDraft(false);
-  }, [seqData, createDrip]);
+  }, [seqData, createDrip, updateDrip, isEditMode, dripId]);
 
   return {
     step,
@@ -193,6 +217,8 @@ export const useSequenceWizard = (onSuccess) => {
     fieldErrors,
     isSubmitting,
     isSavingDraft,
+    isLoading,
+    isEditMode,
     seqData,
     setSeqData,
     handleNext,

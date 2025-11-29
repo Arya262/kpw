@@ -83,6 +83,7 @@ export const API_ENDPOINTS = {
   DRIP: {
     CREATE: `${API_BASE}/drip/add`,
     GET_ALL: (customerId) => `${API_BASE}/drip/customer/${customerId}`,
+    GET_BY_ID: (dripId) => `${API_BASE}/drip/${dripId}`,
     UPDATE: (dripId) => `${API_BASE}/drip/update/${dripId}`,
     DELETE: (dripId) => `${API_BASE}/drip/delete/${dripId}`,
   },
@@ -94,5 +95,11 @@ export const API_ENDPOINTS = {
     UPDATE_ABOUT: (customerId) => `${API_BASE}/${customerId}/about`,
     UPDATE_PHOTO: (customerId) => `${API_BASE}/${customerId}/photo`,
     SYNC_WABA: (customerId) => `${API_BASE}/${customerId}/waba-info/sync`,
+  },
+  TAGS: {
+    GET_ALL: (customerId) => `${API_BASE}/tag/customer/${customerId}`,
+    ADD: `${API_BASE}/tag/add`,
+    DELETE: (tagId) => `${API_BASE}/tag/delete/${tagId}`,
+    ASSIGN: `${API_BASE}/tag/assignTag`,
   },
 };

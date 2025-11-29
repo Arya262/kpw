@@ -132,10 +132,7 @@ export const useChatLogic = ({
           lastMessageTime: c.last_message_time,
           unreadCount: c.unread_count || 0,
           block: c.block === 1,
-          tags: c.tags || [
-          { tag_id: 1, tag_name: "VIP", tag_color: "#FF6B6B" },
-          { tag_id: 2, tag_name: "Support", tag_color: "#4ECDC4" },
-        ],
+          tags: c.tags || [],
         }));
 
         setContacts((prev) =>

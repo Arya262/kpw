@@ -134,10 +134,7 @@ const TemplateModal = ({
       if (!mediaIdentifier && !fileName) {
         throw new Error("No media identifier or fileName returned from server");
       }
-      // console.log("Media identifier returned:", mediaIdentifier);
-      // console.log("File name returned:", fileName);
 
-      // Return both as an object
       return {
         mediaIdentifier: typeof mediaIdentifier === "string"
           ? mediaIdentifier.split("\n")[0]
@@ -328,13 +325,10 @@ const TemplateModal = ({
     setPhoneNumberError("");
   };
 
-  // Detect variables from format
   useEffect(() => {
-    const regex = /{{\s*(\d+)\s*}}/g;
+    const regex = /{{\s*([a-zA-Z_][a-zA-Z0-9_]*|\d+)\s*}}/g;
     const matches = [...format.matchAll(regex)];
-    const uniqueVariables = [...new Set(matches.map((match) => match[1]))].sort(
-      (a, b) => a - b
-    );
+    const uniqueVariables = [...new Set(matches.map((match) => match[1]))];
 
     if (matches.length > 1 && category !== "AUTHENTICATION") {
       setSubCategory("TRANSACTIONAL");
@@ -354,7 +348,7 @@ const TemplateModal = ({
     if (category === "AUTHENTICATION") {
       setTemplateType("Text");
       setSelectedAction("None");
-      setFormat("{{1}} is your verification code.");
+      setFormat("{{otp}} is your verification code.");
       setFooter("");
       setIncludeSecurityMessage(false);
       setIncludeExpiry(false);
@@ -371,7 +365,6 @@ const TemplateModal = ({
     }
   }, [category]);
 
-  // Check for unsaved changes
   useEffect(() => {
     const hasChanges =
       category.trim() ||
@@ -437,7 +430,8 @@ const TemplateModal = ({
           : "Text"
       );
       setHeader(initialValues.header || "");
-      setFormat(initialValues.content || "");
+      // Use original named format if available, otherwise use the numbered content
+      setFormat(initialValues.container_meta?.originalFormat || initialValues.content || "");
       setFooter(initialValues.footer || "");
       setUrlCtas(initialValues.urlCtas || [{ title: "", url: "" }]);
       setPhoneCta(
@@ -464,27 +458,41 @@ const TemplateModal = ({
       setExampleMedia(initialValues.exampleMedia || "");
       setAuthButtonText(initialValues.authButtonText || "");
 
-      const formatStr = initialValues.content || "";
+      // Check if we have the original named format stored
+      const originalFormat = initialValues.container_meta?.originalFormat;
+      const variableMapping = initialValues.container_meta?.variableMapping;
+      const formatStr = originalFormat || initialValues.content || "";
       const sampleText = initialValues.example || "";
-      const regex = /{{\s*(\d+)\s*}}/g;
+      
+      // Support both named and numbered variables
+      const regex = /{{\s*([a-zA-Z_][a-zA-Z0-9_]*|\d+)\s*}}/g;
       const matches = [...formatStr.matchAll(regex)];
-      const uniqueVariables = [
-        ...new Set(matches.map((match) => match[1])),
-      ].sort((a, b) => a - b);
+      const uniqueVariables = [...new Set(matches.map((match) => match[1]))];
       setVariables(uniqueVariables);
 
-      if (initialValues.sampleValues) {
+      // Restore sample values - check for original named sample values first
+      const storedSampleValues = initialValues.container_meta?.sampleValues;
+      if (variableMapping && storedSampleValues) {
+        // Convert numbered sample values back to named using the mapping
+        const namedSampleValues = {};
+        Object.entries(variableMapping).forEach(([num, name]) => {
+          if (storedSampleValues[num]) {
+            namedSampleValues[name] = storedSampleValues[num];
+          }
+        });
+        setSampleValues(namedSampleValues);
+      } else if (initialValues.sampleValues) {
         setSampleValues(initialValues.sampleValues);
       } else if (formatStr && sampleText) {
         const formatLines = formatStr.split("\n");
         const sampleLines = sampleText.split("\n");
         const sampleValues = {};
-        let varIdx = 0;
+        const numberedRegex = /{{\s*(\d+)\s*}}/g;
         for (let i = 0; i < formatLines.length; i++) {
           let fLine = formatLines[i];
           let sLine = sampleLines[i] || "";
           let m;
-          while ((m = regex.exec(fLine)) !== null) {
+          while ((m = numberedRegex.exec(fLine)) !== null) {
             const before = fLine.slice(0, m.index);
             const after = fLine.slice(m.index + m[0].length);
             let value = sLine;
@@ -492,7 +500,6 @@ const TemplateModal = ({
             if (after) value = value.replace(after, "");
             value = value.replace(/^[^\w\d]*/, "").replace(/[^\w\d]*$/, "");
             sampleValues[m[1]] = value.trim();
-            varIdx++;
           }
         }
         setSampleValues(sampleValues);
@@ -518,8 +525,6 @@ const TemplateModal = ({
       };
 
       templateSchema.parse(formData);
-
-      // Validate sample values
       const sampleErrors = {};
       variables.forEach((v) => {
         if (!sampleValues[v]?.trim()) {
@@ -532,7 +537,7 @@ const TemplateModal = ({
         return false;
       }
 
-      // Validate phone number if phone CTA is provided
+    
       if (phoneCta.title || phoneCta.number) {
         if (!phoneCta.number || phoneCta.number.trim() === "") {
           setPhoneNumberError("Phone number is required when phone CTA is added");
@@ -588,43 +593,32 @@ const TemplateModal = ({
     }
   };
 
-  // Validate dynamic variables sequence and duplicates
+  // Validate dynamic variables - supports named variables like {{name}}, {{order_id}}
   const validateDynamicVariables = (formatString) => {
     if (!formatString) return { isValid: true };
 
-    // Extract all variable numbers from format string (e.g., {{1}}, {{2}})
-    const regex = /{{\s*(\d+)\s*}}/g;
+    // Extract all variables from format string (named or numbered)
+    const regex = /{{\s*([a-zA-Z_][a-zA-Z0-9_]*|\d+)\s*}}/g;
     const matches = [...formatString.matchAll(regex)];
-    const variableNumbers = matches.map(match => parseInt(match[1], 10));
+    const variableNames = matches.map(match => match[1]);
 
-    if (variableNumbers.length === 0) {
+    if (variableNames.length === 0) {
       return { isValid: true };
     }
 
     // Check for duplicates
-    const uniqueNumbers = [...new Set(variableNumbers)];
-    if (uniqueNumbers.length !== variableNumbers.length) {
-      const duplicates = variableNumbers.filter((num, index) => variableNumbers.indexOf(num) !== index);
+    const uniqueNames = [...new Set(variableNames)];
+    if (uniqueNames.length !== variableNames.length) {
+      const duplicates = variableNames.filter((name, index) => variableNames.indexOf(name) !== index);
       return {
         isValid: false,
-        message: `Duplicate variable detected: {{${duplicates[0]}}}. Each variable number can only be used once.`
+        message: `Duplicate variable detected: {{${duplicates[0]}}}. Each variable can only be used once.`
       };
-    }
-
-    // Check for sequential order starting from 1
-    const sortedNumbers = [...uniqueNumbers].sort((a, b) => a - b);
-    for (let i = 0; i < sortedNumbers.length; i++) {
-      if (sortedNumbers[i] !== i + 1) {
-        return {
-          isValid: false,
-          message: `Variables must be in sequential order starting from {{1}}. Found {{${sortedNumbers[i]}}} but expected {{${i + 1}}}.`
-        };
-      }
     }
 
     // Check if any variable is at the end of the string
     const trimmedFormat = formatString.trim();
-    const endRegex = /{{\s*(\d+)\s*}}\s*$/;
+    const endRegex = /{{\s*([a-zA-Z_][a-zA-Z0-9_]*|\d+)\s*}}\s*$/;
     if (endRegex.test(trimmedFormat)) {
       const endMatch = trimmedFormat.match(endRegex);
       return {
@@ -691,12 +685,36 @@ const TemplateModal = ({
     setIsSubmitting(true);
 
     try {
-      const generateSampleText = (formatString, samples) => {
-        return formatString.replace(/{{\s*(\d+)\s*}}/g, (match, number) => {
-          return samples[number] || match;
+      // Convert named variables to numbered format for WhatsApp API
+      // e.g., "Hello {{name}}, your order {{order_id}}" -> "Hello {{1}}, your order {{2}}"
+      const convertToNumberedFormat = (formatString, variablesList) => {
+        let result = formatString;
+        variablesList.forEach((varName, index) => {
+          const regex = new RegExp(`\\{\\{\\s*${varName}\\s*\\}\\}`, 'g');
+          result = result.replace(regex, `{{${index + 1}}}`);
         });
+        return result;
       };
-      const sampleText = generateSampleText(format, sampleValues);
+
+      // Generate sample text by replacing variables with their sample values
+      const generateSampleText = (formatString, samples, variablesList) => {
+        let result = formatString;
+        variablesList.forEach((varName) => {
+          const regex = new RegExp(`\\{\\{\\s*${varName}\\s*\\}\\}`, 'g');
+          result = result.replace(regex, samples[varName] || `{{${varName}}}`);
+        });
+        return result;
+      };
+
+      // Convert format to numbered for API
+      const numberedFormat = convertToNumberedFormat(format, variables);
+      // Generate sample text with actual values
+      const sampleText = generateSampleText(format, sampleValues, variables);
+      // Create numbered sample values for API
+      const numberedSampleValues = {};
+      variables.forEach((varName, index) => {
+        numberedSampleValues[index + 1] = sampleValues[varName] || '';
+      });
 
     const buttons =
       category === "AUTHENTICATION"
@@ -731,11 +749,11 @@ const TemplateModal = ({
 
     const newTemplate = {
       elementName: templateName,
-      content: format,
+      content: numberedFormat,
       category,
       sub_category,
       templateType:
-        category === "AUTHENTICATION" ? "TEXT" : templateType.toUpperCase(),
+        category === "AUTHENTICATION" ? "TEXT" : (templateType === "None" ? "TEXT" : templateType.toUpperCase()),
       languageCode: language,
       buttons,
       example: sampleText,
@@ -749,9 +767,15 @@ const TemplateModal = ({
             ? { type: templateType.toUpperCase(), media: { id: exampleMedia, media_url: mediaFileName } }
             : null,
         footer: footer || null,
-        data: format,
+        data: numberedFormat,
         sampleText,
-        sampleValues,
+        sampleValues: numberedSampleValues, 
+
+        originalFormat: format,
+        variableMapping: variables.reduce((acc, varName, index) => {
+          acc[index + 1] = varName;
+          return acc;
+        }, {}),
       },
       ...(category === "AUTHENTICATION" && {
         authButtonText,
@@ -771,14 +795,15 @@ const TemplateModal = ({
 
   if (!isOpen) return null;
 
-  const generateSampleText = (bodyString, samples) => {
-    return bodyString.replace(/{{\s*(\d+)\s*}}/g, (match, number) => {
-      return samples[number] || match;
+  // Generate sample text for live preview - supports named variables
+  const generateSampleTextForPreview = (bodyString, samples) => {
+    return bodyString.replace(/{{\s*([a-zA-Z_][a-zA-Z0-9_]*|\d+)\s*}}/g, (match, varName) => {
+      return samples[varName] || match;
     });
   };
 
   const livePreviewSampleText = {
-    text: generateSampleText(format, sampleValues),
+    text: generateSampleTextForPreview(format, sampleValues),
     file:
       templateType !== "Text" && previewUrl
         ? { type: templateType, url: previewUrl }
@@ -1036,12 +1061,12 @@ const TemplateModal = ({
                             {/* Example messages */}
                             {sub_category === "TRANSACTIONAL" && (
                               <span className="text-gray-500 text-xs mt-1 block">
-                                {`Example: Hello {{1}}, your orderId {{2}} has been shipped.`}
+                                {`Example: Hello {{name}}, your orderId {{order_id}} has been shipped.`}
                               </span>
                             )}
                             {sub_category === "PROMOTION" && (
                               <span className="text-gray-500 text-xs mt-1 block">
-                                {`Example: Hello {{1}}, get 20% off on your next purchase!`}
+                                {`Example: Hello {{name}}, get 20% off on your next purchase!`}
                               </span>
                             )}
                           </div>
@@ -1297,8 +1322,8 @@ const TemplateModal = ({
                         const checked = e.target.checked;
                         setIncludeSecurityMessage(checked);
                         const newFormat = checked
-                          ? "{{1}} is your verification code. For your security, do not share this code."
-                          : "{{1}} is your verification code.";
+                          ? "{{otp}is yourur verification code. For your security, do not share this code."
+                          : "{{otp}} is your verification code.";
                         setFormat(newFormat);
                         validateField("format", newFormat);
                       }}

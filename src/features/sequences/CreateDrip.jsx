@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useState, useCallback } from "react";
 import { ArrowLeft, Save } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -10,9 +10,12 @@ import WizardProgress from "./components/WizardProgress";
 import WizardNavigation from "./components/WizardNavigation";
 import { useSequenceWizard } from "./hooks/useSequenceWizard";
 import { WIZARD_STEPS } from "./utils/sequenceValidation";
+import Loader from "../../components/Loader";
 
 const CreateDrip = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const dripId = searchParams.get("id");
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState(null);
 
@@ -21,6 +24,8 @@ const CreateDrip = () => {
     error,
     fieldErrors,
     isSubmitting,
+    isLoading,
+    isEditMode,
     seqData,
     setSeqData,
     handleNext,
@@ -29,7 +34,7 @@ const CreateDrip = () => {
     handleSaveDraft,
     hasUnsavedChanges,
     isSavingDraft,
-  } = useSequenceWizard(() => navigate("/autocampaign"));
+  } = useSequenceWizard(() => navigate("/autocampaign"), dripId);
 
   // Handle browser back/refresh with unsaved changes
   useEffect(() => {
@@ -83,6 +88,14 @@ const CreateDrip = () => {
     }),
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader />
+      </div>
+    );
+  }
+
   return (
     <div className="p-6">
       {/* Header with back button */}
@@ -96,7 +109,9 @@ const CreateDrip = () => {
             <ArrowLeft className="w-5 h-5 text-gray-600" />
           </button>
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Create Drip Sequence</h1>
+            <h1 className="text-xl font-bold text-gray-900">
+              {isEditMode ? "Edit Drip Sequence" : "Create Drip Sequence"}
+            </h1>
             <p className="text-sm text-gray-600">
               Step {step} of {WIZARD_STEPS.length}: {WIZARD_STEPS[step - 1]?.title}
             </p>

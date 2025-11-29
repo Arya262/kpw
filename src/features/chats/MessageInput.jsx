@@ -266,33 +266,31 @@ const MessageInput = ({ onSendMessage, selectedContact, canSendMessage }) => {
       </div>
       {showTemplates && (
         <div className="fixed inset-0 bg-[#000]/50 z-50 flex justify-center items-center p-2">
-<div
-  ref={modalRef}
-  className="bg-white w-full sm:max-w-md md:max-w-3xl lg:max-w-5xl xl:max-w-6xl max-h-[90vh] overflow-y-auto p-4 relative mx-auto my-20 rounded-lg">
-  <SendTemplate
-    onSelect={(filledTemplate) => {
-      if (!filledTemplate || !filledTemplate.element_name) {
-        console.error("Invalid template data:", filledTemplate);
-        toast.error("Invalid template selected.");
-        return;
-      }
-      onSendMessage({
-        template_name: filledTemplate.element_name,
-        parameters: filledTemplate.parameters || [],
-        headerType: filledTemplate.headerType,
-        headerValue: filledTemplate.headerValue,
-        headerIsId: filledTemplate.headerIsId,
-        language_code: filledTemplate.language_code || "en",
-        fileName: filledTemplate.fileName,
-        category: filledTemplate.category,
-      });
-      setShowTemplates(false);
-    }}
-    onClose={() => setShowTemplates(false)}
-    returnFullTemplate={true}
-  />
-</div>
-
+          <div
+            ref={modalRef}>
+            <SendTemplate
+              onSelect={(filledTemplate) => {
+                if (!filledTemplate || !filledTemplate.element_name) {
+                  console.error("Invalid template data:", filledTemplate);
+                  toast.error("Invalid template selected.");
+                  return;
+                }
+                onSendMessage({
+                  template_name: filledTemplate.element_name,
+                  parameters: filledTemplate.parameters || [],
+                  headerType: filledTemplate.headerType,
+                  headerValue: filledTemplate.headerValue,
+                  headerIsId: filledTemplate.headerIsId,
+                  language_code: filledTemplate.language_code || "en",
+                  fileName: filledTemplate.fileName,
+                  category: filledTemplate.category,
+                });
+                setShowTemplates(false);
+              }}
+              onClose={() => setShowTemplates(false)}
+              returnFullTemplate={true}
+            />
+          </div>
         </div>
       )}
     </>
