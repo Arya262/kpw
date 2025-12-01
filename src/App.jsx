@@ -23,7 +23,9 @@ const ForgotPassword = lazy(() => import("./ForgotPassword"));
 const RegisterPage = lazy(() => import("./RegisterPage"));
 const GroupManagement = lazy(() => import("./features/contacts/GroupManagement"));
 const Settings = lazy(() => import("./features/settings/Settings"));
+const SettingsLayout = lazy(() => import("./features/settings/SettingsLayout"));
 const TagsManagement = lazy(() => import("./features/tags/TagsManagement"));
+const NotificationSettings = lazy(() => import("./features/settings/NotificationSettings"));
 const OnboardingGuide = lazy(() => import("./features/onboard/OnboardingGuide"));
 const PricingPlans = lazy(() => import("./PricingPlans"));
 const Autocampaign = lazy(() => import("./features/sequences/AutoCampaign"));
@@ -198,22 +200,19 @@ function App() {
                   </ErrorBoundary>
                 }
               />
+              {/* Settings with its own sidebar layout */}
               <Route
                 path="/settings"
                 element={
                   <ErrorBoundary>
-                    <Settings />
+                    <SettingsLayout />
                   </ErrorBoundary>
                 }
-              />
-              <Route
-                path="/settings/tags"
-                element={
-                  <ErrorBoundary>
-                    <TagsManagement />
-                  </ErrorBoundary>
-                }
-              />
+              >
+                <Route index element={<Settings />} />
+                <Route path="tags" element={<TagsManagement />} />
+                <Route path="notifications" element={<NotificationSettings />} />
+              </Route>
               <Route
                 path="/flow"
                 element={

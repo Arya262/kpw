@@ -16,6 +16,9 @@ export default function AddContact({ closePopup, onSuccess, onPlanRequired }) {
   const [fieldMapping, setFieldMapping] = useState({});
   const [extractedContacts, setExtractedContacts] = useState([]);
   const [phoneError, setPhoneError] = useState("");
+  const [nameError, setNameError] = useState("");
+  const [fileError, setFileError] = useState("");
+  const [contactsError, setContactsError] = useState("");
   const [isTouched, setIsTouched] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -30,6 +33,10 @@ export default function AddContact({ closePopup, onSuccess, onPlanRequired }) {
     setSelectedTags([]);
   };
 
+  const clearMessages = () => {
+    if (errorMessage) setErrorMessage("");
+  };
+
   const handleTabChange = (newTab) => {
     if (newTab === "bulk") {
       const canProceed = onPlanRequired ? onPlanRequired("bulkImport") : true;
@@ -39,22 +46,93 @@ export default function AddContact({ closePopup, onSuccess, onPlanRequired }) {
       clearBulkData();
     }
     setTab(newTab);
+    clearMessages();
+  };
+
+  const handlePhoneChange = (value) => {
+    setPhone(value);
+    clearMessages();
+
+    const digits = value.replace(/\D/g, "");
+    if (digits.length >= 10) {
+      setPhoneError("");
+    }
+  };
+
+  const handleNameChange = (value) => {
+    setName(value);
+    clearMessages();
+    if (value.trim()) {
+      setNameError("");
+    }
+  };
+
+  const handleFileChange = (file) => {
+    setFile(file);
+    clearMessages();
+    if (file) {
+      setFileError("");
+      setContactsError("");
+    }
+  };
+
+  const handleTagsChange = (tags) => {
+    setSelectedTags(tags);
+    clearMessages();
   };
 
   const handleDataExtracted = (contacts) => {
     setExtractedContacts(contacts);
+    if (contacts && contacts.length > 0) {
+      setContactsError("");
+    }
   };
 
   const handleSubmit = async () => {
-    if (tab === "single" && phoneError) return;
-    if (tab === "bulk") {
-      if (!file) {
-        setErrorMessage("Please provide a CSV file.");
-        setSuccessMessage("");
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    if (tab === "single") {
+      let hasErrors = false;
+      
+      const digits = phone.replace(/\D/g, "");
+      if (digits.length < 10) {
+        setPhoneError("Please enter a valid phone number");
+        hasErrors = true;
+      } else {
+        setPhoneError("");
+      }
+      
+      if (!name.trim()) {
+        setNameError("Contact name is required");
+        hasErrors = true;
+      } else {
+        setNameError("");
+      }
+      
+      if (hasErrors) {
         return;
       }
+    }
+    
+    if (tab === "bulk") {
+      let hasErrors = false;
+      
+      if (!file) {
+        setFileError("Please upload a CSV file");
+        hasErrors = true;
+      } else {
+        setFileError("");
+      }
+      
       if (!extractedContacts || extractedContacts.length === 0) {
-        setErrorMessage("No valid contacts found. Please check your CSV file.");
+        setContactsError("No valid contacts found in the file");
+        hasErrors = true;
+      } else {
+        setContactsError("");
+      }
+      
+      if (hasErrors) {
         return;
       }
     }
@@ -74,10 +152,6 @@ export default function AddContact({ closePopup, onSuccess, onPlanRequired }) {
         const nationalNumber = digits.replace(countryCode, "");
         const tagIds = selectedTags.map(tag => getTagId(tag)).filter(Boolean);
 
-        console.log("=== ADD CONTACT REQUEST ===");
-        console.log("Selected tags:", selectedTags);
-        console.log("Tag IDs being sent:", tagIds);
-
         const requestBody = {
           country_code: countryCode,
           first_name: name.trim(),
@@ -85,8 +159,6 @@ export default function AddContact({ closePopup, onSuccess, onPlanRequired }) {
           customer_id: user.customer_id,
           tag_ids: tagIds,
         };
-        console.log("Full request body:", requestBody);
-        console.log("=== END ADD CONTACT REQUEST ===");
 
         const response = await fetch(API_ENDPOINTS.CONTACTS.ADD_SINGLE, {
           method: "POST",
@@ -96,12 +168,11 @@ export default function AddContact({ closePopup, onSuccess, onPlanRequired }) {
         });
 
         const data = await response.json();
-        console.log("Add contact response:", data);
+        // console.log("Add contact response:", data);
         if (data.success) {
-          // Assign tags to the newly created contact
           const contactId = data.contact_id || data.data?.contact_id;
           if (contactId && tagIds.length > 0) {
-            console.log("Assigning tags to contact:", contactId, tagIds);
+            // console.log("Assigning tags to contact:", contactId, tagIds);
             for (const tagId of tagIds) {
               try {
                 await fetch(API_ENDPOINTS.TAGS.ASSIGN, {
@@ -202,7 +273,7 @@ export default function AddContact({ closePopup, onSuccess, onPlanRequired }) {
         {tab === "single" ? (
           <SingleContactForm
             phone={phone}
-            setPhone={setPhone}
+            setPhone={handlePhoneChange}
             phoneError={phoneError}
             setPhoneError={setPhoneError}
             isTouched={isTouched}
@@ -210,19 +281,22 @@ export default function AddContact({ closePopup, onSuccess, onPlanRequired }) {
             optStatus={optStatus}
             setOptStatus={setOptStatus}
             name={name}
-            setName={setName}
+            setName={handleNameChange}
+            nameError={nameError}
             selectedTags={selectedTags}
-            setSelectedTags={setSelectedTags}
+            setSelectedTags={handleTagsChange}
           />
         ) : (
           <BulkContactForm
             file={file}
-            setFile={setFile}
+            setFile={handleFileChange}
             fieldMapping={fieldMapping}
             setFieldMapping={setFieldMapping}
             onDataExtracted={handleDataExtracted}
             selectedTags={selectedTags}
-            setSelectedTags={setSelectedTags}
+            setSelectedTags={handleTagsChange}
+            fileError={fileError}
+            contactsError={contactsError}
           />
         )}
       </div>

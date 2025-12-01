@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { z } from "zod";
 import { toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 import SampleValuesSection from "./SampleValuesSection";
 import QuickRepliesSection from "./QuickRepliesSection";
 import CallToActionSection from "./CallToActionSection";

@@ -13,6 +13,7 @@ const ContactTable = ({
   onCheckboxChange,
   onEditClick,
   onDeleteClick,
+  onRowClick,
   onSendBroadcast,
   onExport,
   onDelete,
@@ -24,16 +25,6 @@ const ContactTable = ({
     <div className="overflow-x-auto">
       <div className="min-w-[900px] bg-white rounded-2xl shadow-[0px_-0.91px_3.66px_0px_#00000042] overflow-hidden">
         <table className="w-full text-sm text-center">
-          <colgroup>
-            {permissions.canDelete && <col className="w-12" />}
-            <col className="w-[12%]" />
-            <col className="w-[10%]" />
-            <col />
-            <col className="w-[15%]" />
-            <col className="w-[15%]" />
-            <col className="w-[13%]" />
-            <col />
-          </colgroup>
           <thead className="bg-[#F4F4F4] border-b-2 shadow-sm border-gray-300">
             <tr>
               {permissions.canDelete ? (
@@ -125,6 +116,7 @@ const ContactTable = ({
                   onCheckboxChange={onCheckboxChange}
                   onEditClick={onEditClick}
                   onDeleteClick={onDeleteClick}
+                  onRowClick={onRowClick}
                   canEdit={true}
                   canDelete={true}
                   userId={user?.id}

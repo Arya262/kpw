@@ -3,8 +3,7 @@ import {Users,Plus,Edit2,Trash2,UserCheck,CloudUpload,} from "lucide-react";
 import { API_ENDPOINTS } from "../../config/api";
 import axios from "axios";
 import { useAuth } from "../../context/AuthContext";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 import Loader from "../../components/Loader";
 import GroupRow from "./GroupRow";
 import vectorIcon from "../../assets/Vector.png";
@@ -1035,7 +1034,7 @@ export default function GroupManagement() {
       </div>
       <div className="overflow-x-auto">
         <div className="min-w-[900px] bg-white rounded-2xl shadow-[0px_-0.91px_3.66px_0px_#00000042] overflow-hidden">
-          <table className="w-full text-sm text-center overflow-hidden table-auto">
+          <table className="w-full text-sm text-center overflow-hidden">
             <thead className="bg-[#F4F4F4] border-b-2 shadow-sm border-gray-300">
               <tr>
                 <th className="px-2 py-3 sm:px-6">
@@ -1043,7 +1042,6 @@ export default function GroupManagement() {
                     <input
                       type="checkbox"
                       className="form-checkbox w-4 h-4"
-                      // checked={selectAll}
                       onChange={handleSelectAllChange}
                       aria-label="Select all groups"
                       checked={allDisplayedSelected}
@@ -1279,7 +1277,6 @@ export default function GroupManagement() {
           </div>
         </div>
       )}
-      <ToastContainer />
     </div>
   );
 }

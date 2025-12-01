@@ -1,27 +1,19 @@
 import React, { useState } from "react";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 import axios from "axios";
 import { API_ENDPOINTS } from "./config/api";
 import { handleError, USER_MESSAGES } from "./utils/errorHandling";
+import { forgotPasswordSchema, validateField } from "./utils/validationSchemas";
 
 const ForgotPassword = () => {
   const [identifier, setIdentifier] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Validation for email or mobile
+  // Validation using Zod schema
   const validateInput = (value) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const mobileRegex = /^[6-9]\d{9}$/;
-
-    if (!value.trim()) {
-      return "Please enter your email or mobile number.";
-    }
-    if (!emailRegex.test(value) && !mobileRegex.test(value)) {
-      return "Enter a valid email or 10-digit mobile number starting with 6-9.";
-    }
-    return "";
+    const result = validateField(forgotPasswordSchema.shape.identifier, value);
+    return result.error || "";
   };
 
   const handleSubmit = async (e) => {
@@ -65,7 +57,6 @@ const ForgotPassword = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#c6f1f0] to-white p-4">
-      <ToastContainer />
       <div className="w-full max-w-md bg-white rounded-lg shadow-lg p-6">
         <h2 className="text-2xl font-semibold mb-4 text-center">
           Forgot Password

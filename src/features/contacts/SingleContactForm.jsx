@@ -12,18 +12,18 @@ export default function SingleContactForm({
   setIsTouched,
   name,
   setName,
+  nameError = "",
   selectedTags = [],
   setSelectedTags,
 }) {
   const handlePhoneChange = (value, country) => {
+    // Pass to parent handler which handles validation
     setPhone(value);
     setIsTouched(true);
     
-    // Basic validation
-    const digitsOnly = value.replace(/\D/g, "");
-    if (digitsOnly.length < 10) {
-      setPhoneError("Please enter a valid phone number");
-    } else {
+    // Clear error if phone looks valid (10+ digits)
+    const digits = value.replace(/\D/g, "");
+    if (digits.length >= 10 && phoneError) {
       setPhoneError("");
     }
   };
@@ -34,7 +34,7 @@ export default function SingleContactForm({
       <div>
         <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
           <Phone size={16} className="text-gray-400" />
-          Phone Number
+          Phone Number <span className="text-red-500">*</span>
         </label>
         <PhoneInput
           country="in"
@@ -45,20 +45,20 @@ export default function SingleContactForm({
             height: "44px",
             fontSize: "0.95rem",
             borderRadius: "0.5rem",
-            border: phoneError && isTouched ? "1px solid #ef4444" : "1px solid #e5e7eb",
+            border: phoneError ? "1px solid #ef4444" : "1px solid #e5e7eb",
             paddingLeft: "52px",
           }}
           buttonStyle={{
             borderRadius: "0.5rem 0 0 0.5rem",
-            borderTop: phoneError && isTouched ? "1px solid #ef4444" : "1px solid #e5e7eb",
-            borderBottom: phoneError && isTouched ? "1px solid #ef4444" : "1px solid #e5e7eb",
-            borderLeft: phoneError && isTouched ? "1px solid #ef4444" : "1px solid #e5e7eb",
+            borderTop: phoneError ? "1px solid #ef4444" : "1px solid #e5e7eb",
+            borderBottom: phoneError ? "1px solid #ef4444" : "1px solid #e5e7eb",
+            borderLeft: phoneError ? "1px solid #ef4444" : "1px solid #e5e7eb",
             borderRight: "none",
           }}
           containerStyle={{ width: "100%" }}
           placeholder="Enter phone number"
         />
-        {phoneError && isTouched && (
+        {phoneError && (
           <p className="mt-1 text-xs text-red-500">{phoneError}</p>
         )}
         <p className="mt-1 text-xs text-gray-400">
@@ -70,15 +70,20 @@ export default function SingleContactForm({
       <div>
         <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
           <User size={16} className="text-gray-400" />
-          Contact Name
+          Contact Name <span className="text-red-500">*</span>
         </label>
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Enter contact name"
-          className="w-full px-4 py-3 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
+          className={`w-full px-4 py-3 border rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all ${
+            nameError ? "border-red-500 bg-red-50" : "border-gray-200"
+          }`}
         />
+        {nameError && (
+          <p className="mt-1 text-xs text-red-500">{nameError}</p>
+        )}
       </div>
 
       {/* Tags Field */}

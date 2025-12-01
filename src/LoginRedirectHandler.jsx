@@ -5,29 +5,29 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import axios from "axios";
 import { API_ENDPOINTS } from "./config/api";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 import Loader from "./components/Loader";
+import { loginSchema, validateField as zodValidateField } from "./utils/validationSchemas";
 
 const LoginPage = () => {
   const { login, user } = useAuth();
   const navigate = useNavigate();
 
-React.useEffect(() => {
-  if (user) {
-    if (user.role === "admin" || user.role === "super_admin") {
-      navigate("/admin/dashboard", { replace: true });
-    } else {
-      navigate("/dashboard", { replace: true });
+  React.useEffect(() => {
+    if (user) {
+      if (user.role === "admin" || user.role === "super_admin") {
+        navigate("/admin/dashboard", { replace: true });
+      } else {
+        navigate("/dashboard", { replace: true });
+      }
     }
-  }
 
-  // New: Show logout success toast if flag is set
-  if (localStorage.getItem("showLogoutSuccessToast") === "true") {
-    toast.success("Successfully logged out!");
-    localStorage.removeItem("showLogoutSuccessToast");
-  }
-}, [user, navigate]);
+    // New: Show logout success toast if flag is set
+    if (localStorage.getItem("showLogoutSuccessToast") === "true") {
+      toast.success("Successfully logged out!");
+      localStorage.removeItem("showLogoutSuccessToast");
+    }
+  }, [user, navigate]);
 
   const [loginMethod, setLoginMethod] = useState("");
   const [password, setPassword] = useState("");
@@ -37,29 +37,15 @@ React.useEffect(() => {
   const [touched, setTouched] = useState({});
 
   const validateField = (name, value) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const mobileRegex = /^[6-9]\d{9}$/;
-
-    switch (name) {
-      case "loginMethod":
-        if (!value.trim()) {
-          return "Make sure you enter a valid email address or a 10-digit mobile number.";
-        }
-        if (!emailRegex.test(value) && !mobileRegex.test(value)) {
-          return "Enter a valid email or 10-digit mobile number starting with 6-9.";
-        }
-        return "";
-      case "password":
-        if (!value.trim()) {
-          return "Please enter your password.";
-        }
-        if (value.length < 6) {
-          return "Password must be at least 6 characters.";
-        }
-        return "";
-      default:
-        return "";
+    if (name === "loginMethod") {
+      const result = zodValidateField(loginSchema.shape.loginMethod, value);
+      return result.error || "";
     }
+    if (name === "password") {
+      const result = zodValidateField(loginSchema.shape.password, value);
+      return result.error || "";
+    }
+    return "";
   };
 
   const handleBlur = (e) => {
@@ -81,12 +67,17 @@ React.useEffect(() => {
   };
 
   const validate = () => {
-    const newErrors = {
-      loginMethod: validateField("loginMethod", loginMethod),
-      password: validateField("password", password),
-    };
-    setErrors(newErrors);
-    return !Object.values(newErrors).some((error) => error);
+    const result = loginSchema.safeParse({ loginMethod, password });
+    if (!result.success) {
+      const newErrors = {};
+      result.error.errors.forEach((err) => {
+        newErrors[err.path[0]] = err.message;
+      });
+      setErrors(newErrors);
+      return false;
+    }
+    setErrors({});
+    return true;
   };
 
   const handleSubmit = async (e) => {
@@ -143,7 +134,6 @@ React.useEffect(() => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-t from-[#adede9] via-[#def7f6] via-[#d4f5f3] to-white ">
-      <ToastContainer />
       <div className="w-full h-[620px] m-3  max-w-[548px]  md:max-w-[648px] sm:max-w-[500px] bg-white rounded-xl overflow-hidden shadow-lg flex flex-col ">
         {/* Header */}
         <div className="relative h-[250px] sm:h-[352px] md:h-[352px] w-full bg-[#ceeeec] overflow-hidden">

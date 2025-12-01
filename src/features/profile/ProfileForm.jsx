@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useFormik } from "formik";
-import * as Yup from "yup";
+import { z } from "zod";
 import Dropdown from "../../components/Dropdown";
 import { useProfile } from "../../hooks/useProfile";
 import { useAuth } from "../../context/AuthContext";
 import Loader from "../../components/Loader";
 import { toast } from "react-toastify";
-
 
 const VERTICAL_OPTIONS = [
   "RESTAURANT", "RETAIL", "SERVICE", "OTHER", "AUTO", "BEAUTY",
@@ -14,11 +13,22 @@ const VERTICAL_OPTIONS = [
   "GOVT", "HOTEL", "HEALTH", "NONPROFIT", "PROF_SERVICES", "TRAVEL"
 ].map(v => ({ value: v, label: v }));
 
+// Zod schema for profile validation
+const profileFormSchema = z.object({
+  description: z.string().max(256, "Max 256 characters").optional(),
+  address: z.string().max(256, "Max 256 characters").optional(),
+  email: z.string().email("Invalid email format").max(128, "Max 128 characters").optional().or(z.literal("")),
+  vertical: z.string().optional(),
+  websites: z.array(
+    z.string().url("Must be a valid URL (e.g., https://...)").max(256, "Max 256 characters")
+  ).max(2, "Maximum 2 websites allowed").optional(),
+});
 
-const websiteSchema = Yup.string()
+// Zod schema for website validation
+const websiteZodSchema = z.string()
+  .min(1, "URL cannot be empty.")
   .url("Must be a valid URL (e.g., https://...)")
-  .max(256, "URL must be max 256 characters.")
-  .required("URL cannot be empty.");
+  .max(256, "URL must be max 256 characters.");
 
 const ProfileForm = ({ onClose }) => {
   const { user } = useAuth();
@@ -74,21 +84,16 @@ const ProfileForm = ({ onClose }) => {
   const formik = useFormik({
     initialValues,
     enableReinitialize: true,
-    validationSchema: Yup.object({
-      description: Yup.string().trim().max(256, "Max 256 characters"),
-      address: Yup.string().trim().max(256, "Max 256 characters"),
-      email: Yup.string()
-        .email("Invalid email format")
-        .max(128, "Max 128 characters"),
-      vertical: Yup.string(),
-      websites: Yup.array()
-        .of(
-          Yup.string()
-            .url("Must be a valid URL (e.g., https://...)")
-            .max(256, "Max 256 characters")
-        )
-        .max(2, "Maximum 2 websites allowed"),
-    }),
+    validate: (values) => {
+      const result = profileFormSchema.safeParse(values);
+      if (result.success) return {};
+      const errors = {};
+      result.error.errors.forEach((err) => {
+        const path = err.path.join('.');
+        errors[path] = err.message;
+      });
+      return errors;
+    },
     onSubmit: async (values) => {
       setIsSubmitting(true);
       try {
@@ -134,20 +139,20 @@ const ProfileForm = ({ onClose }) => {
   });
 
 
-  const handleAddWebsite = async () => {
+  const handleAddWebsite = () => {
     const url = newWebsite.trim();
     setWebsiteError("");
     if (formik.values.websites.length >= 2) {
       setWebsiteError("Maximum 2 websites allowed.");
       return;
     }
-    try {
-      await websiteSchema.validate(url);
+    const result = websiteZodSchema.safeParse(url);
+    if (result.success) {
       formik.setFieldValue("websites", [...formik.values.websites, url]);
       formik.setFieldTouched("websites", true);
       setNewWebsite("");
-    } catch (err) {
-      if (err instanceof Yup.ValidationError) setWebsiteError(err.message);
+    } else {
+      setWebsiteError(result.error.errors[0]?.message || "Invalid URL");
     }
   };
 

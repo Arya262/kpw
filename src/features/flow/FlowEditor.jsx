@@ -6,8 +6,7 @@ import {
   ReactFlowProvider,
 } from "reactflow";
 import "reactflow/dist/style.css";
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+
 import debounce from "lodash.debounce";
 
 import { useAuth } from "../../context/AuthContext";
@@ -44,8 +43,6 @@ const FlowEditor = () => {
   const [showFlowNameModal, setShowFlowNameModal] = useState(false);
   const [shouldFitView, setShouldFitView] = useState(true);
 
-
-  // Get live preview data from the actual node with button connections
   const previewData = useMemo(() => {
     if (!previewNodeId) return null;
     const node = nodes.find(n => n.id === previewNodeId);
@@ -274,7 +271,6 @@ const FlowEditor = () => {
 
   return (
     <div className="flow-editor-container">
-      <ToastContainer position="top-right" autoClose={3000} />
       
       <FlowNameModal
         isOpen={showFlowNameModal}

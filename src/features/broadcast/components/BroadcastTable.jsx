@@ -74,12 +74,14 @@ const BroadcastTable = ({ filteredData, loading, error }) => {
           {formatDate(row.created_at)}
         </td>
         <td className="px-2 py-4 text-[12px] sm:text-[16px] text-gray-700">
-          {row.broadcast_name}
+          <div className="max-w-[180px] truncate mx-auto" title={row.broadcast_name}>
+            {row.broadcast_name}
+          </div>
         </td>
         <td className="px-2 py-4 text-[12px] sm:text-[16px] text-gray-700">
           {row.container_meta?.sampleText ? (
-            <div className="flex flex-col items-start">
-              <span>{`${row.container_meta.sampleText.slice(0, 40)}...`}</span>
+            <div className="flex flex-col items-center max-w-[200px] mx-auto">
+              <span className="truncate w-full text-center">{`${row.container_meta.sampleText.slice(0, 40)}...`}</span>
               <div className="w-full flex justify-center mt-1">
                 <button
                   onClick={() => {
@@ -116,7 +118,7 @@ const BroadcastTable = ({ filteredData, loading, error }) => {
     <>
       <div className="overflow-x-auto">
         <div className="min-w-[900px] bg-white shadow-[0px_-0.91px_3.66px_0px_#00000042] overflow-hidden">
-          <table className="w-full text-sm text-center table-auto">
+          <table className="w-full text-sm text-center">
             <thead className="bg-[#F4F4F4] border-b-2 shadow-sm border-gray-300">
               <tr>
                 <th className="px-2 py-3 sm:px-6 text-[12px] sm:text-[16px] font-semibold text-gray-700">Date</th>

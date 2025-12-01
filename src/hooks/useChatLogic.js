@@ -3,7 +3,6 @@ import axios from "axios";
 import { API_BASE, API_ENDPOINTS } from "../config/api";
 import { useNotifications } from "../context/NotificationContext";
 import { toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 import { 
   normalizeMessageData, 
   updateContactFromMessage as updateContactFromMessageUtil,

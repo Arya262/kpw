@@ -47,7 +47,8 @@ const DashboardLayout = () => {
           className="overflow-y-auto"
         />
 
-  
+        {/* Spacer for fixed sidebar on desktop */}
+        <div className="hidden lg:block lg:w-[80px] lg:shrink-0" />
 
         <main
           className={`flex-1 min-h-0 bg-white ${

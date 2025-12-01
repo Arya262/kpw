@@ -120,14 +120,15 @@ export default function GroupRow({
           />
         </div>
       </td>
-      <td className="px-2 py-4 sm:px-4 whitespace-nowrap text-[12px] sm:text-[16px] text-gray-700 font-medium  text-center">
-        {group.name}
+      <td className="px-2 py-4 sm:px-4 text-[12px] sm:text-[16px] text-gray-700 font-medium text-center">
+        <div className="max-w-[180px] truncate mx-auto" title={group.name}>
+          {group.name}
+        </div>
       </td>
-      <td
-        className="px-2 py-4 text-[12px] sm:text-[16px] text-gray-700 cursor-pointer hover:text-[#0AA89E] font-medium max-w-[180px] truncate"
-        title={group.description || "-"}
-      >
-        {group.description || "-"}
+      <td className="px-2 py-4 text-[12px] sm:text-[16px] text-gray-700 font-medium text-center">
+        <div className="max-w-[200px] truncate mx-auto" title={group.description || "-"}>
+          {group.description || "-"}
+        </div>
       </td>
       <td className="px-2 py-4 text-[12px] sm:text-[16px] text-center text-gray-700 font-medium">
         {group.category || "Imported Data"}

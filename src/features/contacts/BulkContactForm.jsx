@@ -28,6 +28,8 @@ export default function BulkContactForm({
   onDataExtracted,
   selectedTags = [],
   setSelectedTags,
+  fileError = "",
+  contactsError = "",
 }) {
   const [countryCode, setCountryCode] = useState({ dialCode: "91", countryCode: "in" });
   const [csvHeaders, setCsvHeaders] = useState([]);
@@ -179,43 +181,60 @@ export default function BulkContactForm({
       </div>
 
       {/* File Upload Area */}
-      <div
-        className={`border-2 border-dashed rounded-xl p-8 text-center transition-all ${
-          isDragging ? "border-teal-500 bg-teal-50" : file ? "border-green-400 bg-green-50" : "border-gray-200 hover:border-gray-300"
-        }`}
-        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-        onDragLeave={(e) => { e.preventDefault(); setIsDragging(false); }}
-        onDrop={(e) => {
-          e.preventDefault();
-          setIsDragging(false);
-          handleFileChange({ target: { files: e.dataTransfer.files } });
-        }}
-      >
-        <input type="file" accept=".csv" onChange={handleFileChange} className="hidden" id="csvUpload" />
-        
-        {file ? (
-          <div className="flex items-center justify-center gap-3">
-            <FileText size={24} className="text-green-600" />
-            <div className="text-left">
-              <p className="font-medium text-gray-900">{file.name}</p>
-              <p className="text-sm text-green-600">{contactCount} valid contacts found</p>
+      <div>
+        <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+          <Upload size={16} className="text-gray-400" />
+          CSV File <span className="text-red-500">*</span>
+        </label>
+        <div
+          className={`border-2 border-dashed rounded-xl p-8 text-center transition-all ${
+            fileError 
+              ? "border-red-500 bg-red-50" 
+              : isDragging 
+                ? "border-teal-500 bg-teal-50" 
+                : file 
+                  ? "border-green-400 bg-green-50" 
+                  : "border-gray-200 hover:border-gray-300"
+          }`}
+          onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+          onDragLeave={(e) => { e.preventDefault(); setIsDragging(false); }}
+          onDrop={(e) => {
+            e.preventDefault();
+            setIsDragging(false);
+            handleFileChange({ target: { files: e.dataTransfer.files } });
+          }}
+        >
+          <input type="file" accept=".csv" onChange={handleFileChange} className="hidden" id="csvUpload" />
+          
+          {file ? (
+            <div className="flex items-center justify-center gap-3">
+              <FileText size={24} className="text-green-600" />
+              <div className="text-left">
+                <p className="font-medium text-gray-900">{file.name}</p>
+                <p className={`text-sm ${contactsError ? "text-red-600" : "text-green-600"}`}>
+                  {contactsError || `${contactCount} valid contacts found`}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFile(null)}
+                className="ml-4 p-1 hover:bg-gray-100 rounded"
+              >
+                <X size={18} className="text-gray-500" />
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => setFile(null)}
-              className="ml-4 p-1 hover:bg-gray-100 rounded"
-            >
-              <X size={18} className="text-gray-500" />
-            </button>
-          </div>
-        ) : (
-          <label htmlFor="csvUpload" className="cursor-pointer">
-            <Upload size={32} className="mx-auto text-gray-400 mb-3" />
-            <p className="text-gray-600 mb-1">
-              Drag & drop your CSV file here, or <span className="text-teal-600 font-medium">browse</span>
-            </p>
-            <p className="text-xs text-gray-400">Supports CSV files up to 50MB</p>
-          </label>
+          ) : (
+            <label htmlFor="csvUpload" className="cursor-pointer">
+              <Upload size={32} className={`mx-auto mb-3 ${fileError ? "text-red-400" : "text-gray-400"}`} />
+              <p className="text-gray-600 mb-1">
+                Drag & drop your CSV file here, or <span className="text-teal-600 font-medium">browse</span>
+              </p>
+              <p className="text-xs text-gray-400">Supports CSV files up to 50MB</p>
+            </label>
+          )}
+        </div>
+        {fileError && (
+          <p className="mt-1 text-xs text-red-500">{fileError}</p>
         )}
       </div>
 

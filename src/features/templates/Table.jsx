@@ -295,7 +295,7 @@ const filteredCounts = useMemo(() => {
       <div className="w-full font-sans scrollbar-hide scroll-smooth bg-white shadow-[0px_0.91px_3.66px_0px_#00000042] overflow-hidden">
         <div className="overflow-x-auto">
           <div className="min-w-[900px] bg-white shadow-[0px_-0.91px_3.66px_0px_#00000042] overflow-hidden">
-            <table className="w-full text-sm text-center table-auto">
+            <table className="w-full text-sm text-center">
               <thead className="bg-[#F4F4F4] border-b-2 shadow-sm border-gray-300">
                 <tr>
                   <th className="px-2 py-3 sm:px-6">
@@ -435,7 +435,9 @@ const filteredCounts = useMemo(() => {
                         </span>
                       </td>
                       <td className="px-2 py-4 text-[12px] sm:text-[16px] text-gray-700 font-medium">
-                        {template.element_name || "-"}
+                        <div className="max-w-[200px] truncate mx-auto" title={template.element_name}>
+                          {template.element_name || "-"}
+                        </div>
                       </td>
                       <td className="px-2 py-4 text-[12px] sm:text-[16px] text-gray-700 font-medium">
                         {template.template_type

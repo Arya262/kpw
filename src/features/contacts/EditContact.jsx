@@ -65,14 +65,30 @@ export default function EditContact({ contact, closePopup, onSuccess }) {
     }
   }, [contact?.tags, availableTags]);
 
+  // Clear error messages when user changes data
+  const clearMessages = () => {
+    if (errorMessage) setErrorMessage("");
+  };
+
   const handlePhoneChange = (value) => {
     setPhone(value);
     setIsTouched(true);
+    clearMessages();
     if (value.replace(/\D/g, "").length < 10) {
       setPhoneError("Please enter a valid phone number");
     } else {
       setPhoneError("");
     }
+  };
+
+  const handleNameChange = (e) => {
+    setName(e.target.value);
+    clearMessages();
+  };
+
+  const handleTagsChange = (tags) => {
+    setSelectedTags(tags);
+    clearMessages();
   };
 
   const handleSubmit = async () => {
@@ -209,7 +225,7 @@ export default function EditContact({ contact, closePopup, onSuccess }) {
           <input
             type="text"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={handleNameChange}
             placeholder="Enter contact name"
             className="w-full px-4 py-3 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
           />
@@ -223,7 +239,7 @@ export default function EditContact({ contact, closePopup, onSuccess }) {
           </label>
           <TagSelector
             selectedTags={selectedTags}
-            onTagsChange={(tags) => setSelectedTags(tags)}
+            onTagsChange={handleTagsChange}
             placeholder="Select or create tags..."
             allowCreate={true}
           />

@@ -3,8 +3,7 @@ import { useAuth } from "../../context/AuthContext";
 import Table from "./Table";
 import ErrorBoundary from "../../components/ErrorBoundary";
 import Modal from "./Modal";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 import { getPermissions } from "../../utils/getPermissions";
 import NotAuthorized from "../../components/NotAuthorized";
 import Loader from "../../components/Loader";
@@ -123,10 +122,7 @@ const Templates = () => {
 
   return (
     <div className="flex flex-col gap-4 pt-2">
-      <ToastContainer
-        position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop closeOnClick draggable pauseOnHover
-        theme="light"
-      />
+
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h2 className="text-xl pt-0 font-semibold">Templates List</h2>
 

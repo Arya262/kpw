@@ -13,8 +13,7 @@ import { getPermissions } from "../../utils/getPermissions";
 import { GripVertical } from "lucide-react";
 import Loader from "../../components/Loader";
 import ContactsLoader from "./ContactsLoader";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 import EmptyState from "./chatFeatures/EmptyState";
 import { CHAT_CONFIG, ERROR_MESSAGES } from "./chatConstants";
 
@@ -247,7 +246,6 @@ const handleSearchChange = useCallback(
 
   return (
     <div className="flex flex-col md:flex-row w-full flex-1 min-h-0 h-full md:border md:rounded-2xl border-gray-300 bg-white overflow-hidden">
-      <ToastContainer position="top-right" autoClose={3000} />
       {isResizingState && !isMobile && (
         <div 
           className="fixed inset-0 z-[9999] cursor-col-resize"

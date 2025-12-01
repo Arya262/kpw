@@ -1,5 +1,5 @@
 import vendor from "../../assets/Vector.png";
-import { ToastContainer, toast } from "react-toastify";
+import { toast } from "react-toastify";
 import { AnimatePresence, motion } from "framer-motion";
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -186,7 +186,6 @@ const AutoCampaign = () => {
 
   return (
     <div className="flex-1 pt-2.5 overflow-x-hidden">
-      <ToastContainer position="top-right" autoClose={2000} />
 
       {/* Header Section */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">

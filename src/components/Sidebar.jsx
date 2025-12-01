@@ -50,15 +50,7 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
       ],
     },
     { name: "Flow", icon: <Workflow size={22} />, path: "/flow" },
-    {
-      name: "Setting",
-      icon: <Settings size={22} />,
-      submenu: true,
-      submenuItems: [
-        { name: "User", path: "/settings", icon: <Users size={20} /> },
-        { name: "Tag", path: "/settings/tags", icon: <List size={20} /> },
-      ],
-    },
+    { name: "Settings", icon: <Settings size={22} />, path: "/settings" },
     { name: "Help", icon: <HelpCircle size={22} />, path: "/help" },
   ];
 
@@ -122,15 +114,14 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
       ref={sidebarRef}
       role="navigation"
       className={`
-        fixed top-0 left-0 z-50 lg:z-auto h-screen
+        fixed top-0 left-0 z-[60] h-screen
         bg-white text-black flex flex-col
-        transition-all duration-700 ease-in-out
+        transition-all duration-300 ease-in-out
         group
         ${isOpen ? "translate-x-0" : "-translate-x-full"}
         w-4/5 sm:w-72
-        lg:relative lg:translate-x-0 lg:top-0 lg:h-auto
-        lg:w-22 lg:hover:w-64
-        shadow-2xl lg:shadow-2xl
+        lg:z-40 lg:translate-x-0 lg:top-[72px] lg:h-[calc(100vh-72px)] lg:w-[80px] lg:hover:w-64
+        shadow-2xl
         ${className}
       `}
     >
@@ -160,10 +151,10 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
                 onClick={() => toggleSubmenu(item.name)}
               >
                 <span className="w-5 h-5 flex items-center justify-center">{item.icon}</span>
-                <span className="whitespace-nowrap overflow-hidden transition-all duration-300 ml-0 opacity-100">
+                <span className="whitespace-nowrap overflow-hidden transition-all duration-300 lg:opacity-0 lg:w-0 lg:group-hover:opacity-100 lg:group-hover:w-auto">
                   {item.name}
                 </span>
-                <div className="ml-auto w-5 flex justify-center">
+                <div className="ml-auto w-5 flex justify-center lg:opacity-0 lg:group-hover:opacity-100">
                   <ChevronDown
                     size={18}
                     className={`transition-transform duration-200 ${
@@ -222,7 +213,7 @@ const Sidebar = ({ isOpen, setIsOpen, className = "" }) => {
                   </span>
                 )}
               </span>
-              <span className="whitespace-nowrap overflow-hidden transition-all duration-300 ml-0 opacity-100">
+              <span className="whitespace-nowrap overflow-hidden transition-all duration-300 lg:opacity-0 lg:w-0 lg:group-hover:opacity-100 lg:group-hover:w-auto">
                 {item.name}
               </span>
             </NavLink>

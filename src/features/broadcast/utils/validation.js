@@ -1,4 +1,6 @@
+import { z } from 'zod';
 import { getMessageLimit, isContactLimitExceeded } from './messageLimits';
+
 export const VALIDATION_MESSAGES = {
   BROADCAST_NAME_REQUIRED: "Campaign name is required",
   GROUP_SELECTION_REQUIRED: "Please select at least one group",
@@ -9,10 +11,29 @@ export const VALIDATION_MESSAGES = {
   CONTACT_LIMIT_EXCEEDED: (limit) => `You can only send to a maximum of ${limit.toLocaleString()} contacts at once`,
 };
 
+// Zod schemas for broadcast validation
+export const broadcastNameSchema = z
+  .string()
+  .min(1, VALIDATION_MESSAGES.BROADCAST_NAME_REQUIRED)
+  .min(3, "Campaign name must be at least 3 characters")
+  .max(100, "Campaign name must be 100 characters or less");
+
+export const broadcastFormSchema = z.object({
+  broadcastName: broadcastNameSchema,
+  group_id: z.array(z.string()).optional(),
+  directContacts: z.array(z.any()).optional(),
+  selectedTemplate: z.any().refine((val) => val !== null && val !== undefined, {
+    message: VALIDATION_MESSAGES.TEMPLATE_REQUIRED,
+  }),
+  schedule: z.enum(["Yes", "No"]).optional(),
+  isDirectBroadcast: z.boolean().optional(),
+});
+
 
 export const validateBroadcastName = (broadcastName) => {
-  if (!broadcastName?.trim()) {
-    return VALIDATION_MESSAGES.BROADCAST_NAME_REQUIRED;
+  const result = broadcastNameSchema.safeParse(broadcastName?.trim() || '');
+  if (!result.success) {
+    return result.error.errors[0]?.message || VALIDATION_MESSAGES.BROADCAST_NAME_REQUIRED;
   }
   return null;
 };

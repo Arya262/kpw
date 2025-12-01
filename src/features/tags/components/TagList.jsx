@@ -20,9 +20,9 @@ const TagList = ({
   }
 
   const sizeClasses = {
-    xs: "px-1.5 py-0.5 text-[9px]",
-    sm: "px-2 py-0.5 text-[10px]",
-    md: "px-2.5 py-1 text-xs",
+    xs: "px-2 py-1 text-[10px]",
+    sm: "px-3 py-1.5 text-xs",
+    md: "px-3.5 py-2 text-sm",
   };
 
   const displayTags = tags.slice(0, maxDisplay);
@@ -38,11 +38,10 @@ const TagList = ({
         return (
           <span
             key={tag?.id || tag?.tag_id || `tag-${index}`}
-            className={`inline-block rounded font-medium truncate max-w-[70px] ${sizeClasses[size] || sizeClasses.sm}`}
+            className={`inline-block rounded-full font-medium truncate max-w-[100px] ${sizeClasses[size] || sizeClasses.sm}`}
             style={{
-              backgroundColor: `${tagColor}20`,
+              backgroundColor: `${tagColor}15`,
               color: tagColor,
-              border: `1px solid ${tagColor}40`,
             }}
             title={tagName}
           >
@@ -53,14 +52,13 @@ const TagList = ({
       {remainingCount > 0 && (
         <div className="relative">
           <span
-            className={`inline-block rounded bg-gray-100 text-gray-600 font-medium border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors ${sizeClasses[size] || sizeClasses.sm}`}
+            className="text-gray-500 font-medium text-sm ml-1 cursor-pointer hover:text-gray-700 transition-colors"
             onMouseEnter={() => setShowTooltip(true)}
             onMouseLeave={() => setShowTooltip(false)}
           >
             +{remainingCount}
           </span>
           
-          {/* Tooltip showing hidden tags */}
           {showTooltip && (
             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50">
               <div className="bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-lg">

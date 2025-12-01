@@ -3,8 +3,7 @@ import { useAuth } from "../../context/AuthContext";
 import Modal from "./Modal";
 import vendor from "../../assets/Vector.png";
 import { useNavigate } from "react-router-dom";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 import { getPermissions } from "../../utils/getPermissions";
 import SingleDeleteDialog from "../contacts/SingleDeleteDialog";
 import { Trash2, Eye, Send } from "lucide-react";
@@ -118,7 +117,6 @@ const ExploreTemplates = () => {
 
   return (
     <div className="p-0 sm:p-6 min-h-screen bg-gray-50">
-      <ToastContainer position="top-right" autoClose={3000} />
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8 sticky top-0 bg-gray-50/90 backdrop-blur-md z-20 py-3 ">
         <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-800 flex items-center gap-2">
           Explore <span className="text-[#0AA89E]">Templates</span>

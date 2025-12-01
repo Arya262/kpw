@@ -2,7 +2,8 @@ import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { ROLE_PERMISSIONS } from "../../context/permissions";
 import { User, Shield, Star, Crown, Pencil, Trash2 } from "lucide-react";
-import { toast } from "react-toastify";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import ReactDOM from "react-dom";
 import PlansModal from "../dashboard/PlansModal";
 import ClickToUpgrade from "../../components/ClickToUpgrade";
@@ -53,7 +54,7 @@ function PopoverPortal({ anchorRect, children, onClose, position = "bottom" }) {
   );
 }
 
-const Settings = () => {
+const UserSetting = () => {
   const { user } = useAuth();
 
   const permissions = useMemo(() => {
@@ -97,7 +98,7 @@ const Settings = () => {
     { key: "/chats", label: "Chats" },
     { key: "/broadcast", label: "Broadcast" },
     { key: "/settings", label: "Settings" },
-    { key: "/flow", label: "Flow" },
+    // { key: "/flow", label: "Flow" },
     { key: "/help", label: "Help" },
   ];
 
@@ -239,7 +240,18 @@ const roleOptions = [
 
   return (
     <>
-
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
       <div className="pt-2.5">
         <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
           <div className="flex items-center gap-4 flex-wrap">
@@ -357,13 +369,13 @@ const roleOptions = [
                                 handleRoleChange(u.id, e.target.value)
                               }
                               className={`appearance-none pr-8 pl-3 py-1 rounded-full text-xs font-medium border-none 
-                                focus:outline-none focus:ring-2 focus:ring-teal-400
-                                flex items-center justify-center text-center leading-tight
-                                ${
-                                  u.role === "subuser"
-                                    ? "bg-yellow-100 text-yellow-700" 
-                                    : "bg-gray-100 text-gray-700"
-                                }`}
+                              focus:outline-none focus:ring-2 focus:ring-teal-400
+                              flex items-center justify-center text-center leading-tight
+                              ${
+                                u.role === "subuser"
+                                  ? "bg-yellow-100 text-yellow-700" 
+                                  : "bg-gray-100 text-gray-700"
+                              }`}
                               style={{ minWidth: 120 }}
                             >
                               {roleOptions
@@ -537,4 +549,4 @@ const roleOptions = [
   );
 };
 
-export default Settings;
+export default UserSetting;

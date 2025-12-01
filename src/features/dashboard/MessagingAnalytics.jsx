@@ -23,8 +23,7 @@ import {
   endOfWeek,
 } from "date-fns";
 import { useAuth } from "../../context/AuthContext";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 import { getPermissions } from "../../utils/getPermissions";
 import Loader from "../../components/Loader";
 import { API_ENDPOINTS } from "../../config/api";
@@ -419,18 +418,7 @@ export default function MessagingAnalytics({ usageHistory }) {
 
   return (
     <div className=" space-y-10 mx-3">
-      <ToastContainer
-        position="top-right"
-        autoClose={5000}
-        hideProgressBar={false}
-        newestOnTop
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
-      />
+
 
       <div className="flex flex-col md:flex-row md:justify-between gap-4 w-full">
         {/* Filter row */}

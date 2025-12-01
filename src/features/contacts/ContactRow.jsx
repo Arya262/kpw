@@ -5,15 +5,17 @@ import TagList from "../tags/components/TagList";
 
 export default function ContactRow({
   contact,
-  isChecked, // parent decides if this row is checked
+  isChecked,
   onCheckboxChange,
   onEditClick,
   onDeleteClick,
+  onRowClick,
 }) {
   const rowRef = useRef(null);
   const navigate = useNavigate();
 
-  const handleChat = () => {
+  const handleChat = (e) => {
+    e.stopPropagation();
     const contactForChat = {
       id: contact.customer_id,
       contact_id: contact.contact_id || contact.id,
@@ -50,12 +52,19 @@ export default function ContactRow({
     onEditClick(contact);
   };
 
+  const handleRowClick = () => {
+    if (onRowClick) {
+      onRowClick(contact);
+    }
+  };
+
   return (
     <tr
       ref={rowRef}
-      className="border-t border-b border-b-[#C3C3C3] hover:bg-gray-50 text-md"
+      onClick={handleRowClick}
+      className="border-t border-b border-b-[#C3C3C3] hover:bg-gray-50 text-md cursor-pointer"
     >
-      <td className="px-2 py-4 sm:px-6 sm:py-4">
+      <td className="px-2 py-4 sm:px-6 sm:py-4" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-center h-full">
           <input
             type="checkbox"
@@ -72,19 +81,22 @@ export default function ContactRow({
         {contact.status}
       </td>
       <td
-        onClick={handleChat}
-        className="px-2 py-4 sm:px-6 sm:py-4 text-[12px] sm:text-[16px] text-gray-700 cursor-pointer hover:text-[#0AA89E] font-medium truncate"
+        className="px-2 py-4 sm:px-6 sm:py-4 text-[12px] sm:text-[16px] text-gray-700 font-medium"
         title={contact.fullName}
       >
-        {contact.fullName}
+        <div className="max-w-[200px] truncate mx-auto">
+          {contact.fullName}
+        </div>
       </td>
       <td className="px-2 py-4 sm:px-6 sm:py-4 text-[12px] sm:text-[16px]">
-        <TagList 
-          tags={contact.tags || []} 
-          size="xs" 
-          maxDisplay={3}
-          emptyMessage="No tags"
-        />
+        <div className="max-w-[150px] mx-auto">
+          <TagList 
+            tags={contact.tags || []} 
+            size="sm" 
+            maxDisplay={1}
+            emptyMessage="No tags"
+          />
+        </div>
       </td>
       <td className="px-2 py-4 sm:px-6 sm:py-4 text-[12px] sm:text-[16px] text-gray-700 font-medium whitespace-nowrap">
         {contact.user_country_code}
@@ -100,7 +112,7 @@ export default function ContactRow({
           </span>
         </div>
       </td>
-      <td className="px-2 py-4 sm:px-6 sm:py-4 relative">
+      <td className="px-2 py-4 sm:px-6 sm:py-4 relative" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-center items-center">
           <button
             onClick={handleChat}

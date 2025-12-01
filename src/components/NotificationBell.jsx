@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Bell,
   BellOff,
@@ -6,6 +6,8 @@ import {
   MessageCircle,
   AlertTriangle,
   CalendarCheck,
+  Settings,
+  Moon,
 } from "lucide-react";
 import { useNotifications } from "../context/NotificationContext";
 import { useNavigate } from "react-router-dom";
@@ -19,11 +21,12 @@ const NotificationBell = () => {
   const {
     unreadCount,
     notifications,
-    isNotificationEnabled,
+    preferences,
     markNotificationAsRead,
     markAllNotificationsAsRead,
     clearAllNotifications,
-    toggleNotifications,
+    isDoNotDisturb,
+    snoozeRemaining,
   } = useNotifications();
 
   // Close dropdown when clicking outside
@@ -40,7 +43,9 @@ const NotificationBell = () => {
   // Close dropdown on ESC key
   useEffect(() => {
     const handleEscape = (e) => {
-      if (e.key === "Escape") setIsOpen(false);
+      if (e.key === "Escape") {
+        setIsOpen(false);
+      }
     };
     if (isOpen) {
       document.addEventListener("keydown", handleEscape);
@@ -95,6 +100,7 @@ const NotificationBell = () => {
   };
 
   const grouped = groupByDate(notifications);
+  const isMuted = isDoNotDisturb || snoozeRemaining > 0;
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -102,9 +108,13 @@ const NotificationBell = () => {
       <button
         onClick={() => setIsOpen((prev) => !prev)}
         className="relative p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-full transition"
-        aria-label={isNotificationEnabled ? "View notifications" : "Notifications disabled"}
+        aria-label={preferences.enabled ? "View notifications" : "Notifications disabled"}
       >
-        {isNotificationEnabled ? <Bell className="w-5 h-5" /> : <BellOff className="w-5 h-5" />}
+        {preferences.enabled && !isMuted ? (
+          <Bell className="w-5 h-5" />
+        ) : (
+          <BellOff className="w-5 h-5" />
+        )}
         {unreadCount > 0 && (
           <span
             title={`${unreadCount} unread ${unreadCount === 1 ? "notification" : "notifications"}`}
@@ -113,11 +123,15 @@ const NotificationBell = () => {
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
+        {/* DND/Snooze indicator */}
+        {isMuted && (
+          <span className="absolute -bottom-1 -right-1 w-3 h-3 bg-orange-500 rounded-full border-2 border-white" />
+        )}
       </button>
 
       {/* Dropdown */}
       <div
-        className={`absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-50 transition-all duration-200 ease-out ${
+        className={`fixed sm:absolute left-2 right-2 sm:left-auto sm:right-0 mt-2 w-auto sm:w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-50 transition-all duration-200 ease-out ${
           isOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
         }`}
       >
@@ -125,14 +139,19 @@ const NotificationBell = () => {
           <h3 className="text-lg font-semibold text-gray-800">Notifications</h3>
           <div className="flex items-center gap-2">
             <button
-              onClick={toggleNotifications}
-              title={isNotificationEnabled ? "Disable notifications" : "Enable notifications"}
+              onClick={() => {
+                navigate("/settings/notifications");
+                setIsOpen(false);
+              }}
+              title="Notification settings"
+              aria-label="Notification settings"
               className="p-1 text-gray-500 hover:text-gray-700"
             >
-              {isNotificationEnabled ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
+              <Settings className="w-4 h-4" />
             </button>
             <button
               onClick={() => setIsOpen(false)}
+              aria-label="Close notifications panel"
               className="p-1 text-gray-500 hover:text-gray-700"
             >
               <X className="w-4 h-4" />
@@ -140,15 +159,40 @@ const NotificationBell = () => {
           </div>
         </div>
 
+        {/* DND/Snooze Banner */}
+        {isMuted && (
+          <div className="px-4 py-2 bg-orange-50 border-b border-orange-100 flex items-center gap-2">
+            <Moon className="w-4 h-4 text-orange-600" />
+            <span className="text-xs text-orange-700">
+              {snoozeRemaining > 0 ? "Notifications snoozed" : "Do Not Disturb is on"}
+            </span>
+            <button
+              onClick={() => {
+                navigate("/settings/notifications");
+                setIsOpen(false);
+              }}
+              className="ml-auto text-xs text-orange-600 hover:underline"
+            >
+              Manage
+            </button>
+          </div>
+        )}
+
         {notifications.length > 0 ? (
           <>
             <div className="flex justify-between px-4 py-2 text-sm text-gray-600 border-b">
               {notifications.some((n) => !n.read) && (
-                <button onClick={markAllNotificationsAsRead} className="text-blue-600 hover:underline">
+                <button
+                  onClick={markAllNotificationsAsRead}
+                  className="text-blue-600 hover:underline"
+                >
                   Mark all as read
                 </button>
               )}
-              <button onClick={clearAllNotifications} className="text-red-600 hover:underline ml-auto">
+              <button
+                onClick={clearAllNotifications}
+                className="text-red-600 hover:underline ml-auto"
+              >
                 Clear all
               </button>
             </div>
@@ -171,12 +215,18 @@ const NotificationBell = () => {
                         <div className="pt-1">{getIconByType(n.type)}</div>
                         <div className="flex-1 min-w-0">
                           <div className="flex justify-between">
-                            <p className="text-sm font-medium text-gray-900">{n.title}</p>
-                            <span className="text-xs text-gray-500">{formatTime(n.timestamp)}</span>
+                            <p className="text-sm font-medium text-gray-900">
+                              {n.title}
+                            </p>
+                            <span className="text-xs text-gray-500">
+                              {formatTime(n.timestamp)}
+                            </span>
                           </div>
                           <p className="text-sm text-gray-600 truncate">{n.message}</p>
                           {n.contactName && (
-                            <p className="text-xs text-gray-500 mt-0.5">From: {n.contactName}</p>
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              From: {n.contactName}
+                            </p>
                           )}
                         </div>
                       </div>

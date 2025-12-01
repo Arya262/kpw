@@ -3,8 +3,7 @@ import { Send, X } from "lucide-react";
 import SendTemplate from "./chatFeatures/SendTemplate";
 import EmojiPicker from "emoji-picker-react";
 import DOMPurify from "dompurify";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 
 const MessageInput = ({ onSendMessage, selectedContact, canSendMessage }) => {
   const [message, setMessage] = useState("");

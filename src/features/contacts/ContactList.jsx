@@ -3,8 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { getPermissions } from "../../utils/getPermissions";
 import { API_ENDPOINTS } from "../../config/api";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 import FilterDialog from "../../components/FilterDialog";
 import Pagination from "../shared/Pagination";
 
@@ -16,6 +15,7 @@ import { useContactSelection } from "./hooks/useContactSelection";
 import ContactListHeader from "./components/ContactListHeader";
 import ContactTable from "./components/ContactTable";
 import ContactModals from "./components/ContactModals";
+import ContactDetailsModal from "./components/ContactDetailsModal";
 
 // Utils
 import { 
@@ -73,6 +73,7 @@ export default function ContactListRefactored() {
     ids: [],
     list: []
   });
+  const [viewContact, setViewContact] = useState(null);
 
   // Custom hooks
   const {
@@ -548,6 +549,7 @@ export default function ContactListRefactored() {
         onCheckboxChange={handleCheckboxChange}
         onEditClick={handleEditClick}
         onDeleteClick={handleDeleteClickSingle}
+        onRowClick={(contact) => setViewContact(contact)}
         onSendBroadcast={handleAddbroadcast}
         onExport={() => setShowExportDialog(true)}
         onDelete={handleDeleteClick}
@@ -624,17 +626,11 @@ export default function ContactListRefactored() {
         }}
       />
 
-      <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
+      {/* Contact Details Modal */}
+      <ContactDetailsModal
+        contact={viewContact}
+        isOpen={!!viewContact}
+        onClose={() => setViewContact(null)}
       />
     </>
   );

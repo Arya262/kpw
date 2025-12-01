@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 import BroadcastStats from "./BroadcastStats";
 import vendor from "../../assets/Vector.png";
 import BroadcastDashboard from "./BroadcastDashboard";
@@ -69,7 +68,6 @@ const Broadcast = () => {
 
   return (
     <div className="p-0 bg-white min-h-screen">
-      <ToastContainer position="top-right" autoClose={3000} theme="light" />
 
       {/* Header */}
       <div className="flex items-center justify-between p-2.5">

@@ -1,6 +1,8 @@
-import React, { useCallback } from "react";
+import React, { useState } from "react";
 import FormInput from "./FormInput";
 import RoutePermissionsSection from "./RoutePermissionsSection";
+import { createUserSchema, updateUserSchema, validateForm } from "../../../utils/validationSchemas";
+import { toast } from "react-toastify";
 
 const UserFormModal = React.memo(({
   isOpen,
@@ -15,21 +17,49 @@ const UserFormModal = React.memo(({
   title,
   isLoading = false,
 }) => {
+  const [errors, setErrors] = useState({});
+
   if (!isOpen) return null;
+
+  // Clear specific field error when user types
+  const handleFieldChange = (fieldName, value) => {
+    // Clear the error for this field when user starts typing
+    if (errors[fieldName]) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[fieldName];
+        return newErrors;
+      });
+    }
+    onUpdateField(fieldName, value);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (isLoading) return; // Prevent multiple submissions
+    if (isLoading) return;
     
-    if (!formData.firstName.trim() || !formData.email.trim()) {
+    // Validate using Zod schema
+    const schema = isEdit ? updateUserSchema : createUserSchema;
+    const dataToValidate = {
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      email: formData.email,
+      password: formData.password,
+      role: formData.role || 'subuser',
+      allowedRoutes: formData.allowedRoutes,
+    };
+    
+    const validation = validateForm(schema, dataToValidate);
+    
+    if (!validation.isValid) {
+      setErrors(validation.errors);
+      const firstError = Object.values(validation.errors)[0];
+      if (firstError) toast.error(firstError);
       return;
     }
     
-    if (!isEdit && !formData.password.trim()) {
-      return;
-    }
-
+    setErrors({});
     await onSubmit();
   };
 
@@ -67,19 +97,23 @@ const UserFormModal = React.memo(({
               <FormInput
                 label="First Name"
                 value={formData.firstName}
-                onChange={(e) => onUpdateField("firstName", e.target.value)}
+                onChange={(e) => handleFieldChange("firstName", e.target.value)}
                 placeholder="Enter first name"
                 required
                 name="firstName"
+                error={errors.firstName}
+                touched={!!errors.firstName}
               />
             </div>
             <div className="w-full md:w-1/2">
               <FormInput
                 label="Last Name"
                 value={formData.lastName}
-                onChange={(e) => onUpdateField("lastName", e.target.value)}
+                onChange={(e) => handleFieldChange("lastName", e.target.value)}
                 placeholder="Enter last name"
                 name="lastName"
+                error={errors.lastName}
+                touched={!!errors.lastName}
               />
             </div>
           </div>
@@ -91,12 +125,14 @@ const UserFormModal = React.memo(({
                 label="Email"
                 type="email"
                 value={formData.email}
-                onChange={(e) => onUpdateField("email", e.target.value)}
+                onChange={(e) => handleFieldChange("email", e.target.value)}
                 placeholder="Enter email"
                 required={!isEdit}
                 disabled={isEdit}
                 name="email"
                 autoComplete={isEdit ? "off" : "new-email"}
+                error={errors.email}
+                touched={!!errors.email}
               />
             </div>
             <div className="w-full md:w-1/2">
@@ -104,11 +140,13 @@ const UserFormModal = React.memo(({
                 label="Password"
                 type="password"
                 value={formData.password}
-                onChange={(e) => onUpdateField("password", e.target.value)}
+                onChange={(e) => handleFieldChange("password", e.target.value)}
                 placeholder={isEdit ? "Enter new password (leave blank to keep unchanged)" : "Enter password"}
                 required={!isEdit}
                 name="password"
                 autoComplete="new-password"
+                error={errors.password}
+                touched={!!errors.password}
               />
             </div>
           </div>
@@ -119,9 +157,11 @@ const UserFormModal = React.memo(({
               <FormInput
                 label="Mobile No"
                 value={formData.mobileNo}
-                onChange={(e) => onUpdateField("mobileNo", e.target.value)}
+                onChange={(e) => handleFieldChange("mobileNo", e.target.value)}
                 placeholder="Enter mobile number"
                 name="mobileNo"
+                error={errors.mobileNo}
+                touched={!!errors.mobileNo}
               />
             </div>
             <div className="w-full md:w-1/2">
@@ -130,7 +170,7 @@ const UserFormModal = React.memo(({
               </label>
               <select
                 value={formData.role}
-                onChange={(e) => onUpdateField("role", e.target.value)}
+                onChange={(e) => handleFieldChange("role", e.target.value)}
                 className="w-full border border-gray-300 p-2 rounded-md text-gray-700 h-[38px] focus:border-[#05A3A3] focus:outline-none focus:ring-1 focus:ring-[#05A3A3] transition-all duration-150 ease-in-out bg-white"
                 required
                 disabled={isEdit && formData.role === "owner"}

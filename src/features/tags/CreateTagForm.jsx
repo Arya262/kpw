@@ -4,6 +4,7 @@ import { useAuth } from "../../context/AuthContext";
 import axios from "axios";
 import { showSuccessToast, showErrorToast, showWarningToast } from "../../utils/toastConfig";
 import { getTagId, getTagName, getTagColor, formatTagDate } from "./utils/tagUtils";
+import { tagSchema, validateField } from "../../utils/validationSchemas";
 
 const CreateTagForm = ({ 
   onSuccess, 
@@ -38,8 +39,10 @@ const CreateTagForm = ({
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!tagName.trim()) {
-      showWarningToast("Tag name is required");
+    // Validate using Zod schema
+    const validation = validateField(tagSchema.shape.name, tagName.trim());
+    if (!validation.isValid) {
+      showWarningToast(validation.error);
       return;
     }
 

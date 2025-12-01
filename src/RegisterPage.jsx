@@ -4,13 +4,28 @@ import { FaEyeSlash, FaEye } from "react-icons/fa";
 import whatsAppLogo from "./assets/whatsappIcon.png";
 import { API_ENDPOINTS } from "./config/api";
 import axios from "axios";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 import { handleError, handleSuccess, USER_MESSAGES } from "./utils/errorHandling";
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import { useGoogleLogin } from '@react-oauth/google';
 import { motion } from 'framer-motion';
+import { z } from 'zod';
+import { nameSchema, emailSchema, passwordSchema, phoneSchema } from "./utils/validationSchemas";
+
+// Zod schema for registration
+const registerFormSchema = z.object({
+  first_name: nameSchema,
+  last_name: nameSchema,
+  phone: phoneSchema,
+  email: emailSchema,
+  password: passwordSchema,
+  confirm_password: z.string().min(1, 'Please confirm your password'),
+  address: z.string().optional(),
+}).refine((data) => data.password === data.confirm_password, {
+  message: "Passwords do not match",
+  path: ['confirm_password'],
+});
 
 const RegisterPage = () => {
   const navigate = useNavigate();
@@ -30,27 +45,20 @@ const RegisterPage = () => {
   const [touched, setTouched] = useState({});
 
   const validateField = (name, value) => {
-    switch (name) {
-      case "first_name":
-        return !value.trim() ? "First name is required." : "";
-      case "last_name":
-        return !value.trim() ? "Last name is required." : "";
-      case "phone":
-        return ""; // Phone is optional, no validation
-      case "email":
-        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
-          ? ""
-          : "Please enter a valid email.";
-      case "password":
-        return value.length < 6
-          ? "Password must be at least 6 characters."
-          : "";
-      case "confirm_password":
-        return value !== form.password ? "Passwords do not match." : "";
-      case "address":
-        return ""; // Address is optional, no validation
-      default:
-        return "";
+    try {
+      if (registerFormSchema.shape[name]) {
+        registerFormSchema.shape[name].parse(value);
+      }
+      // Special case for confirm_password
+      if (name === 'confirm_password' && value !== form.password) {
+        return "Passwords do not match.";
+      }
+      return "";
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return error.errors[0]?.message || "Invalid value";
+      }
+      return "";
     }
   };
 
@@ -71,20 +79,20 @@ const RegisterPage = () => {
   };
 
   const validate = () => {
-    const newErrors = {
-      first_name: validateField("first_name", form.first_name),
-      last_name: validateField("last_name", form.last_name),
-      phone: validateField("phone", form.phone),
-      email: validateField("email", form.email),
-      password: validateField("password", form.password),
-      confirm_password: validateField(
-        "confirm_password",
-        form.confirm_password
-      ),
-      address: validateField("address", form.address),
-    };
-    setErrors(newErrors);
-    return !Object.values(newErrors).some((err) => err);
+    const result = registerFormSchema.safeParse(form);
+    if (!result.success) {
+      const newErrors = {};
+      result.error.errors.forEach((err) => {
+        const path = err.path[0];
+        if (!newErrors[path]) {
+          newErrors[path] = err.message;
+        }
+      });
+      setErrors(newErrors);
+      return false;
+    }
+    setErrors({});
+    return true;
   };
 
   const handleRegister = async (e) => {
@@ -134,7 +142,6 @@ const RegisterPage = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-t from-[#adede9] via-[#def7f6] via-[#d4f5f3] to-white p-4">
-      <ToastContainer />
       <motion.div
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
