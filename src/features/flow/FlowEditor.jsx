@@ -42,6 +42,7 @@ const FlowEditor = () => {
   const [showPreview, setShowPreview] = useState(false);
   const [showFlowNameModal, setShowFlowNameModal] = useState(false);
   const [shouldFitView, setShouldFitView] = useState(true);
+  const [flowType, setFlowType] = useState("inbound"); // "inbound" or "outbound"
 
   const previewData = useMemo(() => {
     if (!previewNodeId) return null;
@@ -164,12 +165,21 @@ const FlowEditor = () => {
     setShowFlowNameModal(true);
   }, []);
 
-  const handleFlowNameConfirm = useCallback((flowName) => {
+  const handleFlowNameConfirm = useCallback((flowName, selectedFlowType) => {
     setShowFlowNameModal(false);
     setShouldFitView(true);
     setMode("edit");
     setEditingFlowId(null);
-    setNodes([createStartNode()]);
+    setFlowType(selectedFlowType);
+    
+    // Only add start node for inbound flows
+    if (selectedFlowType === "inbound") {
+      setNodes([createStartNode()]);
+    } else {
+      // Outbound flows start with empty canvas (no start node)
+      setNodes([]);
+    }
+    
     setEdges([]);
     setFlowTitle(flowName);
     setFlowEnabled(true);
@@ -181,6 +191,7 @@ const FlowEditor = () => {
       
       setMode("edit");
       setEditingFlowId(flow.id);
+      setFlowType(flow.flowType || "inbound"); // Load flow type
       
       const savedTransform = await handleLoadFlow(flow);
       const hasTransform = !!savedTransform;
@@ -217,7 +228,8 @@ const FlowEditor = () => {
           enabled,
           nodes,
           edges,
-          currentViewport
+          currentViewport,
+          flowType
         );
         if (success) {
           setMode("table");
@@ -226,9 +238,10 @@ const FlowEditor = () => {
           setFlowTitle("Untitled");
           setFlowEnabled(true);
           setEditingFlowId(null);
+          setFlowType("inbound");
         }
       } else {
-        handleSaveFlowFromHeader(title, enabled, nodes, edges, currentViewport);
+        handleSaveFlowFromHeader(title, enabled, nodes, edges, currentViewport, flowType);
       }
     },
     [
@@ -242,6 +255,7 @@ const FlowEditor = () => {
       setFlowTitle,
       setFlowEnabled,
       getViewport,
+      flowType,
     ]
   );
 
@@ -306,6 +320,7 @@ const FlowEditor = () => {
                 isSaving={loadingFlow}
                 onImport={handleImportFlow}
                 isEditingFlow={!!editingFlowId}
+                flowType={flowType}
                 onBack={() => {
                   setMode("table");
                   setNodes([]);
@@ -313,32 +328,25 @@ const FlowEditor = () => {
                   setFlowTitle("Untitled");
                   setFlowEnabled(true);
                   setEditingFlowId(null);
+                  setFlowType("inbound");
                 }}
               />
 
               <div className="flow-editor-canvas flex-1 min-h-0">
-                {nodes.length === 0 && edges.length === 0 ? (
-                  <div className="flex items-center justify-center h-full bg-gray-50">
-                    <div className="text-center">
-                      <p className="text-gray-500 mb-4">No flow data loaded</p>
-                    </div>
-                  </div>
-                ) : (
-                  <FlowCanvas
-                    nodes={nodes}
-                    edges={edges}
-                    onNodesChange={onNodesChange}
-                    onEdgesChange={onEdgesChange}
-                    onConnect={onConnect}
-                    onEdgeClick={onEdgeClick}
-                    onEdgeContextMenu={onEdgeContextMenu}
-                    onDrop={onDrop}
-                    onDragOver={onDragOver}
-                    nodeTypes={nodeTypes}
-                    isImporting={isImporting}
-                    shouldFitView={shouldFitView}
-                  />
-                )}
+                <FlowCanvas
+                  nodes={nodes}
+                  edges={edges}
+                  onNodesChange={onNodesChange}
+                  onEdgesChange={onEdgesChange}
+                  onConnect={onConnect}
+                  onEdgeClick={onEdgeClick}
+                  onEdgeContextMenu={onEdgeContextMenu}
+                  onDrop={onDrop}
+                  onDragOver={onDragOver}
+                  nodeTypes={nodeTypes}
+                  isImporting={isImporting}
+                  shouldFitView={shouldFitView}
+                />
               </div>
             </div>
 

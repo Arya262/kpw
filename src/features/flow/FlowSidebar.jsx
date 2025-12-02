@@ -9,6 +9,7 @@ import {
   Type,
   Image,
   Tag,
+  FileText,
 } from "lucide-react";
 
 const DraggableCard = ({ type, label, Icon, onAddNode }) => {
@@ -58,11 +59,18 @@ const FlowSidebar = ({ onAddNode }) => {
     { label: "Media", type: "media", Icon: Image },
     { label: "Text Button", type: "text-button", Icon: MessageSquare },
     { label: "Media Button", type: "media-button", Icon: Video },
+    { label: "Template", type: "template", Icon: FileText }
+  ];
+
+  const actionNodes = [
     { label: "Add Tag", type: "add-tag", Icon: Tag },
+    { label: "Delay", type: "delay", Icon: () => <span className="text-lg">⏱️</span> },
+    { label: "Condition", type: "condition", Icon: () => <span className="text-lg">🔀</span> },
+    { label: "Goal", type: "goal", Icon: () => <span className="text-lg">🎯</span> },
   ];
 
   return (
-    <div className="w-70 p-4 bg-[#f8f9fb] h-full space-y-4">
+    <div className="w-70 p-4 bg-[#f8f9fb] h-full space-y-4 overflow-y-auto">
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
         <p className="text-xs text-blue-700">
           <strong>💡 Tip:</strong> Click to add to center or drag to position
@@ -70,9 +78,24 @@ const FlowSidebar = ({ onAddNode }) => {
       </div>
 
       <div>
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">Message Types</h3>
+        <h3 className="text-sm font-semibold text-gray-700 mb-3">Messages</h3>
         <div className="grid grid-cols-2 gap-3">
           {messageNodes.map(({ label, type, Icon }) => (
+            <DraggableCard
+              key={`${type}-${label}`}
+              type={type}
+              label={label}
+              Icon={Icon}
+              onAddNode={onAddNode}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-sm font-semibold text-gray-700 mb-3">Actions & Logic</h3>
+        <div className="grid grid-cols-2 gap-3">
+          {actionNodes.map(({ label, type, Icon }) => (
             <DraggableCard
               key={`${type}-${label}`}
               type={type}

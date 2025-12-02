@@ -65,11 +65,14 @@ export const useSequenceWizard = (onSuccess, dripId = null) => {
     let result;
 
     if (currentStep === 1) {
-      result = sequenceSchema.pick({ drip_name: true }).safeParse(seqData);
+      result = sequenceSchema.pick({ drip_name: true, tag: true }).safeParse(seqData);
       if (!result.success) {
         result.error.errors.forEach((err) => {
           if (err.path.includes("drip_name")) {
             errors.drip_name = err.message;
+          }
+          if (err.path.includes("tag")) {
+            errors.tag = err.message;
           }
         });
       }

@@ -281,7 +281,18 @@ const FlowTable = ({
                         {new Date(flow.created_at).toLocaleDateString()}
                       </td>
                       <td className="px-2 py-4 text-[12px] sm:text-[16px] text-gray-700">
-                        {flow.name || "-"}
+                        <div className="flex items-center justify-center gap-2">
+                          <span>{flow.name || "-"}</span>
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                              flow.flowType === "outbound"
+                                ? "bg-purple-100 text-purple-700"
+                                : "bg-blue-100 text-blue-700"
+                            }`}
+                          >
+                            {flow.flowType === "outbound" ? "📤" : "📥"}
+                          </span>
+                        </div>
                       </td>
                       <td className="px-2 py-4 text-[12px] sm:text-[16px] text-green-600">
                         {flow.status}

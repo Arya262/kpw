@@ -34,7 +34,11 @@ export const FRONTEND_TO_BACKEND_NODE_TYPES = {
   "summary": "summary",
   "set-variable": "setvariable",
   "set-custom-field": "setcustomfield",
-  "template": "template"
+  "template": "template",
+  "add-tag": "addtag",
+  "delay": "delay",
+  "condition": "condition",
+  "goal": "goal"
 };
 
 export const BACKEND_TO_FRONTEND_NODE_TYPES = {
@@ -56,7 +60,11 @@ export const BACKEND_TO_FRONTEND_NODE_TYPES = {
   "summary": "summary",
   "setvariable": "set-variable",
   "setcustomfield": "set-custom-field",
-  "template": "template"
+  "template": "template",
+  "addtag": "add-tag",
+  "delay": "delay",
+  "condition": "condition",
+  "goal": "goal"
 };
 
 

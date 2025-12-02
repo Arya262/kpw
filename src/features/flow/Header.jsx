@@ -11,7 +11,8 @@ const Header = ({
   isSaving = false,
   onImport,
   isEditingFlow = false,
-  onBack
+  onBack,
+  flowType = "inbound"
 }) => {
   const [localTitle, setLocalTitle] = useState(title);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -113,7 +114,7 @@ const Header = ({
           )}
 
           {/* Title */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             {isEditingTitle ? (
               <input
                 value={localTitle}
@@ -132,6 +133,17 @@ const Header = ({
                 <Pencil size={16} className="text-gray-500" />
               </h2>
             )}
+            
+            {/* Flow Type Badge */}
+            <span
+              className={`px-3 py-1 rounded-full text-xs font-medium ${
+                flowType === "outbound"
+                  ? "bg-purple-100 text-purple-700"
+                  : "bg-blue-100 text-blue-700"
+              }`}
+            >
+              {flowType === "outbound" ? "📤 Outbound" : "📥 Inbound"}
+            </span>
           </div>
         </div>
 

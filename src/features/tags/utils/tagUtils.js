@@ -1,10 +1,5 @@
-// Tag utility functions
-
-// Extract tag ID from different possible field names (backend uses 'id')
 export const getTagId = (tag) => tag?.id || tag?.tag_id || tag?._id || null;
 
-// Extract tag name from different possible field names (backend uses 'tag')
-// Also handles string tags (when backend returns tags as array of strings)
 export const getTagName = (tag) => {
   if (typeof tag === "string") return tag;
   return tag?.tag || tag?.tag_name || tag?.name || "Untitled";

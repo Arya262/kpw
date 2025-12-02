@@ -224,6 +224,38 @@ export const useNodeHandlers = (setNodes, setEdges, updateNodeData) => {
           longitudeField: "",
           latitudeField: "",
         },
+        template: {
+          selectedTemplate: null,
+          buttons: [],
+          interactiveButtonsItems: [],
+        },
+        delay: {
+          delayValue: 1,
+          delayUnit: "hours",
+          delayType: "duration",
+          specificTime: "",
+          specificDate: "",
+        },
+        condition: {
+          conditionType: "tag",
+          conditions: [
+            {
+              id: Date.now(),
+              field: "",
+              operator: "equals",
+              value: "",
+            },
+          ],
+          matchType: "all",
+        },
+        goal: {
+          goalName: "",
+          goalDescription: "",
+          goalType: "conversion",
+          actionOnComplete: "continue",
+          completionTag: "",
+          trackMetrics: true,
+        },
       };
 
       const initialData = { ...base, ...(typeDefaults[type] || {}) };

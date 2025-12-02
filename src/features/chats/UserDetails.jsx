@@ -3,17 +3,52 @@ import { formatTime } from "../../utils/time";
 import Avatar from "../../utils/Avatar";
 import Dropdown from "../../components/Dropdown";
 import { FiUserX, FiUserCheck } from "react-icons/fi";
-import { getTagName, getTagColor } from "../tags/utils/tagUtils";
+import { X } from "lucide-react";
+import { getTagName, getTagColor, getTagId } from "../tags/utils/tagUtils";
+import { API_ENDPOINTS } from "../../config/api";
+import axios from "axios";
+import { toast } from "react-toastify";
 
-const UserDetails = ({ isExpanded, setIsExpanded, selectedContact, updateBlockStatus }) => {
+const UserDetails = ({ isExpanded, setIsExpanded, selectedContact, updateBlockStatus, onContactUpdate }) => {
   const [status, setStatus] = useState("");
   const [incomingStatus, setIncomingStatus] = useState("");
   const [isBlocked, setIsBlocked] = useState(selectedContact?.block || false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [localTags, setLocalTags] = useState(selectedContact?.tags || []);
+  const [isRemovingTag, setIsRemovingTag] = useState(null);
 
   useEffect(() => {
     setIsBlocked(selectedContact?.block || false);
+    setLocalTags(selectedContact?.tags || []);
   }, [selectedContact]);
+
+  const handleRemoveTag = async (tagToRemove) => {
+    const tagId = getTagId(tagToRemove);
+    const contactId = selectedContact?.contact_id;
+    if (!tagId || !contactId) return;
+    
+    setIsRemovingTag(tagId);
+    try {
+      await axios.post(
+        API_ENDPOINTS.TAGS.UNASSIGN,
+        { contact_id: contactId, tag_id: tagId },
+        { withCredentials: true }
+      );
+      
+      setLocalTags(prev => prev.filter(t => getTagId(t) !== tagId));
+      
+      if (onContactUpdate) {
+        onContactUpdate();
+      }
+      
+      toast.success("Tag removed");
+    } catch (error) {
+      console.error("Failed to remove tag:", error);
+      toast.error("Failed to remove tag");
+    } finally {
+      setIsRemovingTag(null);
+    }
+  };
 
   if (!selectedContact) return null;
 
@@ -185,15 +220,17 @@ const UserDetails = ({ isExpanded, setIsExpanded, selectedContact, updateBlockSt
                 Tags
               </label>
 
-              {selectedContact?.tags?.length > 0 ? (
+              {localTags?.length > 0 ? (
                 <div className="flex flex-wrap gap-2 mt-1">
-                  {selectedContact.tags.map((tag, index) => {
+                  {localTags.map((tag, index) => {
                     const tagName = getTagName(tag);
                     const tagColor = getTagColor(tag);
+                    const tagId = getTagId(tag);
+                    const isRemoving = isRemovingTag === tagId;
                     return (
                       <span
-                        key={tag?.id || tag?.tag_id || `tag-${index}`}
-                        className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium"
+                        key={tagId || `tag-${index}`}
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium ${isRemoving ? "opacity-50" : ""}`}
                         style={{
                           backgroundColor: `${tagColor}20`,
                           color: tagColor,
@@ -201,6 +238,17 @@ const UserDetails = ({ isExpanded, setIsExpanded, selectedContact, updateBlockSt
                         }}
                       >
                         {tagName}
+                        <button
+                          onClick={() => handleRemoveTag(tag)}
+                          disabled={isRemoving}
+                          className="ml-0.5 hover:opacity-70 disabled:cursor-not-allowed"
+                        >
+                          {isRemoving ? (
+                            <span className="animate-spin text-[10px]">⏳</span>
+                          ) : (
+                            <X size={12} />
+                          )}
+                        </button>
                       </span>
                     );
                   })}

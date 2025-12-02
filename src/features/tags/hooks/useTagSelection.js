@@ -37,7 +37,6 @@ export const useTagSelection = () => {
     }
   }, []);
 
-  // Check if all visible tags are selected
   const areAllSelected = useCallback((visibleTags) => {
     if (visibleTags.length === 0) return false;
     return visibleTags.every((tag) => selectedIds[getTagId(tag)]);

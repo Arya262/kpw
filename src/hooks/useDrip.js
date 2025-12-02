@@ -28,6 +28,7 @@ export const useDrip = () => {
     customer_id: seqData.customer_id || customer_id,
     drip_name: seqData.drip_name,
     drip_description: seqData.drip_description || "",
+    tag: seqData.tag || [], // Array of tag IDs
     trigger_type: seqData.trigger_type || "",
     status: seqData.status || "active",
 
@@ -86,15 +87,39 @@ export const useDrip = () => {
     return { value: num, unit: "minutes" };
   };
 
-  const transformToEditFormat = (drip) => {
+  const transformToEditFormat = (drip, allTags = []) => {
     // The getDrip endpoint already parses steps and delivery_preferences
     const steps = drip.steps || [];
     const deliveryPrefs = drip.delivery_preferences || {};
+    
+    // Handle multiple tags - backend returns tags as array of IDs [4, 6, 5, 7]
+    const tagIdsFromDrip = drip.tags || [];
+    
+    // Extract tag IDs
+    const tagIds = tagIdsFromDrip.map(t => {
+      if (typeof t === 'number') return t;
+      return t.id || t.tag_id;
+    }).filter(Boolean);
+    
+    // Match tag IDs with full tag objects from allTags
+    const tagObjects = tagIds.map(tagId => {
+      const foundTag = allTags.find(t => (t.id || t.tag_id) === tagId);
+      if (foundTag) {
+        return foundTag;
+      }
+      // Fallback: create placeholder if tag not found
+      return { id: tagId, tag_id: tagId, tag: `Tag ${tagId}`, name: `Tag ${tagId}` };
+    });
+    
+    const tagNames = tagObjects.map(t => t.tag || t.name || "").filter(Boolean);
 
     return {
       id: drip.drip_id || drip.id,
       drip_name: drip.drip_name || "",
       drip_description: drip.drip_description || "",
+      tag: tagIds, // Array of tag IDs
+      selectedTagObjects: tagObjects, // Array of tag objects (with placeholders if needed)
+      target_type: tagNames.join(", "), // Comma-separated tag names for display
       trigger_type: drip.trigger_type || "",
       status: drip.status || "active",
       color: "bg-teal-500",
@@ -169,6 +194,7 @@ export const useDrip = () => {
     console.log("Looking for dripId:", dripId);
     
     try {
+      // Fetch drip data
       const { data: result } = await axios.get(
         API_ENDPOINTS.DRIP.GET_ALL(customer_id),
         { withCredentials: true }
@@ -186,7 +212,19 @@ export const useDrip = () => {
         return { success: false, error: "Sequence not found" };
       }
       
-      const transformed = transformToEditFormat(drip);
+      // Fetch all tags to match with tag IDs
+      let allTags = [];
+      try {
+        const { data: tagsResult } = await axios.get(
+          API_ENDPOINTS.TAGS.GET_ALL(customer_id),
+          { withCredentials: true }
+        );
+        allTags = tagsResult?.tags || tagsResult?.data || tagsResult || [];
+      } catch (tagErr) {
+        console.warn("Failed to fetch tags:", tagErr);
+      }
+      
+      const transformed = transformToEditFormat(drip, allTags);
       console.log("=== TRANSFORMED FOR EDIT ===");
       console.log(JSON.stringify(transformed, null, 2));
       

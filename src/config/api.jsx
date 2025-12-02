@@ -99,7 +99,7 @@ export const API_ENDPOINTS = {
   TAGS: {
     GET_ALL: (customerId) => `${API_BASE}/tag/customer/${customerId}`,
     ADD: `${API_BASE}/tag/add`,
-    DELETE: (tagId) => `${API_BASE}/tag/delete/${tagId}`,
     ASSIGN: `${API_BASE}/tag/assignTag`,
+    UNASSIGN: `${API_BASE}/tag/unassignTag`,
   },
 };

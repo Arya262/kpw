@@ -407,13 +407,11 @@ export default function ContactListRefactored() {
 
   const checkPlanBeforeAction = useCallback((action) => {
     const plan = (user?.plan || '').toLowerCase();
-    // Block bulk import unless plan is pro
     if (action === 'bulkImport' && plan !== 'pro') {
       setActionRequiringPlan(action);
       setShowPlansModal(true);
       return false;
     }
-    // Also block any action if no plan at all
     if (!user?.plan || user?.plan === 'null') {
       setActionRequiringPlan(action);
       setShowPlansModal(true);
@@ -631,6 +629,7 @@ export default function ContactListRefactored() {
         contact={viewContact}
         isOpen={!!viewContact}
         onClose={() => setViewContact(null)}
+        onContactUpdate={() => fetchContacts(pagination.currentPage, pagination.itemsPerPage, searchTerm)}
       />
     </>
   );

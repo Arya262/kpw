@@ -1,13 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
-import { X, ArrowRight, MessageCircle, Send } from "lucide-react";
-import { Lightbulb } from "lucide-react";
+import { X, MessageCircle, Send, Lightbulb } from "lucide-react";
 
 const FlowNameModal = ({ isOpen, onClose, onConfirm, initialName = "" }) => {
   const [flowName, setFlowName] = useState(initialName);
   const [flowType, setFlowType] = useState("inbound"); // "inbound" or "outbound"
   const inputRef = useRef(null);
-  const navigate = useNavigate();
 
   useEffect(() => {
     if (isOpen) {
@@ -25,15 +22,9 @@ const FlowNameModal = ({ isOpen, onClose, onConfirm, initialName = "" }) => {
     const trimmed = flowName.trim();
     if (!trimmed) return;
 
-    if (flowType === "outbound") {
-      // Navigate to autocampaign page
-      onClose();
-      navigate("/autocampaign");
-    } else {
-      // Continue with inbound flow creation
-      onConfirm(trimmed);
-      setFlowName("");
-    }
+    // Pass both flow name and type to parent
+    onConfirm(trimmed, flowType);
+    setFlowName("");
   };
 
   const handleKeyDown = (e) => {
@@ -222,14 +213,7 @@ const FlowNameModal = ({ isOpen, onClose, onConfirm, initialName = "" }) => {
               disabled={!flowName.trim()}
               className="flex-1 px-4 py-2.5 bg-[#0AA89E] text-white rounded-lg hover:bg-[#089086] disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium flex items-center justify-center gap-2"
             >
-              {flowType === "outbound" ? (
-                <>
-                  Continue
-                  <ArrowRight size={16} />
-                </>
-              ) : (
-                "Create Flow"
-              )}
+              Create Flow
             </button>
           </div>
         </form>

@@ -18,6 +18,9 @@ import ContactCustomFieldNode from "../components/nodes/ContactCustomFieldNode";
 import SummaryNode from "../components/nodes/SummaryNode";
 import SetVariableNode from "../components/nodes/SetVariableNode";
 import AddTagNode from "../components/nodes/AddTagNode";
+import DelayNode from "../components/nodes/DelayNode";
+import ConditionNode from "../components/nodes/ConditionNode";
+import GoalNode from "../components/nodes/GoalNode";
 
 export const useNodeTypes = (
   handlePreviewRequest,
@@ -61,6 +64,9 @@ export const useNodeTypes = (
       summary: wrap(SummaryNode),
 
       "add-tag": wrap(AddTagNode),
+      delay: wrap(DelayNode),
+      condition: wrap(ConditionNode),
+      goal: wrap(GoalNode),
     }),
     [handlePreviewRequest, handleNodeDelete, handleNodeDuplicate]
   );

@@ -120,20 +120,12 @@ export const getNodeIcon = (nodeType) => {
   return icons[nodeType] || '📌';
 };
 
-/**
- * Export node data for debugging
- * @param {object} nodeData - Node data to export
- * @returns {string} JSON string of node data
- */
+
 export const exportNodeData = (nodeData) => {
   return JSON.stringify(nodeData, null, 2);
 };
 
-/**
- * Import node data from JSON
- * @param {string} jsonString - JSON string to import
- * @returns {object|null} Parsed node data or null if invalid
- */
+
 export const importNodeData = (jsonString) => {
   try {
     return JSON.parse(jsonString);

@@ -1,12 +1,9 @@
-import { useEffect } from "react";
-import { useAuth } from "../../context/AuthContext";
-import { useTagsApi } from "../tags/hooks/useTagsApi";
 import { z } from "zod";
+import TagSelector from "../tags/components/TagSelector";
 
 const MAX_NAME_LENGTH = 50;
 const MAX_DESC_LENGTH = 200;
 
-// Zod schema for sequence validation
 export const sequenceInfoSchema = z.object({
   drip_name: z
     .string()
@@ -21,18 +18,24 @@ export const sequenceInfoSchema = z.object({
 });
 
 const SequenceInfoStep = ({ seqData, setSeqData, fieldErrors = {} }) => {
-  const { user } = useAuth();
-  const {
-    tags,
-    isLoading,
-    fetchTags,
-  } = useTagsApi(user?.customer_id);
+  const selectedTags = seqData.selectedTagObjects || [];
 
-  useEffect(() => {
-    if (user?.customer_id) {
-      fetchTags();
-    }
-  }, [user?.customer_id]);
+  const handleTagChange = (tags) => {
+    // Extract tag IDs from all selected tags
+    const tagIds = tags.map(tag => tag?.id || tag?.tag_id).filter(Boolean);
+    
+    // Get tag names for display
+    const tagNames = tags.map(tag => 
+      typeof tag === "object" ? (tag.tag || tag.name || "") : tag
+    ).filter(Boolean);
+    
+    setSeqData({ 
+      ...seqData, 
+      tag: tagIds, 
+      selectedTagObjects: tags, 
+      target_type: tagNames.join(", ") 
+    });
+  };
 
   const handleNameChange = (e) => {
     const value = e.target.value;
@@ -131,34 +134,18 @@ const SequenceInfoStep = ({ seqData, setSeqData, fieldErrors = {} }) => {
               <label className="block text-sm font-medium text-gray-700 mb-2 mt-6">
                 Drip Based On <span className="text-red-500">*</span>
               </label>
-              <select
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors bg-white"
-                value={seqData.target_type}
-                onChange={(e) =>
-                  setSeqData({ ...seqData, target_type: e.target.value })
-                }
-              >
-                <option value="">Select a trigger type</option>
-                {isLoading ? (
-                  <option value="" disabled>
-                    Loading tags...
-                  </option>
-                ) : tags && tags.length > 0 ? (
-                  tags.map((t) => {
-                    return (
-                      <option key={t.id} value={t.tag || "contacts"}>
-                        {t.tag || "contacts"}
-                      </option>
-                    );
-                  })
-                ) : (
-                  <option value="" disabled>
-                    No tags available
-                  </option>
-                )}
-              </select>
+              <TagSelector
+                selectedTags={selectedTags}
+                onTagsChange={handleTagChange}
+                placeholder="Select tags to trigger this drip..."
+                allowCreate={false}
+                maxTags={null}
+              />
+              {fieldErrors.tag && (
+                <p className="text-xs text-red-500 mt-1">{fieldErrors.tag}</p>
+              )}
               <p className="text-xs text-gray-500 mt-1">
-                Choose what will trigger this drip
+                Choose which tags will trigger this drip sequence (multiple allowed)
               </p>
             </div>
           </div>
@@ -197,11 +184,22 @@ const SequenceInfoStep = ({ seqData, setSeqData, fieldErrors = {} }) => {
                   Draft
                 </span>
               </div>
-               <div>
-                <p className="text-xs text-gray-500">Target</p>
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                  {seqData.target_type}
-                </span>
+               <div className="flex-1">
+                <p className="text-xs text-gray-500 mb-1">Tags</p>
+                <div className="flex flex-wrap gap-1">
+                  {seqData.selectedTagObjects && seqData.selectedTagObjects.length > 0 ? (
+                    seqData.selectedTagObjects.map((tag, idx) => (
+                      <span 
+                        key={idx}
+                        className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800"
+                      >
+                        {tag.tag || tag.name || "Tag"}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-xs text-gray-400">None</span>
+                  )}
+                </div>
               </div>
             </div>
           </div>

@@ -11,9 +11,7 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
   const [flowTitle, setFlowTitle] = useState("Untitled");
   const [flowEnabled, setFlowEnabled] = useState(true);
 
-  // ---------------------------------------------------------
-  // LOAD ALL FLOWS FOR CUSTOMER
-  // ---------------------------------------------------------
+
   useEffect(() => {
     const fetchFlows = async () => {
       if (!user?.customer_id) {
@@ -54,6 +52,7 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
               id: flow.id,
               name: flow.flow_name,
               isActive: flow.status === "ACTIVE",
+              flowType: flow.flow_type || "inbound",
               created_at: flow.created_at,
               updated_at: flow.updated_at,
               flow_data: flow.flow_json,
@@ -73,11 +72,9 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
     fetchFlows();
   }, [user?.customer_id]);
 
-  // ---------------------------------------------------------
-  // SAVE NEW FLOW
-  // ---------------------------------------------------------
+
   const handleSaveFlowFromHeader = useCallback(
-    async (title, enabled, nodes, edges, viewport) => {
+    async (title, enabled, nodes, edges, viewport, flowType = "inbound") => {
       if (!title.trim()) {
         toast.error("Please enter a flow name");
         return;
@@ -90,6 +87,7 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
           customer_id: user?.customer_id,
           name: title.trim(),
           enabled,
+          flowType,
         };
 
         const result = await flowAPI.save(nodes, edges, metadata, viewport);
@@ -101,6 +99,7 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
             id: result.id || Date.now(),
             name: title.trim(),
             isActive: enabled,
+            flowType: flowType,
             flow_data: result.flow_json,
             triggerConfig: result.triggerConfig,
             created_at: new Date().toISOString(),
@@ -109,7 +108,7 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
           ...prev,
         ]);
 
-        // Reset editor
+
         setNodes([]);
         setEdges([]);
         setFlowTitle("Untitled");
@@ -125,9 +124,7 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
     [user?.customer_id, setNodes, setEdges, setMode]
   );
 
-  // ---------------------------------------------------------
-  // LOAD FLOW
-  // ---------------------------------------------------------
+
   const handleLoadFlow = useCallback(
     (flow) => {
       setLoadingFlow(true);
@@ -147,7 +144,7 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
         const rawNodes = safeFlow.flowNodes || [];
         const rawEdges = safeFlow.flowEdges || [];
 
-        // Build frontend structure
+  
         const { nodes, edges } = buildFrontendFlow(
           { flowNodes: rawNodes, flowEdges: rawEdges },
           (nodeId, newData) =>
@@ -158,13 +155,12 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
             )
         );
 
-        // Set editor data
         setNodes(nodes);
         setEdges(edges);
         setFlowTitle(flow.name || "Untitled");
         setFlowEnabled(flow.isActive || false);
 
-        // Handle viewport transform
+      
         if (safeFlow.transform) {
           return {
             x: parseFloat(safeFlow.transform.posX || 0),
@@ -185,11 +181,9 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
     [setNodes, setEdges]
   );
 
-  // ---------------------------------------------------------
-  // UPDATE FLOW
-  // ---------------------------------------------------------
+
   const handleUpdateFlow = useCallback(
-    async (flowId, title, enabled, nodes, edges, viewport) => {
+    async (flowId, title, enabled, nodes, edges, viewport, flowType = "inbound") => {
       if (!title.trim()) {
         toast.error("Please enter a flow name");
         return false;
@@ -202,6 +196,7 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
           customer_id: user?.customer_id,
           name: title.trim(),
           enabled,
+          flowType,
         };
 
         const result = await flowAPI.update(
@@ -221,6 +216,7 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
                   ...f,
                   name: title.trim(),
                   isActive: enabled,
+                  flowType: flowType,
                   flow_data: result.flow_json,
                   updated_at: new Date().toISOString(),
                 }
@@ -240,9 +236,6 @@ export const useFlowOperations = (user, setNodes, setEdges, setMode) => {
     [user?.customer_id]
   );
 
-  // ---------------------------------------------------------
-  // DELETE FLOW
-  // ---------------------------------------------------------
   const handleDeleteFlow = useCallback(async (flowId) => {
     try {
       await flowAPI.delete(flowId);

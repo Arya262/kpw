@@ -53,6 +53,7 @@ export const sequenceSchema = z.object({
     .string()
     .min(1, "Sequence name is required")
     .refine((val) => val.trim().length > 0, "Sequence name cannot be empty or just spaces"),
+  tag: z.array(z.number()).min(1, "Please select a tag to trigger this drip"),
   trigger_type: z.string().min(1, "Please select trigger type"),
   delivery_preferences: z.array(deliveryPreferenceSchema),
   steps: z.array(stepSchema).min(1, "At least one step is required"),
@@ -62,6 +63,9 @@ export const sequenceSchema = z.object({
 export const getInitialSeqData = (customerId) => ({
   drip_name: "",
   drip_description: "",
+  tag: [], // Array of tag IDs for backend
+  selectedTagObjects: [], // Array of full tag objects for UI
+  target_type: "", // Tag names for display (comma-separated)
   trigger_type: "",
   status: "active",
   color: "bg-teal-500",
@@ -69,7 +73,7 @@ export const getInitialSeqData = (customerId) => ({
   customer_id: customerId ?? null,
   delivery_preferences: [
     {
-      days: ["Mon", "Tue", "Wed", "Thu", "Fri"],
+      days: [], // Empty by default - user must select days
       time_type: "Any Time",
       time_from: "",
       time_to: "",

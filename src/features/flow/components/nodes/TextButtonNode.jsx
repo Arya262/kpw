@@ -17,7 +17,6 @@ const TextButtonNode = memo(({ data, isConnectable, id, onPreviewRequest, onDele
     delay: "",
   });
 
-  // Initialize buttons from data
   const initialButtons = data?.buttons || data?.interactiveButtonsItems || [];
 
   const {
@@ -28,7 +27,7 @@ const TextButtonNode = memo(({ data, isConnectable, id, onPreviewRequest, onDele
     canAddMore,
   } = useButtonManager(initialButtons, CHAR_LIMITS.MAX_BUTTONS, CHAR_LIMITS.BUTTON_TEXT);
 
-  // Initialize form data once
+ 
   useEffect(() => {
     if (!data || initialized) return;
 
