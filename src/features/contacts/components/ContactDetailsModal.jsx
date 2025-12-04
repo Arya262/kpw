@@ -1,20 +1,25 @@
 import { useState, useEffect } from "react";
-import { X, ChevronDown, Plus, Tag, Copy, Info } from "lucide-react";
+import { X, ChevronDown, ChevronUp, Copy, Info, Plus } from "lucide-react";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
-import TagSelector from "../../tags/components/TagSelector";
-import { getTagName, getTagColor, getTagId } from "../../tags/utils/tagUtils";
 import { API_ENDPOINTS } from "../../../config/api";
 import { toast } from "react-toastify";
 import { useAuth } from "../../../context/AuthContext";
+import { useTagsApi } from "../../tags/hooks/useTagsApi";
 
 export default function ContactDetailsModal({ contact, isOpen, onClose, onContactUpdate }) {
   const { user } = useAuth();
-  const [showAllTags, setShowAllTags] = useState(false);
-  const [showTagSelector, setShowTagSelector] = useState(false);
+  const { tags: availableTags, fetchTags, createTag, assignTag, unassignTag } = useTagsApi(user?.customer_id);
   const [copied, setCopied] = useState(false);
+  
+  // Tags state
+  const [tagsExpanded, setTagsExpanded] = useState(true);
   const [localTags, setLocalTags] = useState([]);
+  const [selectedTagId, setSelectedTagId] = useState("");
+  const [isAddingTag, setIsAddingTag] = useState(false);
   const [isRemovingTag, setIsRemovingTag] = useState(null);
+  const [showCreateTag, setShowCreateTag] = useState(false);
+  const [newTagName, setNewTagName] = useState("");
   
   // Editable fields
   const [editedName, setEditedName] = useState("");
@@ -28,15 +33,23 @@ export default function ContactDetailsModal({ contact, isOpen, onClose, onContac
       const name = contact.first_name || contact.fullName || "";
       const phone = `${contact.country_code || ""}${contact.mobile_no || ""}`;
       
-      setShowAllTags(false);
-      setShowTagSelector(false);
-      setLocalTags(contact?.tags || []);
       setEditedName(name);
       setEditedPhone(phone);
       setOriginalName(name);
       setOriginalPhone(phone);
+      setSelectedTagId("");
+      setShowCreateTag(false);
+      setNewTagName("");
+      setLocalTags(contact?.tags || []);
     }
   }, [isOpen, contact]);
+
+  // Fetch available tags when modal opens
+  useEffect(() => {
+    if (isOpen && user?.customer_id) {
+      fetchTags();
+    }
+  }, [isOpen, user?.customer_id, fetchTags]);
 
   if (!isOpen || !contact) return null;
 
@@ -117,36 +130,87 @@ export default function ContactDetailsModal({ contact, isOpen, onClose, onContac
     setEditedPhone(originalPhone);
   };
 
-  const handleRemoveTag = async (tagToRemove) => {
-    const tagId = getTagId(tagToRemove);
-    if (!tagId || !contactId) return;
+  // Add tag to contact (from dropdown)
+  const handleAddTag = async () => {
+    if (!selectedTagId || !contactId) return;
     
-    setIsRemovingTag(tagId);
-    try {
-      const response = await fetch(API_ENDPOINTS.TAGS.UNASSIGN, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ contact_id: contactId, tag_id: tagId }),
-      });
-      
-      if (response.ok) {
-        setLocalTags(prev => prev.filter(t => getTagId(t) !== tagId));
-        if (onContactUpdate) onContactUpdate();
-        toast.success("Tag removed");
-      } else {
-        toast.error("Failed to remove tag");
-      }
-    } catch (error) {
-      console.error("Failed to remove tag:", error);
-      toast.error("Failed to remove tag");
-    } finally {
-      setIsRemovingTag(null);
+    // Check if already added
+    if (localTags.some(t => String(t.id || t.tag_id) === String(selectedTagId))) {
+      toast.info("Tag already added");
+      setSelectedTagId("");
+      return;
     }
+    
+    setIsAddingTag(true);
+    const result = await assignTag(contactId, selectedTagId, { showToast: true });
+    
+    if (result.success) {
+      const addedTag = availableTags.find(t => String(t.id || t.tag_id) === String(selectedTagId));
+      if (addedTag) setLocalTags(prev => [...prev, addedTag]);
+      setSelectedTagId("");
+      if (onContactUpdate) onContactUpdate();
+    }
+    setIsAddingTag(false);
   };
 
-  const displayTags = showAllTags ? localTags : localTags.slice(0, 3);
-  const remainingTags = localTags.length - 3;
+  // Helper to get tag ID (handles both string tags and object tags)
+  const getTagId = (tag) => {
+    if (typeof tag === 'string') {
+      // Find the tag in availableTags by name
+      const found = availableTags.find(t => (t.tag || t.name) === tag);
+      return found?.id || found?.tag_id;
+    }
+    return tag.id || tag.tag_id;
+  };
+
+  // Helper to get tag name
+  const getTagName = (tag) => {
+    if (typeof tag === 'string') return tag;
+    return tag.tag || tag.name || tag.tag_name || "Unknown";
+  };
+
+  // Remove tag from contact
+  const handleRemoveTag = async (tag) => {
+    const tagId = getTagId(tag);
+    const tagName = getTagName(tag);
+    
+    if (!tagId || !contactId) {
+      console.log("Missing tagId or contactId", { tagId, contactId, tag });
+      return;
+    }
+    
+    setIsRemovingTag(tagId);
+    const result = await unassignTag(contactId, tagId, { showToast: true });
+    
+    if (result.success) {
+      setLocalTags(prev => prev.filter(t => getTagName(t) !== tagName));
+      if (onContactUpdate) onContactUpdate();
+    }
+    setIsRemovingTag(null);
+  };
+
+  // Create and add new tag
+  const handleCreateAndAddTag = async () => {
+    if (!newTagName.trim() || !contactId) return;
+    
+    setIsAddingTag(true);
+    
+    // First create the tag using the hook
+    const createResult = await createTag({ tag: newTagName.trim() });
+    
+    if (createResult.success && createResult.tag) {
+      // Then assign it to contact
+      const assignResult = await assignTag(contactId, createResult.tag.id, { showToast: false });
+      
+      if (assignResult.success) {
+        setLocalTags(prev => [...prev, createResult.tag]);
+        toast.success("Tag created and added successfully");
+        setNewTagName("");
+        if (onContactUpdate) onContactUpdate();
+      }
+    }
+    setIsAddingTag(false);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
@@ -285,110 +349,127 @@ export default function ContactDetailsModal({ contact, isOpen, onClose, onContac
               </div>
             )}
           </div>
-          
-          {/* Tags */}
-          <div>
-            <h3 className="text-xs font-bold text-gray-900 tracking-wide mb-2">TAGS</h3>
-            <label className="text-sm text-gray-500">Contact Tags</label>
 
-            {showTagSelector ? (
-              <div className="mt-2">
-                <TagSelector
-                  selectedTags={localTags}
-                  onTagsChange={async (newTags) => {
-                    const oldTagIds = localTags.map(t => getTagId(t));
-                    const newTagIds = newTags.map(t => getTagId(t));
-                    
-                    // Find added tags
-                    const addedTagIds = newTagIds.filter(id => !oldTagIds.includes(id));
-                    // Find removed tags
-                    const removedTagIds = oldTagIds.filter(id => !newTagIds.includes(id));
-                    
-                    // Assign new tags
-                    for (const tagId of addedTagIds) {
-                      try {
-                        await fetch(API_ENDPOINTS.TAGS.ASSIGN, {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          credentials: "include",
-                          body: JSON.stringify({ contact_id: contactId, tag_id: tagId }),
-                        });
-                      } catch (error) {
-                        console.error("Failed to assign tag:", error);
-                      }
-                    }
-                    
-                    // Unassign removed tags
-                    for (const tagId of removedTagIds) {
-                      try {
-                        await fetch(API_ENDPOINTS.TAGS.UNASSIGN, {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          credentials: "include",
-                          body: JSON.stringify({ contact_id: contactId, tag_id: tagId }),
-                        });
-                      } catch (error) {
-                        console.error("Failed to unassign tag:", error);
-                      }
-                    }
-                    
-                    setLocalTags(newTags);
-                    if (onContactUpdate) onContactUpdate();
-                  }}
-                  placeholder="Search or create tags..."
-                  allowCreate={true}
-                />
-                <button
-                  onClick={() => setShowTagSelector(false)}
-                  className="mt-2 text-sm text-gray-500 hover:text-gray-700"
-                >
-                  Done
-                </button>
-              </div>
-            ) : (
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                {displayTags.map((tag, index) => {
-                  const tagName = getTagName(tag);
-                  const tagColor = getTagColor(tag);
-                  const tagId = getTagId(tag);
-                  const isRemoving = isRemovingTag === tagId;
-                  return (
-                    <span
-                      key={tagId || index}
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-sm ${isRemoving ? "opacity-50" : ""}`}
-                      style={{ backgroundColor: `${tagColor}15`, color: tagColor }}
-                    >
-                      {tagName}
-                      <button 
-                        onClick={() => handleRemoveTag(tag)}
-                        disabled={isRemoving}
-                        className="hover:opacity-70 disabled:cursor-not-allowed"
-                      >
-                        {isRemoving ? <span className="animate-spin text-xs">⏳</span> : <X size={12} />}
-                      </button>
-                    </span>
-                  );
-                })}
+          {/* Tags Section */}
+          <div className="bg-white border border-gray-200 rounded-xl">
+            {/* Header */}
+            <button
+              onClick={() => setTagsExpanded(!tagsExpanded)}
+              className="w-full flex items-center justify-between p-4"
+            >
+              <span className="text-lg font-medium text-gray-900">Tags</span>
+              {tagsExpanded ? (
+                <ChevronUp size={20} className="text-gray-500" />
+              ) : (
+                <ChevronDown size={20} className="text-gray-500" />
+              )}
+            </button>
 
-                {remainingTags > 0 && !showAllTags && (
-                  <button
-                    onClick={() => setShowAllTags(true)}
-                    className="inline-flex items-center gap-1 text-sm text-blue-500 hover:text-blue-600"
-                  >
-                    <Tag size={14} />
-                    +{remainingTags}
-                  </button>
+            {/* Content */}
+            {tagsExpanded && (
+              <div className="px-4 pb-4 space-y-4">
+                {/* Display added tags */}
+                {localTags.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {localTags.map((tag, index) => {
+                      const tagName = getTagName(tag);
+                      const tagId = getTagId(tag);
+                      const removing = isRemovingTag === tagId;
+                      // Alternate colors for tags
+                      const colors = [
+                        { bg: "bg-purple-100", text: "text-purple-700" },
+                        { bg: "bg-blue-100", text: "text-blue-700" },
+                      ];
+                      const colorIndex = index % colors.length;
+                      return (
+                        <div
+                          key={tagId || tagName || index}
+                          className={`inline-flex items-center gap-2 px-4 py-2 ${colors[colorIndex].bg} ${colors[colorIndex].text} rounded-lg text-sm font-medium ${removing ? "opacity-50" : ""}`}
+                        >
+                          <span>{tagName}</span>
+                          <button
+                            onClick={() => handleRemoveTag(tag)}
+                            disabled={removing}
+                            className="hover:opacity-70"
+                          >
+                            <X size={18} strokeWidth={2.5} />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
 
-                <button
-                  onClick={() => setShowTagSelector(true)}
-                  className="w-7 h-7 flex items-center justify-center border-2 border-dashed border-blue-300 rounded text-blue-500 hover:border-blue-400 hover:bg-blue-50"
-                >
-                  <Plus size={14} />
-                </button>
+                {!showCreateTag ? (
+                  <>
+                    {/* Select dropdown */}
+                    <select
+                      value={selectedTagId}
+                      onChange={(e) => setSelectedTagId(e.target.value)}
+                      className="w-full px-4 py-3 bg-gray-100 border-0 rounded-lg text-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    >
+                      <option value="">Select & add tag</option>
+                      {availableTags.map((tag) => (
+                        <option key={tag.id || tag.tag_id} value={tag.id || tag.tag_id}>
+                          {tag.tag || tag.name || tag.tag_name}
+                        </option>
+                      ))}
+                    </select>
+
+                    {/* Add button */}
+                    <button
+                      onClick={handleAddTag}
+                      disabled={!selectedTagId || isAddingTag}
+                      className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-teal-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                    >
+                      <Plus size={16} />
+                      {isAddingTag ? "Adding..." : "Add"}
+                    </button>
+
+                    {/* Create & Add Tag link */}
+                    <button
+                      onClick={() => setShowCreateTag(true)}
+                      className="text-teal-600 hover:text-teal-700 text-sm font-medium"
+                    >
+                      Create & Add Tag
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {/* Input and Create & Add button */}
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newTagName}
+                        onChange={(e) => setNewTagName(e.target.value)}
+                        placeholder="Enter tag name"
+                        className="flex-1 px-4 py-3 bg-gray-100 border-0 rounded-lg text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                        onKeyDown={(e) => e.key === "Enter" && handleCreateAndAddTag()}
+                        autoFocus
+                      />
+                      <button
+                        onClick={handleCreateAndAddTag}
+                        disabled={!newTagName.trim() || isAddingTag}
+                        className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-teal-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium whitespace-nowrap"
+                      >
+                        <Plus size={16} />
+                        {isAddingTag ? "Creating..." : "Create & Add"}
+                      </button>
+                    </div>
+
+                    {/* Cancel button */}
+                    <button
+                      onClick={() => { setShowCreateTag(false); setNewTagName(""); }}
+                      className="text-gray-500 hover:text-gray-700 text-sm font-medium"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </div>
+
         </div>
       </div>
 

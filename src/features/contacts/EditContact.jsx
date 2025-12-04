@@ -7,9 +7,11 @@ import TagSelector from "../tags/components/TagSelector";
 import { API_ENDPOINTS } from "../../config/api";
 import { useAuth } from "../../context/AuthContext";
 import { getTagId, getTagName } from "../tags/utils/tagUtils";
+import { useTagsApi } from "../tags/hooks/useTagsApi";
 
 export default function EditContact({ contact, closePopup, onSuccess }) {
   const [phone, setPhone] = useState("");
+  const [dialCode, setDialCode] = useState("");
   const [name, setName] = useState("");
   const [phoneError, setPhoneError] = useState("");
   const [isTouched, setIsTouched] = useState(false);
@@ -17,26 +19,15 @@ export default function EditContact({ contact, closePopup, onSuccess }) {
   const [successMessage, setSuccessMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [selectedTags, setSelectedTags] = useState([]);
-  const [availableTags, setAvailableTags] = useState([]);
   const { user } = useAuth();
+  const { tags: availableTags, fetchTags } = useTagsApi(user?.customer_id);
 
-  // Fetch available tags to map string tags to tag objects
+  // Fetch available tags using the hook
   useEffect(() => {
-    const fetchTags = async () => {
-      if (!user?.customer_id) return;
-      try {
-        const response = await fetch(API_ENDPOINTS.TAGS.GET_ALL(user.customer_id), {
-          credentials: "include",
-        });
-        const data = await response.json();
-        const tags = data?.tags || data?.data || data || [];
-        setAvailableTags(Array.isArray(tags) ? tags : []);
-      } catch (error) {
-        console.error("Failed to fetch tags:", error);
-      }
-    };
-    fetchTags();
-  }, [user?.customer_id]);
+    if (user?.customer_id) {
+      fetchTags();
+    }
+  }, [user?.customer_id, fetchTags]);
 
   // Initialize contact data and convert string tags to tag objects
   useEffect(() => {
@@ -46,13 +37,12 @@ export default function EditContact({ contact, closePopup, onSuccess }) {
     }
   }, [contact]);
 
-  // Convert string tags to tag objects once availableTags are loaded
   useEffect(() => {
     if (contact?.tags && Array.isArray(contact.tags) && availableTags.length > 0) {
       const tagObjects = contact.tags.map((tag) => {
-        // If already an object with id, use it
+      
         if (typeof tag === "object" && tag?.id) return tag;
-        // If string, find matching tag object
+      
         if (typeof tag === "string") {
           const found = availableTags.find(
             (t) => getTagName(t).toLowerCase() === tag.toLowerCase()
@@ -65,13 +55,15 @@ export default function EditContact({ contact, closePopup, onSuccess }) {
     }
   }, [contact?.tags, availableTags]);
 
-  // Clear error messages when user changes data
   const clearMessages = () => {
     if (errorMessage) setErrorMessage("");
   };
 
-  const handlePhoneChange = (value) => {
+  const handlePhoneChange = (value, country) => {
     setPhone(value);
+    if (country?.dialCode) {
+      setDialCode(country.dialCode);
+    }
     setIsTouched(true);
     clearMessages();
     if (value.replace(/\D/g, "").length < 10) {
@@ -101,16 +93,14 @@ export default function EditContact({ contact, closePopup, onSuccess }) {
       return;
     }
 
-    const formattedPhone = phone.startsWith("+") ? phone : `+${phone}`;
-    const phoneDigits = formattedPhone.replace(/\D/g, "");
+    const phoneDigits = phone.replace(/\D/g, "");
+    
+    const countryCode = dialCode || contact?.country_code?.replace("+", "") || "";
+    const mobileNumber = countryCode && phoneDigits.startsWith(countryCode)
+      ? phoneDigits.slice(countryCode.length)
+      : phoneDigits;
 
-    let countryCode = contact?.country_code || "";
-    if (!countryCode && formattedPhone.startsWith("+")) {
-      const match = formattedPhone.match(/^\+(\d{1,3})/);
-      countryCode = match ? `+${match[1]}` : "+91";
-    }
-
-    const mobileNumber = phoneDigits.slice(countryCode.replace("+", "").length);
+    const tagIds = selectedTags.map((tag) => getTagId(tag)).filter(Boolean);
 
     const requestBody = {
       contact_id: contact.contact_id,
@@ -118,10 +108,10 @@ export default function EditContact({ contact, closePopup, onSuccess }) {
       country_code: countryCode,
       first_name: name.trim(),
       mobile_no: mobileNumber,
+      tags: tagIds,
     };
 
     try {
-      // Update contact details
       const response = await fetch(API_ENDPOINTS.CONTACTS.UPDATE, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -132,30 +122,6 @@ export default function EditContact({ contact, closePopup, onSuccess }) {
       const data = await response.json();
 
       if (data.success) {
-        // Get tag IDs from selected tags (handle both object and string tags)
-        const tagIds = selectedTags
-          .map((tag) => getTagId(tag))
-          .filter(Boolean);
-
-        // Assign tags to contact if any selected
-        if (tagIds.length > 0) {
-          for (const tagId of tagIds) {
-            try {
-              await fetch(API_ENDPOINTS.TAGS.ASSIGN, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify({
-                  contact_id: contact.contact_id,
-                  tag_id: tagId,
-                }),
-              });
-            } catch (tagErr) {
-              console.error("Error assigning tag:", tagErr);
-            }
-          }
-        }
-
         setSuccessMessage(data.message || "Contact updated successfully!");
         setErrorMessage("");
         if (onSuccess) onSuccess();

@@ -1,60 +1,124 @@
 import { useState, useEffect } from "react";
 import { formatTime } from "../../utils/time";
 import Avatar from "../../utils/Avatar";
-import Dropdown from "../../components/Dropdown";
 import { FiUserX, FiUserCheck } from "react-icons/fi";
-import { X } from "lucide-react";
-import { getTagName, getTagColor, getTagId } from "../tags/utils/tagUtils";
-import { API_ENDPOINTS } from "../../config/api";
-import axios from "axios";
+import { X, ChevronUp, ChevronDown, Plus } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
+import { useTagsApi } from "../tags/hooks/useTagsApi";
 import { toast } from "react-toastify";
 
 const UserDetails = ({ isExpanded, setIsExpanded, selectedContact, updateBlockStatus, onContactUpdate }) => {
-  const [status, setStatus] = useState("");
-  const [incomingStatus, setIncomingStatus] = useState("");
+  const { user } = useAuth();
+  const { tags: availableTags, fetchTags, createTag, assignTag, unassignTag } = useTagsApi(user?.customer_id);
   const [isBlocked, setIsBlocked] = useState(selectedContact?.block || false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [localTags, setLocalTags] = useState(selectedContact?.tags || []);
   const [isRemovingTag, setIsRemovingTag] = useState(null);
+
+  const [generalDetailsExpanded, setGeneralDetailsExpanded] = useState(true);
+  
+  const [tagsExpanded, setTagsExpanded] = useState(true);
+  const [selectedTagId, setSelectedTagId] = useState("");
+  const [isAddingTag, setIsAddingTag] = useState(false);
+  const [showCreateTag, setShowCreateTag] = useState(false);
+  const [newTagName, setNewTagName] = useState("");
 
   useEffect(() => {
     setIsBlocked(selectedContact?.block || false);
     setLocalTags(selectedContact?.tags || []);
   }, [selectedContact]);
 
-  const handleRemoveTag = async (tagToRemove) => {
-    const tagId = getTagId(tagToRemove);
-    const contactId = selectedContact?.contact_id;
+  // Fetch tags on mount
+  useEffect(() => {
+    if (user?.customer_id) {
+      fetchTags();
+    }
+  }, [user?.customer_id, fetchTags]);
+
+  const contactId = selectedContact?.contact_id;
+
+
+  const getTagId = (tag) => {
+    if (typeof tag === 'string') {
+      const found = availableTags.find(t => (t.tag || t.name) === tag);
+      return found?.id || found?.tag_id;
+    }
+    return tag.id || tag.tag_id;
+  };
+
+  const getTagName = (tag) => {
+    if (typeof tag === 'string') return tag;
+    return tag.tag || tag.name || tag.tag_name || "Unknown";
+  };
+
+  const handleAddTag = async () => {
+    if (!selectedTagId || !contactId) return;
+    
+    if (localTags.some(t => String(getTagId(t)) === String(selectedTagId))) {
+      toast.info("Tag already added");
+      setSelectedTagId("");
+      return;
+    }
+    
+    setIsAddingTag(true);
+    const result = await assignTag(contactId, selectedTagId, { showToast: true });
+    
+    if (result.success) {
+      const addedTag = availableTags.find(t => String(t.id || t.tag_id) === String(selectedTagId));
+      if (addedTag) setLocalTags(prev => [...prev, addedTag]);
+      setSelectedTagId("");
+      if (onContactUpdate) onContactUpdate();
+    }
+    setIsAddingTag(false);
+  };
+
+  // Remove tag
+  const handleRemoveTag = async (tag) => {
+    const tagId = getTagId(tag);
+    const tagName = getTagName(tag);
+    
     if (!tagId || !contactId) return;
     
     setIsRemovingTag(tagId);
-    try {
-      await axios.post(
-        API_ENDPOINTS.TAGS.UNASSIGN,
-        { contact_id: contactId, tag_id: tagId },
-        { withCredentials: true }
-      );
-      
-      setLocalTags(prev => prev.filter(t => getTagId(t) !== tagId));
-      
-      if (onContactUpdate) {
-        onContactUpdate();
-      }
-      
-      toast.success("Tag removed");
-    } catch (error) {
-      console.error("Failed to remove tag:", error);
-      toast.error("Failed to remove tag");
-    } finally {
-      setIsRemovingTag(null);
+    const result = await unassignTag(contactId, tagId, { showToast: true });
+    
+    if (result.success) {
+      setLocalTags(prev => prev.filter(t => getTagName(t) !== tagName));
+      if (onContactUpdate) onContactUpdate();
     }
+    setIsRemovingTag(null);
+  };
+
+  // Create and add new tag
+  const handleCreateAndAddTag = async () => {
+    if (!newTagName.trim() || !contactId) return;
+    
+    setIsAddingTag(true);
+    const createResult = await createTag({ tag: newTagName.trim() });
+    
+    if (createResult.success && createResult.tag) {
+      const assignResult = await assignTag(contactId, createResult.tag.id, { showToast: false });
+      
+      if (assignResult.success) {
+        setLocalTags(prev => [...prev, createResult.tag]);
+        toast.success("Tag created and added");
+        setNewTagName("");
+        if (onContactUpdate) onContactUpdate();
+      }
+    }
+    setIsAddingTag(false);
   };
 
   if (!selectedContact) return null;
 
+  // Check if 24 hours status is active
+  const is24HoursActive = selectedContact?.updated_at 
+    ? Date.now() - new Date(selectedContact.updated_at).getTime() < 24 * 60 * 60 * 1000
+    : false;
+
   return (
-    <div className="w-full md:w-auto md:min-w-[300px] bg-white border-l border-gray-300 p-0">
-      <div className="user-details h-full">
+    <div className="w-full md:w-[300px] md:min-w-[300px] md:max-w-[300px] bg-white border-l border-gray-300 p-0">
+      <div className="user-details h-full overflow-y-auto">
         {/* Profile Info */}
         <div className="profile mt-3 text-center">
           <div className="avatar mb-2 flex justify-center">
@@ -171,15 +235,15 @@ const UserDetails = ({ isExpanded, setIsExpanded, selectedContact, updateBlockSt
         {/* Toggle for General Details */}
         <div
           className="details-toggle cursor-pointer flex items-center justify-between px-2 py-2 text-gray-600 hover:text-black"
-          onClick={() => setIsExpanded(!isExpanded)}
-          aria-expanded={isExpanded}
+          onClick={() => setGeneralDetailsExpanded(!generalDetailsExpanded)}
+          aria-expanded={generalDetailsExpanded}
         >
           <span className="text-sm font-semibold tracking-wide">
             GENERAL DETAILS
           </span>
           <svg
             className={`w-4 h-4 transform transition-transform duration-200 ${
-              isExpanded ? "rotate-180" : ""
+              generalDetailsExpanded ? "rotate-180" : ""
             }`}
             fill="none"
             stroke="currentColor"
@@ -196,79 +260,142 @@ const UserDetails = ({ isExpanded, setIsExpanded, selectedContact, updateBlockSt
         </div>
 
         {/* General Details Section */}
-        {isExpanded && (
+        {generalDetailsExpanded && (
           <div className="space-y-3 p-2">
-            {/* Status Dropdown */}
+            {/* Tags Section */}
             <div>
-              <label className="block text-sm font-medium text-black mb-1">
-                Status
-              </label>
-              <Dropdown
-                options={[
-                  { value: "open", label: "Open" },
-                  { value: "closed", label: "Closed" },
-                ]}
-                value={status}
-                onChange={setStatus}
-                placeholder="Select Status"
-              />
-            </div>
+              <button
+                onClick={() => setTagsExpanded(!tagsExpanded)}
+                className="w-full flex items-center justify-between py-2"
+              >
+                <span className="text-sm font-medium text-black">Tags</span>
+                {tagsExpanded ? (
+                  <ChevronUp size={16} className="text-gray-400" />
+                ) : (
+                  <ChevronDown size={16} className="text-gray-400" />
+                )}
+              </button>
 
-            {/* Tags */}
-            <div>
-              <label className="block text-sm font-medium text-black mb-1">
-                Tags
-              </label>
+              {/* Content */}
+              {tagsExpanded && (
+                <div className="space-y-3 mt-2">
+                  {/* Display added tags */}
+                  {localTags.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {localTags.map((tag, index) => {
+                        const tagName = getTagName(tag);
+                        const tagId = getTagId(tag);
+                        const removing = isRemovingTag === tagId;
+                        const colors = [
+                          { bg: "bg-purple-100", text: "text-purple-700" },
+                          { bg: "bg-blue-100", text: "text-blue-700" },
+                        ];
+                        const colorIndex = index % colors.length;
+                        return (
+                          <div
+                            key={tagId || tagName || index}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 ${colors[colorIndex].bg} ${colors[colorIndex].text} rounded-lg text-xs font-medium ${removing ? "opacity-50" : ""}`}
+                          >
+                            <span>{tagName}</span>
+                            <button
+                              onClick={() => handleRemoveTag(tag)}
+                              disabled={removing}
+                              className="hover:opacity-70"
+                            >
+                              <X size={14} strokeWidth={2.5} />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
 
-              {localTags?.length > 0 ? (
-                <div className="flex flex-wrap gap-2 mt-1">
-                  {localTags.map((tag, index) => {
-                    const tagName = getTagName(tag);
-                    const tagColor = getTagColor(tag);
-                    const tagId = getTagId(tag);
-                    const isRemoving = isRemovingTag === tagId;
-                    return (
-                      <span
-                        key={tagId || `tag-${index}`}
-                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium ${isRemoving ? "opacity-50" : ""}`}
-                        style={{
-                          backgroundColor: `${tagColor}20`,
-                          color: tagColor,
-                          border: `1px solid ${tagColor}40`,
-                        }}
+                  {!showCreateTag ? (
+                    <>
+                      {/* Select dropdown */}
+                      <select
+                        value={selectedTagId}
+                        onChange={(e) => setSelectedTagId(e.target.value)}
+                        className="w-full px-3 py-2 bg-gray-100 border-0 rounded-lg text-gray-500 text-xs focus:outline-none focus:ring-2 focus:ring-teal-500"
                       >
-                        {tagName}
+                        <option value="">Select & add tag</option>
+                        {availableTags.map((tag) => (
+                          <option key={tag.id || tag.tag_id} value={tag.id || tag.tag_id}>
+                            {tag.tag || tag.name || tag.tag_name}
+                          </option>
+                        ))}
+                      </select>
+
+                      <div className="flex items-center gap-3">
+                        {/* Add button */}
                         <button
-                          onClick={() => handleRemoveTag(tag)}
-                          disabled={isRemoving}
-                          className="ml-0.5 hover:opacity-70 disabled:cursor-not-allowed"
+                          onClick={handleAddTag}
+                          disabled={!selectedTagId || isAddingTag}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg text-teal-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium"
                         >
-                          {isRemoving ? (
-                            <span className="animate-spin text-[10px]">⏳</span>
-                          ) : (
-                            <X size={12} />
-                          )}
+                          <Plus size={14} />
+                          {isAddingTag ? "Adding..." : "Add"}
                         </button>
-                      </span>
-                    );
-                  })}
+
+                        {/* Create & Add Tag link */}
+                        <button
+                          onClick={() => setShowCreateTag(true)}
+                          className="text-teal-600 hover:text-teal-700 text-xs font-medium"
+                        >
+                          Create & Add Tag
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {/* Input and Create & Add button */}
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={newTagName}
+                          onChange={(e) => setNewTagName(e.target.value)}
+                          placeholder="Enter tag name"
+                          className="flex-1 px-3 py-2 bg-gray-100 border-0 rounded-lg text-gray-700 text-xs focus:outline-none focus:ring-2 focus:ring-teal-500"
+                          onKeyDown={(e) => e.key === "Enter" && handleCreateAndAddTag()}
+                          autoFocus
+                        />
+                        <button
+                          onClick={handleCreateAndAddTag}
+                          disabled={!newTagName.trim() || isAddingTag}
+                          className="inline-flex items-center gap-1 px-2 py-1.5 border border-gray-300 rounded-lg text-teal-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium whitespace-nowrap"
+                        >
+                          <Plus size={12} />
+                          {isAddingTag ? "..." : "Create & Add"}
+                        </button>
+                      </div>
+
+                      {/* Cancel button */}
+                      <button
+                        onClick={() => { setShowCreateTag(false); setNewTagName(""); }}
+                        className="text-gray-500 hover:text-gray-700 text-xs font-medium"
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  )}
                 </div>
-              ) : (
-                <p className="text-sm text-gray-500 mt-1">No tags assigned</p>
               )}
             </div>
 
-            {/* Incoming Status Dropdown */}
+            {/* Incoming Status */}
             <div>
               <label className="block text-sm font-medium text-black mb-1">
                 Incoming Status
               </label>
-              <Dropdown
-                options={[{ value: "allowed", label: "Allowed" }]}
-                value={incomingStatus}
-                onChange={setIncomingStatus}
-                placeholder="Incoming Status"
-              />
+              {is24HoursActive ? (
+                <div className="px-3 py-2 bg-green-100 text-green-700 rounded-lg text-sm font-medium">
+                  Allowed
+                </div>
+              ) : (
+                <div className="px-3 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-medium">
+                  Not Allowed
+                </div>
+              )}
             </div>
           </div>
         )}

@@ -88,26 +88,20 @@ export const useDrip = () => {
   };
 
   const transformToEditFormat = (drip, allTags = []) => {
-    // The getDrip endpoint already parses steps and delivery_preferences
     const steps = drip.steps || [];
     const deliveryPrefs = drip.delivery_preferences || {};
-    
-    // Handle multiple tags - backend returns tags as array of IDs [4, 6, 5, 7]
     const tagIdsFromDrip = drip.tags || [];
     
-    // Extract tag IDs
     const tagIds = tagIdsFromDrip.map(t => {
       if (typeof t === 'number') return t;
       return t.id || t.tag_id;
     }).filter(Boolean);
     
-    // Match tag IDs with full tag objects from allTags
     const tagObjects = tagIds.map(tagId => {
       const foundTag = allTags.find(t => (t.id || t.tag_id) === tagId);
       if (foundTag) {
         return foundTag;
       }
-      // Fallback: create placeholder if tag not found
       return { id: tagId, tag_id: tagId, tag: `Tag ${tagId}`, name: `Tag ${tagId}` };
     });
     
@@ -117,9 +111,9 @@ export const useDrip = () => {
       id: drip.drip_id || drip.id,
       drip_name: drip.drip_name || "",
       drip_description: drip.drip_description || "",
-      tag: tagIds, // Array of tag IDs
-      selectedTagObjects: tagObjects, // Array of tag objects (with placeholders if needed)
-      target_type: tagNames.join(", "), // Comma-separated tag names for display
+      tag: tagIds, 
+      selectedTagObjects: tagObjects, 
+      target_type: tagNames.join(", "),
       trigger_type: drip.trigger_type || "",
       status: drip.status || "active",
       color: "bg-teal-500",
@@ -132,8 +126,8 @@ export const useDrip = () => {
           time_from: deliveryPrefs.time_from || "",
           time_to: deliveryPrefs.time_to || "",
           timezone: deliveryPrefs.timezone || "",
-          allow_once: deliveryPrefs.allow_once ?? true,
-          continue_after_delivery: deliveryPrefs.continue_after_delivery ?? false,
+          allow_once: Boolean(deliveryPrefs.allow_once ?? true), // Convert 1/0 to boolean
+          continue_after_delivery: Boolean(deliveryPrefs.continue_after_delivery ?? false), // Convert 1/0 to boolean
         },
       ],
       retry_settings: {
@@ -248,7 +242,6 @@ export const useDrip = () => {
         { withCredentials: true }
       );
 
-      toast.success("Sequence created successfully!");
       await fetchDrips();
 
       return { success: true, data: result };
@@ -262,9 +255,18 @@ export const useDrip = () => {
 
   // Update existing drip
   const updateDrip = async (dripId, seqData) => {
+    // Validate dripId before making API call
+    if (!dripId || dripId === "null" || dripId === "undefined") {
+      console.error("UPDATE DRIP ERROR: Invalid dripId:", dripId);
+      toast.error("Cannot update: Invalid sequence ID");
+      return { success: false, error: "Invalid sequence ID" };
+    }
+
     try {
       const payload = transformToBackendFormat(seqData);
-      console.log("UPDATING DRIP", payload);
+      console.log("UPDATING DRIP - ID:", dripId);
+      console.log("UPDATING DRIP - URL:", API_ENDPOINTS.DRIP.UPDATE(dripId));
+      console.log("UPDATING DRIP - Payload:", payload);
 
       const { data: result } = await axios.put(
         API_ENDPOINTS.DRIP.UPDATE(dripId),
@@ -272,11 +274,11 @@ export const useDrip = () => {
         { withCredentials: true }
       );
 
-      toast.success("Sequence updated successfully!");
       await fetchDrips();
 
       return { success: true, data: result };
     } catch (err) {
+      console.error("UPDATE DRIP ERROR:", err.response?.status, err.response?.data);
       const msg = err.response?.data?.message || "Failed to update sequence";
       toast.error(msg);
       return { success: false, error: msg };
@@ -287,6 +289,7 @@ export const useDrip = () => {
   const deleteDrip = async (dripId) => {
     try {
       await axios.delete(API_ENDPOINTS.DRIP.DELETE(dripId), {
+        params: { customer_id },
         withCredentials: true,
       });
 
@@ -301,12 +304,82 @@ export const useDrip = () => {
     }
   };
 
+  const toggleDripStatus = async (dripId, currentStatus) => {
+    try {
+      const newStatus = currentStatus === "active" ? "inactive" : "active";
+      
+      const fetchResult = await fetchDripById(dripId);
+      if (!fetchResult.success) {
+        throw new Error(fetchResult.error);
+      }
+      const dripData = fetchResult.data;
+      const payload = transformToBackendFormat({
+        ...dripData,
+        status: newStatus,
+      });
+
+      const { data: result } = await axios.put(
+        API_ENDPOINTS.DRIP.UPDATE(dripId),
+        payload,
+        { withCredentials: true }
+      );
+
+      setDrips((prev) =>
+        prev.map((d) =>
+          d.id === dripId ? { ...d, status: newStatus } : d
+        )
+      );
+
+      toast.success(`Sequence ${newStatus === "active" ? "resumed" : "paused"} successfully!`);
+      return { success: true, data: result };
+    } catch (err) {
+      const msg = err.response?.data?.message || "Failed to update sequence status";
+      toast.error(msg);
+      return { success: false, error: msg };
+    }
+  };
+
+  // Duplicate drip
+  const duplicateDrip = async (dripId) => {
+    try {
+      // First fetch the drip data
+      const fetchResult = await fetchDripById(dripId);
+      if (!fetchResult.success) {
+        throw new Error(fetchResult.error);
+      }
+
+      const originalDrip = fetchResult.data;
+      
+      // Create a copy with modified name
+      const duplicateData = {
+        ...originalDrip,
+        drip_name: `${originalDrip.drip_name} (Copy)`,
+        status: "draft", // New duplicates start as draft
+      };
+      
+      // Remove the ID so it creates a new one
+      delete duplicateData.id;
+
+      const createResult = await createDrip(duplicateData);
+      
+      if (createResult.success) {
+        toast.success("Sequence duplicated successfully!");
+      }
+      
+      return createResult;
+    } catch (err) {
+      const msg = err.message || "Failed to duplicate sequence";
+      toast.error(msg);
+      return { success: false, error: msg };
+    }
+  };
+
   useEffect(() => {
     fetchDrips();
   }, [fetchDrips]);
 
   return {
     data: { drips, loading, error },
-    actions: { fetchDrips, fetchDripById, createDrip, updateDrip, deleteDrip },
+    actions: { fetchDrips, fetchDripById, createDrip, updateDrip, deleteDrip, toggleDripStatus, duplicateDrip },
   };
 };

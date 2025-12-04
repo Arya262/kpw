@@ -63,9 +63,9 @@ export const sequenceSchema = z.object({
 export const getInitialSeqData = (customerId) => ({
   drip_name: "",
   drip_description: "",
-  tag: [], // Array of tag IDs for backend
-  selectedTagObjects: [], // Array of full tag objects for UI
-  target_type: "", // Tag names for display (comma-separated)
+  tag: [], 
+  selectedTagObjects: [],
+  target_type: "", 
   trigger_type: "",
   status: "active",
   color: "bg-teal-500",
@@ -73,7 +73,7 @@ export const getInitialSeqData = (customerId) => ({
   customer_id: customerId ?? null,
   delivery_preferences: [
     {
-      days: [], // Empty by default - user must select days
+      days: [], 
       time_type: "Any Time",
       time_from: "",
       time_to: "",

@@ -1,5 +1,7 @@
-import { useState, useEffect } from "react";
-import { useTemplates } from "../../hooks/useTemplates";
+import { useState, useEffect, useCallback } from "react";
+import axios from "axios";
+import { API_ENDPOINTS } from "../../config/api";
+import { useAuth } from "../../context/AuthContext";
 import { renderMedia } from "../../utils/renderMedia";
 import DeleteConfirmationDialog from "../shared/DeleteConfirmationDialog";
 import {
@@ -18,6 +20,7 @@ import {
 import { toast } from "react-toastify";
 
 const DripMessageStep = ({ seqData, setSeqData, fieldErrors = {} }) => {
+  const { user } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isParaModalOpen, setIsParaModalOpen] = useState(false);
   const [isReorderModalOpen, setIsReorderModalOpen] = useState(false);
@@ -29,13 +32,95 @@ const DripMessageStep = ({ seqData, setSeqData, fieldErrors = {} }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedSteps, setExpandedSteps] = useState({});
 
-  const { data } = useTemplates();
-  const templates = data?.templates || [];
+  // Template state
+  const [templates, setTemplates] = useState([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    hasMore: false,
+    isLoadingMore: false
+  });
 
-  // Auto-expand steps with errors
+  // Fetch templates from API
+  const fetchTemplates = useCallback(async (page = 1, append = false, search = "") => {
+    if (!user?.customer_id) return;
+
+    if (page === 1) {
+      setTemplatesLoading(true);
+    } else {
+      setPagination(prev => ({ ...prev, isLoadingMore: true }));
+    }
+
+    try {
+      const response = await axios.get(API_ENDPOINTS.TEMPLATES.GET_ALL, {
+        params: {
+          customer_id: user.customer_id,
+          page,
+          limit: 10,
+          search,
+          sub_category: "PROMOTION",
+          status: "APPROVED",
+        },
+        withCredentials: true,
+      });
+
+      const data = response.data;
+      if (data && Array.isArray(data.templates)) {
+        const normalizedTemplates = data.templates.map(t => ({
+          ...t,
+          container_meta: {
+            ...t.container_meta,
+            sampleText: t.container_meta?.sampleText || t.container_meta?.sample_text,
+          },
+        }));
+
+        setTemplates(prev => append ? [...prev, ...normalizedTemplates] : normalizedTemplates);
+
+        const { page: current = page, totalPages = 1 } = data.pagination || {};
+        setPagination({
+          currentPage: current,
+          totalPages,
+          hasMore: current < totalPages,
+          isLoadingMore: false,
+        });
+      } else {
+        setTemplates(prev => append ? prev : []);
+        setPagination({ currentPage: 1, totalPages: 1, hasMore: false, isLoadingMore: false });
+      }
+    } catch (err) {
+      console.error("Error fetching templates:", err);
+      toast.error("Failed to load templates");
+    } finally {
+      setTemplatesLoading(false);
+    }
+  }, [user?.customer_id]);
+
+  // Load more templates
+  const loadMoreTemplates = useCallback(() => {
+    if (pagination.hasMore && !pagination.isLoadingMore) {
+      fetchTemplates(pagination.currentPage + 1, true, searchQuery);
+    }
+  }, [pagination.hasMore, pagination.isLoadingMore, pagination.currentPage, fetchTemplates, searchQuery]);
+
+  // Fetch templates when modal opens
+  useEffect(() => {
+    if (isModalOpen) {
+      fetchTemplates(1, false, searchQuery);
+    }
+  }, [isModalOpen]);
+
+  // Debounced search
+  useEffect(() => {
+    if (!isModalOpen) return;
+    const timer = setTimeout(() => {
+      fetchTemplates(1, false, searchQuery);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   useEffect(() => {
     if (fieldErrors.parameters) {
-      // Find the step with unmapped params and expand it
       seqData.steps.forEach((step, index) => {
         if (step.parameters?.some((p) => !p.mappedTo || !p.mappedTo.trim())) {
           setExpandedSteps((prev) => ({ ...prev, [index]: true }));
@@ -52,13 +137,11 @@ const DripMessageStep = ({ seqData, setSeqData, fieldErrors = {} }) => {
     setExpandedSteps((prev) => ({ ...prev, [index]: !prev[index] }));
   };
 
-  // Helper to update a specific step field
   const updateStep = (index, updates) => {
     const newSteps = [...seqData.steps];
     newSteps[index] = { ...newSteps[index], ...updates };
     setSeqData({ ...seqData, steps: newSteps });
   };
-
 
   const updateStepTemplate = (index, templateUpdates) => {
     const newSteps = [...seqData.steps];
@@ -177,9 +260,7 @@ const DripMessageStep = ({ seqData, setSeqData, fieldErrors = {} }) => {
     toast.success("Step moved successfully");
   };
 
-  const filteredTemplates = templates.filter((t) =>
-    t.element_name?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Templates are already filtered by API (sub_category=PROMOTION)
 
   const handleParamMapping = (paramIndex, value) => {
     const newSteps = [...seqData.steps];
@@ -207,35 +288,35 @@ const DripMessageStep = ({ seqData, setSeqData, fieldErrors = {} }) => {
       </div>
 
       {/* Sequence Summary */}
-      <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+      <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
         <h5 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <MessageSquare className="w-4 h-4 text-teal-600" />
+          <MessageSquare className="w-5 h-5 text-teal-600" />
           Sequence Summary
         </h5>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-          <div>
-            <p className="text-gray-500 font-medium">Sequence Name</p>
-            <p className="text-gray-900 mt-1">{seqData.drip_name || "-"}</p>
+          <div className="p-3 bg-gray-50 rounded-lg">
+            <p className="text-gray-500 text-xs font-medium uppercase tracking-wide">Sequence Name</p>
+            <p className="text-gray-900 font-medium mt-1">{seqData.drip_name || "-"}</p>
           </div>
-          <div>
-            <p className="text-gray-500 font-medium">Trigger</p>
-            <p className="text-gray-900 mt-1">{seqData.trigger_type || "Not selected"}</p>
+          <div className="p-3 bg-gray-50 rounded-lg">
+            <p className="text-gray-500 text-xs font-medium uppercase tracking-wide">Trigger</p>
+            <p className="text-gray-900 font-medium mt-1">{seqData.trigger_type || "Not selected"}</p>
           </div>
-          <div>
-            <p className="text-gray-500 font-medium">Delivery Days</p>
-            <div className="flex flex-wrap gap-1 mt-1">
+          <div className="p-3 bg-gray-50 rounded-lg">
+            <p className="text-gray-500 text-xs font-medium uppercase tracking-wide mb-2">Delivery Days</p>
+            <div className="flex flex-wrap gap-1.5">
               {seqDay.length > 0 ? (
                 seqDay.map((d, i) => (
-                  <span key={i} className="bg-teal-100 text-teal-800 text-xs px-2 py-1 rounded-full">{d}</span>
+                  <span key={i} className="bg-teal-500 text-white text-xs px-2.5 py-1 rounded-full font-medium">{d}</span>
                 ))
               ) : (
                 <span className="text-gray-400 text-xs">Any day</span>
               )}
             </div>
           </div>
-          <div>
-            <p className="text-gray-500 font-medium">Delivery Time</p>
-            <p className="text-gray-900 mt-1">
+          <div className="p-3 bg-gray-50 rounded-lg">
+            <p className="text-gray-500 text-xs font-medium uppercase tracking-wide">Delivery Time</p>
+            <p className="text-gray-900 font-medium mt-1">
               {seqData.delivery_preferences?.[0]?.time_type === "Time Range"
                 ? `${seqtime_from || "-"} to ${seqtime_to || "-"}`
                 : "Any Time"}
@@ -247,23 +328,22 @@ const DripMessageStep = ({ seqData, setSeqData, fieldErrors = {} }) => {
       {/* Timeline Steps */}
       <div className="relative">
         {seqData.steps.length === 0 ? (
-          <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-lg bg-white">
-            <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500 font-medium">No steps added yet</p>
+          <div className="text-center py-12 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50/50">
+            <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-600 font-medium">No steps added yet</p>
             <p className="text-gray-400 text-sm mt-1">Add your first step to start building your sequence</p>
             <button
               onClick={handleAddStep}
-              className="mt-4 bg-teal-500 hover:bg-teal-600 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-2"
+              className="mt-4 bg-teal-500 hover:bg-teal-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
-              Add step
+              Add First Step
             </button>
           </div>
         ) : (
           <div className="flex flex-col items-center">
             {seqData.steps.map((step, index) => (
               <div key={index} className="w-full">
-                {/* Step Card */}
                 <StepCard
                   step={step}
                   index={index}
@@ -279,7 +359,6 @@ const DripMessageStep = ({ seqData, setSeqData, fieldErrors = {} }) => {
                   hasUnmappedParams={step.parameters?.some((p) => !p.mappedTo || !p.mappedTo.trim())}
                   showError={!!fieldErrors.parameters}
                 />
-
                 {index < seqData.steps.length - 1 && (
                   <StepConnector delay={formatDelay(seqData.steps[index + 1].delay_value, seqData.steps[index + 1].delay_unit)} />
                 )}
@@ -287,33 +366,34 @@ const DripMessageStep = ({ seqData, setSeqData, fieldErrors = {} }) => {
             ))}
 
             {seqData.steps.length < 10 && (
-              <div className="flex flex-col items-center mt-2">
+              <div className="flex flex-col items-center mt-3">
                 <div className="w-px h-6 bg-gray-300"></div>
                 <button
                   onClick={handleAddStep}
-                  className="bg-teal-500 hover:bg-teal-600 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-2 shadow-md"
+                  className="bg-teal-500 hover:bg-teal-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-2 shadow-sm"
                 >
-                  Add step
+                  <Plus className="w-4 h-4" />
+                  Add Step
                 </button>
-                <div className="w-px h-6 bg-gray-300"></div>
-                <div className="w-2 h-2 border-l-2 border-b-2 border-gray-300 transform rotate-[-45deg]"></div>
               </div>
             )}
           </div>
         )}
       </div>
 
-      {/* Template Picker Modal */}
       <TemplatePickerModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        templates={filteredTemplates}
+        onClose={() => { setIsModalOpen(false); setSearchQuery(""); }}
+        templates={templates}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         onSelect={handleTemplateSelect}
+        onLoadMore={loadMoreTemplates}
+        hasMore={pagination.hasMore}
+        isLoadingMore={pagination.isLoadingMore}
+        isLoading={templatesLoading && templates.length === 0}
       />
 
-      {/* Parameter Mapping Modal */}
       <ParameterMappingModal
         isOpen={isParaModalOpen && selectedTemplate}
         onClose={() => setIsParaModalOpen(false)}
@@ -321,13 +401,9 @@ const DripMessageStep = ({ seqData, setSeqData, fieldErrors = {} }) => {
         parameters={seqData.steps[selectedStepIndex]?.parameters || []}
         onParamChange={handleParamMapping}
         onMediaUpdate={handleMediaUpdate}
-        onChangeTemplate={() => {
-          setIsParaModalOpen(false);
-          setIsModalOpen(true);
-        }}
+        onChangeTemplate={() => { setIsParaModalOpen(false); setIsModalOpen(true); }}
       />
 
-      {/* Reorder Modal */}
       <ReorderModal
         isOpen={isReorderModalOpen}
         onClose={() => setIsReorderModalOpen(false)}
@@ -336,15 +412,11 @@ const DripMessageStep = ({ seqData, setSeqData, fieldErrors = {} }) => {
         onMove={handleReorderStep}
       />
 
-      {/* Delete Confirmation Modal */}
       <DeleteConfirmationDialog
         showDialog={isDeleteModalOpen}
         title="Delete Step"
         message={`Are you sure you want to delete "${deleteStepIndex !== null ? seqData.steps[deleteStepIndex]?.step_name : "this step"}"? This action cannot be undone.`}
-        onCancel={() => {
-          setIsDeleteModalOpen(false);
-          setDeleteStepIndex(null);
-        }}
+        onCancel={() => { setIsDeleteModalOpen(false); setDeleteStepIndex(null); }}
         onConfirm={handleDeleteStep}
         isDeleting={false}
       />
@@ -352,196 +424,184 @@ const DripMessageStep = ({ seqData, setSeqData, fieldErrors = {} }) => {
   );
 };
 
+
 const StepConnector = ({ delay }) => (
   <div className="flex flex-col items-center py-2">
-    <div className="w-px h-4 bg-gray-300"></div>
-    <div className="flex items-center gap-2 px-3 py-1 bg-gray-100 rounded-full border border-gray-200">
-      <Clock className="w-3.5 h-3.5 text-gray-500" />
-      <span className="text-xs text-gray-600 font-medium">{delay}</span>
+    <div className="w-px h-5 bg-gray-300"></div>
+    <div className="flex items-center gap-2 px-3 py-1.5 bg-teal-50 rounded-full border border-teal-200">
+      <Clock className="w-3.5 h-3.5 text-teal-600" />
+      <span className="text-xs text-teal-700 font-medium">{delay}</span>
     </div>
-    <div className="w-px h-4 bg-gray-300"></div>
-    <div className="w-2 h-2 border-l-2 border-b-2 border-gray-300 transform rotate-[-45deg]"></div>
+    <div className="w-px h-5 bg-gray-300"></div>
   </div>
 );
-
 
 const StepCard = ({ step, index, isExpanded, stepsLength, onToggle, onUpdate, onDelete, onDuplicate, onReorder, onSelectTemplate, onEditParams, hasUnmappedParams, showError }) => {
   const delayLabel = index === 0 ? "From Enrollment" : "From previous step";
   const hasError = showError && hasUnmappedParams;
   
   return (
-  <div className={`rounded-xl border ${hasError ? "border-red-400 bg-red-50/30" : "border-gray-200 bg-cyan-50/30"} overflow-hidden shadow-sm`}>
-    <div
-      className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-cyan-50/50 transition-colors"
-      onClick={onToggle}
-    >
-      <div className="flex items-center gap-3">
-        <span className="w-7 h-7 bg-teal-500 text-white rounded-full flex items-center justify-center text-sm font-semibold">
-          {index + 1}
-        </span>
-        <span className="text-sm font-medium text-gray-900">{step.step_name || "Untitled Step"}</span>
-      </div>
-      <div className="flex items-center gap-1">
-        <button
-          onClick={(e) => { e.stopPropagation(); onReorder(); }}
-          className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-          title="Reorder"
-        >
-          <ArrowUpDown className="w-4 h-4" />
-        </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); onDuplicate(); }}
-          className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-          title="Duplicate"
-        >
-          <Copy className="w-4 h-4" />
-        </button>
-        {stepsLength > 1 && (
+    <div className={`rounded-xl border ${hasError ? "border-red-300 bg-red-50/50" : "border-gray-200 bg-white"} overflow-hidden shadow-sm`}>
+      <div
+        className={`flex items-center justify-between px-4 py-3 cursor-pointer ${hasError ? "bg-red-50" : "bg-gray-50 hover:bg-gray-100"} transition-colors`}
+        onClick={onToggle}
+      >
+        <div className="flex items-center gap-3">
+          <span className="w-8 h-8 bg-teal-500 text-white rounded-full flex items-center justify-center text-sm font-semibold shadow-sm">
+            {index + 1}
+          </span>
+          <span className="text-sm font-medium text-gray-900">{step.step_name || "Untitled Step"}</span>
+        </div>
+        <div className="flex items-center gap-0.5">
           <button
-            onClick={(e) => { e.stopPropagation(); onDelete(); }}
-            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
-            title="Delete"
+            onClick={(e) => { e.stopPropagation(); onReorder(); }}
+            className="p-2 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
+            title="Reorder"
           >
-            <Trash2 className="w-4 h-4" />
+            <ArrowUpDown className="w-4 h-4" />
           </button>
-        )}
-        <button className="p-1.5 text-gray-400 hover:text-gray-600 rounded transition-colors">
-          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-        </button>
-      </div>
-    </div>
-
-    {isExpanded && (
-      <div className="border-t border-gray-100 bg-white">
-        <div className="flex">
-          {/* Left Side - Form */}
-          <div className="flex-1 p-4 space-y-4">
-            <div className="flex items-center gap-4">
-              <label className="text-sm font-medium text-gray-700 w-28">
-                Send after <span className="text-red-500">*</span>
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min="1"
-                  className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
-                  value={step.delay_value}
-                  onChange={(e) => onUpdate({ delay_value: parseInt(e.target.value) || 1 })}
-                />
-                <select
-                  value={step.delay_unit}
-                  onChange={(e) => onUpdate({ delay_unit: e.target.value })}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm bg-white"
-                >
-                  <option value="minutes">Minutes</option>
-                  <option value="hours">Hours</option>
-                  <option value="days">Days</option>
-                </select>
-                <span className="text-sm text-teal-600 font-medium">{delayLabel}</span>
-              </div>
-            </div>
-
-            {/* Send Message */}
-            <div className="flex items-start gap-4">
-              <label className="text-sm font-medium text-gray-700 w-28 pt-2">
-                Send Message <span className="text-red-500">*</span>
-              </label>
-              <div className="flex-1">
-                {step.template ? (
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-lg text-sm">
-                      {step.template.element_name}
-                      <button onClick={() => onUpdate({ template: null, parameters: [] })} className="text-gray-400 hover:text-gray-600">
-                        <X className="w-4 h-4" />
-                      </button>
-                    </span>
-                    <button onClick={onEditParams} className="p-1.5 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded transition-colors">
-                      <Pen className="w-4 h-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={onSelectTemplate}
-                    className="bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-2"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Pick template
-                  </button>
-                )}
-              </div>
-            </div>
-
-          
-            {hasError && (
-              <div className="flex items-start gap-2 p-3 bg-red-50 rounded-lg border border-red-200">
-                <span className="text-red-600 text-sm">⚠</span>
-                <p className="text-sm text-red-800">Please map all template variables before continuing. Click the edit button to map variables.</p>
-              </div>
-            )}
-
-            {/* Marketing Warning */}
-            {step.template?.category === "MARKETING" && (
-              <div className="flex items-start gap-2 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                <span className="text-yellow-600 text-sm">ⓘ</span>
-                <p className="text-sm text-yellow-800">Only marketing opted-in contacts will receive this marketing message template.</p>
-              </div>
-            )}
-          </div>
-
-          {/* Right Side - Template Preview */}
-          {step.template && <TemplatePreviewCard template={step.template} parameters={step.parameters} />}
+          <button
+            onClick={(e) => { e.stopPropagation(); onDuplicate(); }}
+            className="p-2 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
+            title="Duplicate"
+          >
+            <Copy className="w-4 h-4" />
+          </button>
+          {stepsLength > 1 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete(); }}
+              className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+              title="Delete"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+          <button className="p-2 text-gray-400 hover:text-gray-600 rounded-lg transition-colors">
+            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </button>
         </div>
       </div>
-    )}
-  </div>
+
+      {isExpanded && (
+        <div className="border-t border-gray-100 bg-white">
+          <div className="flex flex-col lg:flex-row">
+            <div className="flex-1 p-5 space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <label className="text-sm font-medium text-gray-700 sm:w-28 shrink-0">
+                  Send after <span className="text-red-500">*</span>
+                </label>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <input
+                    type="number"
+                    min="1"
+                    className="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
+                    value={step.delay_value}
+                    onChange={(e) => onUpdate({ delay_value: parseInt(e.target.value) || 1 })}
+                  />
+                  <select
+                    value={step.delay_unit}
+                    onChange={(e) => onUpdate({ delay_unit: e.target.value })}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm bg-white"
+                  >
+                    <option value="minutes">Minutes</option>
+                    <option value="hours">Hours</option>
+                    <option value="days">Days</option>
+                  </select>
+                  <span className="text-xs text-teal-600 font-medium bg-teal-50 px-2 py-1 rounded">{delayLabel}</span>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+                <label className="text-sm font-medium text-gray-700 sm:w-28 shrink-0 pt-2">
+                  Message <span className="text-red-500">*</span>
+                </label>
+                <div className="flex-1">
+                  {step.template ? (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-teal-50 text-teal-700 rounded-lg text-sm font-medium border border-teal-200">
+                        {step.template.element_name}
+                        <button onClick={() => onUpdate({ template: null, parameters: [] })} className="text-teal-500 hover:text-teal-700">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </span>
+                      <button onClick={onEditParams} className="p-1.5 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors">
+                        <Pen className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={onSelectTemplate}
+                      className="bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-2"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Pick Template
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {hasError && (
+                <div className="flex items-start gap-2 p-3 bg-red-50 rounded-lg border border-red-200">
+                  <span className="text-red-500 text-sm mt-0.5">⚠</span>
+                  <p className="text-sm text-red-700">Please map all template variables before continuing.</p>
+                </div>
+              )}
+
+              {step.template?.category === "MARKETING" && (
+                <div className="flex items-start gap-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                  <span className="text-amber-500 text-sm mt-0.5">ⓘ</span>
+                  <p className="text-sm text-amber-700">Only marketing opted-in contacts will receive this message.</p>
+                </div>
+              )}
+            </div>
+
+            {step.template && <TemplatePreviewCard template={step.template} parameters={step.parameters} />}
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 
-// Template Preview Component
 const TemplatePreviewCard = ({ template, parameters = [] }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const getPreviewText = () => {
     let text = template.data || template.container_meta?.data || "No preview";
-    
     parameters.forEach((param) => {
       if (param.mappedTo) {
-        
         const displayValue = param.mappedTo.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
         text = text.replace(param.param, `[${displayValue}]`);
       }
     });
-    
     return text;
   };
 
   return (
-    <div className="w-72 border-l border-gray-200 p-4 bg-gray-50">
+    <div className="w-full lg:w-72 border-t lg:border-t-0 lg:border-l border-gray-100 p-4 bg-gray-50">
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         <div
-          className="px-3 py-2 border-b border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50"
+          className="px-3 py-2.5 border-b border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50"
           onClick={() => setIsCollapsed(!isCollapsed)}
         >
-          <span className="text-sm font-medium text-gray-900">{template.element_name}</span>
-          <button className="text-gray-400 hover:text-gray-600 transition-colors">
+          <span className="text-sm font-medium text-gray-900 truncate">{template.element_name}</span>
+          <button className="text-gray-400 hover:text-gray-600 transition-colors ml-2">
             {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
           </button>
         </div>
         {!isCollapsed && (
           <div className="p-3">
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-xs text-green-600 flex items-center gap-1">
+              <span className="text-xs text-green-600 flex items-center gap-1 font-medium">
                 <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
                 Active
               </span>
               <span className="text-xs text-gray-500 uppercase">{template.category || "MARKETING"}</span>
             </div>
-            <div className="bg-green-50 rounded-lg p-3 text-sm text-gray-700">
-              <p className="whitespace-pre-wrap text-xs leading-relaxed">
-                {getPreviewText()}
-              </p>
+            <div className="bg-teal-50 rounded-lg p-3 text-sm text-gray-700 border border-teal-100">
+              <p className="whitespace-pre-wrap text-xs leading-relaxed">{getPreviewText()}</p>
             </div>
-            <p className="text-xs text-teal-600 mt-2 italic">Reply with 'STOP' to unsubscribe from marketing messages.</p>
+            <p className="text-xs text-gray-500 mt-2 italic">Reply STOP to unsubscribe</p>
           </div>
         )}
       </div>
@@ -549,67 +609,101 @@ const TemplatePreviewCard = ({ template, parameters = [] }) => {
   );
 };
 
-// Template Picker Modal Component
-const TemplatePickerModal = ({ isOpen, onClose, templates, searchQuery, onSearchChange, onSelect }) => {
+
+const TemplatePickerModal = ({ isOpen, onClose, templates, searchQuery, onSearchChange, onSelect, onLoadMore, hasMore, isLoadingMore, isLoading }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 backdrop-blur-sm flex justify-center items-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-6 border-b border-gray-200">
-          <div>
-            <h4 className="font-semibold text-gray-900 text-lg">Select Template</h4>
-            <p className="text-sm text-gray-500 mt-1">Choose a message template for this step</p>
+    <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="p-6 border-b border-gray-100">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h4 className="font-bold text-gray-900 text-xl">Select Template</h4>
+              <p className="text-sm text-gray-500 mt-1">Choose a promotional template for your drip message</p>
+            </div>
+            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors absolute right-4 top-4 sm:relative sm:right-auto sm:top-auto">
+              <X className="w-5 h-5 text-gray-400" />
+            </button>
           </div>
-          <div className="relative w-full sm:w-64">
-            <Search size={16} className="absolute left-3 top-3 text-gray-400" />
+          
+          {/* Search Bar */}
+          <div className="relative mt-4">
+            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
-              placeholder="Search templates..."
+              placeholder="Search by template name..."
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+              className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 focus:bg-white text-sm transition-all"
             />
           </div>
         </div>
 
+        {/* Content */}
         <div className="flex-1 overflow-auto p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {templates.length > 0 ? (
-              templates.map((t) => (
-                <div
-                  key={t.id}
-                  className="border border-gray-200 rounded-xl hover:border-teal-400 hover:shadow-md cursor-pointer transition-all bg-white group"
-                  onClick={() => onSelect(t)}
-                >
-                  <div className="h-32 overflow-hidden rounded-t-xl flex items-center justify-center bg-gray-50">
-                    {renderMedia(t)}
-                  </div>
-                  <div className="p-4">
-                    <p className="font-semibold text-gray-900 text-sm truncate">{t.element_name}</p>
-                    <p className="text-teal-600 text-xs font-medium uppercase mt-1">{t.category || "Marketing"}</p>
-                    <p className="text-gray-500 text-xs mt-2 line-clamp-2">
-                      {t.container_meta?.sampleText || "No preview text available"}
-                    </p>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="col-span-full text-center py-12">
-                <Search className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500 font-medium">No templates found</p>
-                <p className="text-gray-400 text-sm mt-1">Try adjusting your search terms</p>
+          {isLoading && templates.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16">
+              <div className="animate-spin rounded-full h-12 w-12 border-4 border-teal-500 border-t-transparent"></div>
+              <p className="text-gray-500 mt-4 text-sm">Loading templates...</p>
+            </div>
+          ) : templates.length > 0 ? (
+            <>
+              {/* Template Count */}
+              <p className="text-sm text-gray-500 mb-4">{templates.length} template{templates.length !== 1 ? 's' : ''} found</p>
+              
+              {/* Template Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {templates.map((t) => (
+                  <TemplateCard key={t.id} template={t} onSelect={onSelect} />
+                ))}
               </div>
-            )}
-          </div>
+
+              {/* Load More */}
+              {hasMore && (
+                <div className="flex justify-center mt-8">
+                  <button
+                    onClick={onLoadMore}
+                    disabled={isLoadingMore}
+                    className="px-6 py-2.5 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-100 text-gray-700 rounded-xl font-medium transition-colors flex items-center gap-2 text-sm"
+                  >
+                    {isLoadingMore ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-400 border-t-transparent"></div>
+                        Loading more...
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="w-4 h-4" />
+                        Load More Templates
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-16">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                <MessageSquare className="w-8 h-8 text-gray-400" />
+              </div>
+              <p className="text-gray-900 font-medium text-lg">No templates found</p>
+              <p className="text-gray-500 text-sm mt-1 text-center max-w-sm">
+                {searchQuery 
+                  ? `No templates match "${searchQuery}". Try a different search term.`
+                  : "Create a PROMOTION template first to use in your drip sequence."}
+              </p>
+            </div>
+          )}
         </div>
 
-        <div className="flex justify-end p-6 border-t border-gray-200">
+        {/* Footer */}
+        <div className="flex justify-end p-4 border-t border-gray-100 bg-gray-50">
           <button
             onClick={onClose}
-            className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium flex items-center gap-2"
+            className="px-5 py-2.5 text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded-lg transition-colors font-medium text-sm"
           >
-            <X className="w-4 h-4" />
             Cancel
           </button>
         </div>
@@ -618,139 +712,303 @@ const TemplatePickerModal = ({ isOpen, onClose, templates, searchQuery, onSearch
   );
 };
 
-// Parameter Mapping Modal Component
+// Template Card Component
+const TemplateCard = ({ template, onSelect }) => {
+  const isTextOnly = template.template_type?.toUpperCase() === "TEXT";
+  
+  return (
+    <div
+      className="group bg-white border border-gray-200 rounded-xl overflow-hidden cursor-pointer transition-all duration-200 hover:border-teal-400 hover:shadow-lg hover:-translate-y-0.5"
+      onClick={() => onSelect(template)}
+    >
+      {/* Media/Preview Section */}
+      <div className={`relative ${isTextOnly ? "h-24 bg-gradient-to-br from-teal-50 to-cyan-50" : "h-32 bg-gray-100"} overflow-hidden`}>
+        {isTextOnly ? (
+          <div className="absolute inset-0 flex items-center justify-center p-4">
+            <p className="text-gray-600 text-xs text-center line-clamp-3 leading-relaxed">
+              {template.container_meta?.sampleText || template.data || "Text template"}
+            </p>
+          </div>
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            {renderMedia(template)}
+          </div>
+        )}
+        
+        {/* Type Badge */}
+        <span className="absolute top-2 left-2 px-2 py-0.5 bg-white/90 backdrop-blur-sm rounded-md text-[10px] font-semibold text-gray-700 uppercase shadow-sm">
+          {template.template_type || "TEXT"}
+        </span>
+        
+        {/* Hover Overlay */}
+        <div className="absolute inset-0 bg-teal-500/0 group-hover:bg-teal-500/10 transition-colors flex items-center justify-center">
+          <span className="opacity-0 group-hover:opacity-100 transition-opacity bg-teal-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium shadow-lg">
+            Select Template
+          </span>
+        </div>
+      </div>
+      
+      {/* Info Section */}
+      <div className="p-4">
+        <h5 className="font-semibold text-gray-900 text-sm truncate group-hover:text-teal-600 transition-colors">
+          {template.element_name}
+        </h5>
+        
+        <div className="flex items-center gap-2 mt-2">
+          <span className="text-xs font-medium text-teal-600 uppercase tracking-wide">
+            {template.category || "Marketing"}
+          </span>
+          {template.sub_category && (
+            <span className="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">
+              {template.sub_category}
+            </span>
+          )}
+        </div>
+        
+        {!isTextOnly && (
+          <p className="text-gray-500 text-xs mt-2 line-clamp-2 leading-relaxed">
+            {template.container_meta?.sampleText || "No preview available"}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const ParameterMappingModal = ({ isOpen, onClose, template, parameters, onParamChange, onMediaUpdate, onChangeTemplate }) => {
+  const { user } = useAuth();
+  const [uploading, setUploading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState("");
+
+  // Clean up object URLs on unmount
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
   if (!isOpen) return null;
 
-  const handleFileUpload = (e) => {
+  const isMediaTemplate = ["IMAGE", "VIDEO", "DOCUMENT"].includes(template?.template_type?.toUpperCase());
+  const hasVariables = parameters.length > 0;
+
+  // Upload file to backend and get mediaId
+  const uploadToBackend = async (file, type = 'image') => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('customer_id', user?.customer_id || '');
+    formData.append('file_type', type);
+    formData.append('is_template', 'true');
+    formData.append('is_media', 'true');
+
+    const response = await axios.post(
+      API_ENDPOINTS.CHAT.SEND_MEDIA,
+      formData,
+      {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        withCredentials: true,
+      }
+    );
+
+    if (response.data?.success && response.data?.mediaId) {
+      return {
+        mediaId: response.data.mediaId,
+        fileName: response.data.fileName || file.name,
+      };
+    }
+    throw new Error('Failed to upload media');
+  };
+
+  const handleFileUpload = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      const objectUrl = URL.createObjectURL(file);
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      // Create preview URL for display
+      const preview = URL.createObjectURL(file);
+      setPreviewUrl(preview);
+
+      // Determine file type
       const extension = file.name.split(".").pop().toLowerCase();
-      const isVideo = ["mp4"].includes(extension);
-      onMediaUpdate(objectUrl, isVideo ? "VIDEO" : "IMAGE");
+      const isVideo = ["mp4", "mov", "avi"].includes(extension);
+      const fileType = isVideo ? "video" : "image";
+
+      // Upload to backend
+      const { mediaId } = await uploadToBackend(file, fileType);
+
+      // Update with mediaId (this is what the API needs)
+      onMediaUpdate(mediaId, isVideo ? "VIDEO" : "IMAGE");
+      toast.success("Media uploaded successfully");
+    } catch (error) {
+      console.error("Error uploading media:", error);
+      toast.error("Failed to upload media");
+      setPreviewUrl("");
+    } finally {
+      setUploading(false);
     }
   };
 
+  // If no variables and no media to edit, just show preview
+  const showRightPanel = isMediaTemplate || hasVariables;
+
   return (
-    <div className="fixed inset-0 backdrop-blur-sm flex justify-center items-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+    <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50 p-4">
+      <div className={`bg-white rounded-xl shadow-xl w-full ${showRightPanel ? "max-w-3xl" : "max-w-md"} max-h-[85vh] overflow-hidden flex flex-col`}>
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Map Template Variables</h2>
-            <p className="text-sm text-gray-600 mt-1">Connect template variables to your contact fields</p>
+            <h2 className="text-lg font-semibold text-gray-900">
+              {hasVariables ? "Map Template Variables" : isMediaTemplate ? "Edit Media" : "Template Preview"}
+            </h2>
+            <p className="text-sm text-gray-500 mt-0.5">
+              {hasVariables ? "Connect variables to contact fields" : isMediaTemplate ? "Update the media for this template" : "Review your selected template"}
+            </p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <X className="w-6 h-6 text-gray-500" />
+            <X className="w-5 h-5 text-gray-500" />
           </button>
         </div>
 
-        <div className="flex-1 overflow-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 p-6">
-            {/* Template Preview */}
-            <div className="space-y-4">
-              <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 bg-teal-500 rounded-full"></div>
-                    <span className="text-sm font-medium text-gray-700">MARKETING</span>
-                  </div>
-                  <button onClick={onChangeTemplate} className="text-blue-600 hover:text-blue-700 text-sm font-medium">
-                    Change
-                  </button>
+        {/* Content */}
+        <div className="flex-1 overflow-auto p-5">
+          <div className={`grid ${showRightPanel ? "grid-cols-1 lg:grid-cols-2 gap-6" : "grid-cols-1"}`}>
+            {/* Template Preview - Left Side */}
+            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                  <span className="text-xs font-medium text-gray-600 uppercase">{template?.category || "Marketing"}</span>
                 </div>
-
-                <div className="bg-white rounded-lg p-4 border border-gray-200">
-                  <div className="text-center mb-4">
-                    <h3 className="font-semibold text-gray-900 text-lg">{template?.element_name || "Template"}</h3>
+                <button onClick={onChangeTemplate} className="text-teal-600 hover:text-teal-700 text-sm font-medium hover:underline">
+                  Change
+                </button>
+              </div>
+              
+              <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                {/* Template Header */}
+                <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
+                  <h3 className="font-medium text-gray-900 text-sm">{template?.element_name}</h3>
+                  <span className="text-xs text-gray-500">{template?.template_type || "TEXT"}</span>
+                </div>
+                
+                {/* Media Preview */}
+                {template?.media_url && (
+                  <div className="p-3 border-b border-gray-100">
+                    <div className="rounded-lg overflow-hidden bg-gray-100">
+                      {renderMedia({ ...template, mediaUrl: template.media_url, template_type: template.template_type || "IMAGE" })}
+                    </div>
                   </div>
-                  <div className="min-h-[120px] flex items-center justify-center">
-                    <div className="text-start w-full">
-                      {template?.media_url && (
-                        <div className="mb-4">
-                          {renderMedia({ ...template, mediaUrl: template.media_url, template_type: template.template_type || "IMAGE" })}
+                )}
+                
+                {/* Message Body */}
+                <div className="p-4">
+                  <p className="text-gray-700 whitespace-pre-wrap text-sm leading-relaxed">{template?.data || template?.container_meta?.data}</p>
+                </div>
+                
+                {/* Footer */}
+                <div className="px-4 py-2 border-t border-gray-100 bg-gray-50">
+                  <p className="text-xs text-gray-400 text-center italic">Reply STOP to unsubscribe</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Side - Variables/Media */}
+            {showRightPanel && (
+              <div className="space-y-6">
+                {/* Media Section - Only for IMAGE/VIDEO templates */}
+                {isMediaTemplate && (
+                  <div className="bg-white rounded-xl border border-gray-200 p-4">
+                    <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                      <span className="w-6 h-6 bg-teal-100 text-teal-600 rounded-full flex items-center justify-center text-xs font-bold">1</span>
+                      Media
+                    </h3>
+                    <div className="space-y-3">
+                      <input
+                        type="text"
+                        placeholder="Enter media URL"
+                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
+                        value={template?.media_url || ""}
+                        onChange={(e) => onMediaUpdate(e.target.value)}
+                      />
+                      {/* Preview uploaded image */}
+                      {previewUrl && (
+                        <div className="mb-3 rounded-lg overflow-hidden border border-gray-200">
+                          <img src={previewUrl} alt="Preview" className="w-full h-32 object-cover" />
                         </div>
                       )}
-                      <p className="text-gray-700 whitespace-pre-wrap text-sm leading-relaxed">{template?.data}</p>
+                      <div className="flex gap-2">
+                        <label className={`flex-1 px-3 py-2.5 ${uploading ? 'bg-gray-400' : 'bg-teal-500 hover:bg-teal-600'} text-white rounded-lg transition-colors text-sm font-medium text-center cursor-pointer flex items-center justify-center gap-2`}>
+                          {uploading ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                              Uploading...
+                            </>
+                          ) : (
+                            'Upload File'
+                          )}
+                          <input type="file" accept="image/*,video/*" className="hidden" onChange={handleFileUpload} disabled={uploading} />
+                        </label>
+                        {template?.media_url && (
+                          <button
+                            onClick={() => onMediaUpdate(null)}
+                            className="px-3 py-2.5 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors text-sm font-medium"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <p className="text-xs text-gray-500 text-center">Reply with STOP to unsubscribe from marketing messages.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+                )}
 
-            {/* Variable Mapping */}
-            <div className="space-y-6">
-              <h1 className="text-2xl font-semibold">Variable</h1>
-
-              {/* Media Editor */}
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="editimage" className="block text-sm font-medium text-gray-700 mb-2">Media URL</label>
-                  <input
-                    type="text"
-                    id="editimage"
-                    placeholder="Enter media URL or upload file"
-                    className="bg-white border border-gray-300 rounded-lg p-3 w-full focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
-                    value={template?.media_url || ""}
-                    onChange={(e) => onMediaUpdate(e.target.value)}
-                  />
-                </div>
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => document.getElementById("media-file-upload").click()}
-                    className="flex-1 px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors text-sm font-medium"
-                  >
-                    Upload File
-                  </button>
-                  {template?.media_url && (
-                    <button
-                      onClick={() => onMediaUpdate(null)}
-                      className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium"
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
-
-                <input id="media-file-upload" type="file" accept="image/*,video/*" className="hidden" onChange={handleFileUpload} />
-              </div>
-
-              {/* Variables List */}
-              <div className="space-y-3 mb-6">
-                {parameters.map((paramObj, idx) => (
-                  <div key={idx} className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                    <div className="flex items-center gap-2 flex-1">
-                      <span className="text-sm font-medium text-gray-700">{paramObj.param}</span>
-                      <span className="text-red-500">*</span>
+                {/* Variables Section - Only if there are parameters */}
+                {hasVariables && (
+                  <div className="bg-white rounded-xl border border-gray-200 p-4">
+                    <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                      <span className="w-6 h-6 bg-teal-100 text-teal-600 rounded-full flex items-center justify-center text-xs font-bold">
+                        {isMediaTemplate ? "2" : "1"}
+                      </span>
+                      Variables
+                    </h3>
+                    <div className="space-y-3">
+                      {parameters.map((paramObj, idx) => (
+                        <div key={idx} className="space-y-1.5">
+                          <label className="text-sm font-medium text-gray-700">
+                            {paramObj.param} <span className="text-red-500">*</span>
+                          </label>
+                          <select
+                            value={paramObj.mappedTo}
+                            onChange={(e) => onParamChange(idx, e.target.value)}
+                            className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white"
+                          >
+                            <option value="">Select field...</option>
+                            <option value="customer_name">Customer Name</option>
+                            <option value="mobile">Customer Mobile</option>
+                          </select>
+                        </div>
+                      ))}
                     </div>
-                    <select
-                      value={paramObj.mappedTo}
-                      onChange={(e) => onParamChange(idx, e.target.value)}
-                      className="flex-1 text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                    >
-                      <option value="">Select field...</option>
-                      <option value="customer_name">Customer Name</option>
-                      <option value="mobile">Customer Mobile</option>
-                    </select>
                   </div>
-                ))}
+                )}
+
+                {/* Help Text */}
+                <div className="bg-amber-50 rounded-lg p-3 border border-amber-200">
+                  <p className="text-xs text-amber-800">
+                    <span className="font-medium">Tip:</span> Variables like {"{{1}}"} will be replaced with the selected contact field value when the message is sent.
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50">
-          <button onClick={onClose} className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors font-medium">
+        {/* Footer */}
+        <div className="flex justify-end gap-3 p-4 border-t border-gray-200 bg-gray-50">
+          <button onClick={onClose} className="px-5 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors font-medium text-sm">
             Cancel
           </button>
-          <button
-            onClick={onClose}
-            className="px-6 py-2.5 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors font-medium"
-          >
+          <button onClick={onClose} className="px-5 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors font-medium text-sm">
             Confirm
           </button>
         </div>
@@ -759,16 +1017,12 @@ const ParameterMappingModal = ({ isOpen, onClose, template, parameters, onParamC
   );
 };
 
-
 const ReorderModal = ({ isOpen, onClose, currentIndex, totalSteps, onMove }) => {
-  // Get available positions (excluding current position)
   const availablePositions = Array.from({ length: totalSteps }, (_, i) => i + 1).filter(
     (pos) => pos !== currentIndex + 1
   );
-  
   const [selectedPosition, setSelectedPosition] = useState(availablePositions[0] || 1);
 
-  // Reset selected position when modal opens or currentIndex changes
   if (isOpen && availablePositions.length > 0 && !availablePositions.includes(selectedPosition)) {
     setSelectedPosition(availablePositions[0]);
   }
@@ -776,46 +1030,37 @@ const ReorderModal = ({ isOpen, onClose, currentIndex, totalSteps, onMove }) => 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 backdrop-blur-sm flex justify-center items-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900">Rearrange steps</h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+    <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden">
+        <div className="flex items-center justify-between p-5 border-b border-gray-200 bg-gray-50">
+          <h2 className="text-lg font-semibold text-gray-900">Rearrange Steps</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
             <X className="w-5 h-5 text-gray-500" />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-6">
-          {/* Position Selector */}
-          <div className="flex items-center gap-4">
-            <label className="text-sm font-medium text-gray-700">Move sequence step to</label>
+        <div className="p-5">
+          <div className="flex items-center gap-3">
+            <label className="text-sm font-medium text-gray-700">Move to position</label>
             <select
               value={selectedPosition}
               onChange={(e) => setSelectedPosition(Number(e.target.value))}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm min-w-[80px]"
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white text-sm"
             >
               {availablePositions.map((pos) => (
-                <option key={pos} value={pos}>
-                  {pos}
-                </option>
+                <option key={pos} value={pos}>{pos}</option>
               ))}
             </select>
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex justify-end gap-3 p-6 border-t border-gray-200">
-          <button
-            onClick={onClose}
-            className="px-6 py-2 text-gray-700 font-medium hover:bg-gray-100 rounded-lg transition-colors"
-          >
+        <div className="flex justify-end gap-3 p-4 border-t border-gray-200 bg-gray-50">
+          <button onClick={onClose} className="px-4 py-2 text-gray-700 font-medium hover:bg-gray-100 rounded-lg transition-colors text-sm">
             Cancel
           </button>
           <button
             onClick={() => onMove(selectedPosition - 1)}
-            className="px-6 py-2 bg-blue-500 text-white font-medium rounded-lg hover:bg-blue-600 transition-colors"
+            className="px-4 py-2 bg-teal-500 text-white font-medium rounded-lg hover:bg-teal-600 transition-colors text-sm"
           >
             Move
           </button>

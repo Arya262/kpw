@@ -36,7 +36,7 @@ const CreateDrip = () => {
     isSavingDraft,
   } = useSequenceWizard(() => navigate("/autocampaign"), dripId);
 
-  // Handle browser back/refresh with unsaved changes
+ 
   useEffect(() => {
     const handleBeforeUnload = (e) => {
       if (hasUnsavedChanges) {
@@ -60,7 +60,7 @@ const CreateDrip = () => {
 
   const confirmExit = () => {
     setShowExitDialog(false);
-    // Dismiss all toasts before navigating
+   
     toast.dismiss();
     if (pendingNavigation) {
       navigate(pendingNavigation);
@@ -72,7 +72,7 @@ const CreateDrip = () => {
     setPendingNavigation(null);
   };
 
-  // Step transition variants
+
   const stepVariants = {
     enter: (direction) => ({
       x: direction > 0 ? 50 : -50,
@@ -98,7 +98,7 @@ const CreateDrip = () => {
 
   return (
     <div className="p-6">
-      {/* Header with back button */}
+     
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <button
@@ -118,7 +118,7 @@ const CreateDrip = () => {
           </div>
         </div>
 
-        {/* Save as Draft Button */}
+     
         <button
           onClick={handleSaveDraft}
           disabled={isSavingDraft || !seqData.drip_name}

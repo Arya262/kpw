@@ -40,7 +40,6 @@ const SeqModal = ({ onClose, isOpen }) => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, hasUnsavedChanges]);
 
-  // Prevent body scroll when modal is open
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";

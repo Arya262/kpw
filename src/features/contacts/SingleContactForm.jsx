@@ -17,8 +17,9 @@ export default function SingleContactForm({
   setSelectedTags,
 }) {
   const handlePhoneChange = (value, country) => {
-    // Pass to parent handler which handles validation
-    setPhone(value);
+    // Pass phone value and dial code to parent
+    // country.dialCode contains the country code (e.g., "91" for India)
+    setPhone(value, country?.dialCode || "");
     setIsTouched(true);
     
     // Clear error if phone looks valid (10+ digits)

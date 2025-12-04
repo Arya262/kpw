@@ -10,6 +10,7 @@ import { getTagId } from "../tags/utils/tagUtils";
 export default function AddContact({ closePopup, onSuccess, onPlanRequired }) {
   const [tab, setTab] = useState("single");
   const [phone, setPhone] = useState("");
+  const [dialCode, setDialCode] = useState("");
   const [optStatus, setOptStatus] = useState("Opted In");
   const [name, setName] = useState("");
   const [file, setFile] = useState(null);
@@ -49,8 +50,11 @@ export default function AddContact({ closePopup, onSuccess, onPlanRequired }) {
     clearMessages();
   };
 
-  const handlePhoneChange = (value) => {
+  const handlePhoneChange = (value, countryDialCode = "") => {
     setPhone(value);
+    if (countryDialCode) {
+      setDialCode(countryDialCode);
+    }
     clearMessages();
 
     const digits = value.replace(/\D/g, "");
@@ -147,9 +151,12 @@ export default function AddContact({ closePopup, onSuccess, onPlanRequired }) {
     try {
       if (tab === "single") {
         const digits = phone.replace(/\D/g, "");
-        const countryCodeMatch = phone.match(/^\+?\d{1,4}/);
-        const countryCode = countryCodeMatch ? countryCodeMatch[0] : "";
-        const nationalNumber = digits.replace(countryCode, "");
+        // Use the dialCode from react-phone-input-2 to properly extract the national number
+        const countryCode = dialCode || "";
+        // Remove the dial code from the beginning of the full number to get the national number
+        const nationalNumber = countryCode && digits.startsWith(countryCode) 
+          ? digits.slice(countryCode.length) 
+          : digits;
         const tagIds = selectedTags.map(tag => getTagId(tag)).filter(Boolean);
 
         const requestBody = {
@@ -157,7 +164,7 @@ export default function AddContact({ closePopup, onSuccess, onPlanRequired }) {
           first_name: name.trim(),
           mobile_no: nationalNumber,
           customer_id: user.customer_id,
-          tag_ids: tagIds,
+          tags: tagIds,
         };
 
         const response = await fetch(API_ENDPOINTS.CONTACTS.ADD_SINGLE, {
@@ -168,24 +175,7 @@ export default function AddContact({ closePopup, onSuccess, onPlanRequired }) {
         });
 
         const data = await response.json();
-        // console.log("Add contact response:", data);
         if (data.success) {
-          const contactId = data.contact_id || data.data?.contact_id;
-          if (contactId && tagIds.length > 0) {
-            // console.log("Assigning tags to contact:", contactId, tagIds);
-            for (const tagId of tagIds) {
-              try {
-                await fetch(API_ENDPOINTS.TAGS.ASSIGN, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  credentials: "include",
-                  body: JSON.stringify({ contact_id: contactId, tag_id: tagId }),
-                });
-              } catch (err) {
-                console.error("Failed to assign tag:", tagId, err);
-              }
-            }
-          }
           setSuccessMessage(data.message || "Contact added successfully!");
           setErrorMessage("");
           setSelectedTags([]);
@@ -200,7 +190,7 @@ export default function AddContact({ closePopup, onSuccess, onPlanRequired }) {
           customer_id: user.customer_id,
           contacts: extractedContacts,
           import_timestamp: new Date().toISOString(),
-          tag_ids: tagIds,
+          tags: tagIds,
         };
 
         const response = await fetch(API_ENDPOINTS.CONTACTS.BULK_IMPORT, {
